@@ -15,6 +15,16 @@ var jiant = jiant || (function($) {
       lookup = function(selector) {},
       pager = {},
       slider = {},
+//      slider = {
+//        ctl: ctl,
+//        decrement: ctl,
+//        increment: ctl,
+//        input: input,
+//        max: ctl,
+//        min: ctl,
+//        roller: ctl,
+//        rollerBg: ctl
+//      },
       stub = function() {
         var callerName = "not available";
         if (arguments && arguments.callee && arguments.callee.caller) {
@@ -44,7 +54,7 @@ var jiant = jiant || (function($) {
 
   function parseTemplate(that, data) {
     data = data || {};
-    var str = (that).html().trim(),
+    var str = $.trim(that.html()),
         _tmplCache = {},
         err = "";
     try {
@@ -133,6 +143,7 @@ var jiant = jiant || (function($) {
 
   function _bindContent(subRoot, key, content, view, prefix) {
     $.each(content, function (elem, elemContent) {
+//      window.console && window.console.logInfo(elem + "    : " + subRoot[elem]);
       if (subRoot[elem] == lookup) {
         logInfo("    loookup element, no checks/bindings: " + elem);
         subRoot[elem] = function() {return $("." + prefix + elem);};
@@ -147,6 +158,7 @@ var jiant = jiant || (function($) {
           setupPager(uiElem);
         }
         subRoot[elem] = uiElem;
+//        _bindContent(subRoot[elem], key, elemContent, uiElem, prefix);
         logInfo("    bound UI for: " + elem);
       }
     });
