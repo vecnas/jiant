@@ -6,7 +6,7 @@ jQuery(function ($) {
       templ2 = helloJiant.templates.templ2,
       name;
 
-  jiant.bindUi("_", helloJiant.views, helloJiant.templates);
+  jiant.bindUi("_", helloJiant);
 
   askView.brokenCtl.click(function() {
     alert("never");
