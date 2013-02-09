@@ -53,8 +53,14 @@ var jiant = jiant || (function($) {
   function maybeAddDevHook(uiElem, key, elem) {
     if (jiant.DEV_MODE) {
       uiElem.click(function(event) {
-        if (event.ctrlKey && event.shiftKey && event.altKey) {
-          alert(key + (elem ? ("." + elem) : ""));
+        if (event.shiftKey && event.altKey) {
+          var message = key + (elem ? ("." + elem) : "");
+          if (event.ctrlKey) {
+            message += "\r\n------------\r\n";
+            message += pseudoserializeJSON(jQuery._data(uiElem[0], "events"));
+          }
+          logInfo(message);
+          alert(message);
           event.preventDefault();
           event.stopImmediatePropagation();
         }
@@ -188,7 +194,7 @@ var jiant = jiant || (function($) {
       } else {
         var uiElem = view.find("." + prefix + elem);
         ensureExists(uiElem, prefix + key, prefix + elem);
-        if (elemContent == tabs) {
+        if (elemContent == tabs && uiElem.tabs) {
           uiElem.tabs();
         } else if (elemContent == inputInt) {
           setupInputInt(uiElem);
@@ -304,8 +310,17 @@ var jiant = jiant || (function($) {
     logError(errorDetails);
   }
 
+  function maybeSetDevModeFromQueryString() {
+    if ((window.location + "").toLowerCase().indexOf("jiant.dev_mode") >= 0) {
+      jiant.DEV_MODE = true;
+    }
+  }
+
   function bindUi(prefix, root, devMode) {
     jiant.DEV_MODE = devMode;
+    if (! devMode) {
+      maybeSetDevModeFromQueryString();
+    }
     errString = "";
     bindingsResult = true;
     if (root.views) {
