@@ -373,6 +373,11 @@ element fast without looking at html source
 
 DEV MODE could be turned on by providing 3rd argument to bindUi call or via direct setting jiant.DEV_MODE.
 Note, if you setting it after binding performed - debug click handlers not assigned.
+Or by adding string "jiant.dev_mode" in any case to current location in browser - useful for production debug.
+For example, 
+
+    http://localhost?jiant.dev_mode
+    http://localhost/?lot=of&other=query&params=here&jiant.dev_mode
 
     
 Spring
