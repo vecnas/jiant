@@ -113,6 +113,8 @@ Fast start
 How it works
 ------------
 
+Always call bindUi on Document.ready event, for example as first line in document ready function.
+
 Views and templates are bound to HTML elements with id equal to prefix + name. 
 Controls inside of view or template are bound to classes inside of according element.
 So you can refer to same element using different controls:
@@ -132,7 +134,20 @@ So you can refer to same element using different controls:
       }
     }
 
-All elements are bound on startup time, except jiant.lookup, which replaced by jQuery.find function.
+All elements are bound at startup time, except jiant.lookup, which replaced by jQuery.find function.
+When binding elements, Jiant reports all missing HTML elements to console, and finally gives summary alert 
+to developer with clear description, like "expected element of class _someClass inside of #someId view".
+
+Templates actually bound twice - first on declaration, at startup time, and later after parsing template 
+and returning resulting element - declared controls also bound to variables.
+
+View and template are bound via extending UI declaration variable by jQuery object properties and functions. 
+Message for developer printed to console, if any collisions occur (for example, name some element "text"
+while jQuery provides function "text". 
+
+All controls are replaced by related jQuery objects. This means - we can refer to View or Template and store
+references to them at any time, but can refer to controls of View only after binding UI performed.
+
     
 Full currently available API
 ----------------------------
@@ -188,6 +203,30 @@ Few of them add extra features to described HTML element:
          updatePager: function(page)}
          and builds bootstrap-compatible HTML infrastructure inside of element declared as pager. 
          That's experiment about building whole UI framework around Jiant
+
+All templates expose function 
+
+    parseTemplate(data)
+    
+which produces jQuery element with all UI specification fields bound to resulting HTML elements.
+And second function
+
+    parseTemplate2Text(data)
+    
+which return plain string
+Template format is 
+
+    !!var!! 
+    
+for substituted values. For example:
+
+    <div id="_tmSomeTemplate">
+      !!substituteMeByValue!!
+      <b>!!substituteMeByValue.andMyChildToo!!</b>
+    </div>
+    
+Note, that root element of template is not included into result, so when referring to template, 
+we talk abount innerHTML. For View - root element included, that's the difference.
 
 
 Possible extensions
