@@ -363,5 +363,42 @@ like now jiant.tabs are bound to jQuery.tabs call
 3) HTML element type verification, for example prevent binding of jiant.input to div element
 
 
-Summary
--------
+Summary and Advertisement
+-------------------------
+
+what I get when using Jiant (because written it just to simplify my own life):
+
+1) auto complete in IDE, instead of 
+
+    elem.find(".someClass")
+
+, write 
+
+    elem.so 
+
+and press enter, space or what is fast key for autocomplete
+
+2) and - no errors when referring HTML, because Jiant already checked all references and notified about any mistakes
+
+3) protection from web designer - because designer deleted some UI elements when re-designed page 
+with working functionality, and Jiant notified me about it
+
+4) life of designer is simpler - (s)he just designs web page, not dynamically produced staff
+
+5) project fully documented - all ajax calls, views, templates and all are reachable via "go to usage" 
+in my favorite IDE
+
+6) highest level of abstraction when understanding code possible
+
+7) Jiant adds it's benefits without asking for your soul as cost, for example following code lines 2 and 3 are equal 
+except 3 is faster because reference to HTML element already resolved:
+
+    var mainView = myapp.views.mainView;
+    mainView.find("._someClass").attr("css", "border: 1px");
+    mainView.someClass.attr("css", "border: 1px");
+    
+So if you need any specific not covered by Jiant binding - just use great jQuery objects and get anything you want.
+
+8) follows from previous - Jiant could be added on any stage to any project, it doesn't require you cancel your 
+current religion and believe in new God. It just not wonders when your believe comes to him in natural way. 
+You may use Jiant binding inside of existing code and move to Jiant when feel how simpler your life becomes.
