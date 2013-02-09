@@ -368,8 +368,13 @@ any ajax actual calls:
     
 any errors added to final error alert (shown only if errors present in code).
 
-ctl+alt+shift+mouse click any element on UI will show nearest bound element, useful to identify UI 
+alt+shift+mouse click any element on UI will show nearest bound element, useful to identify UI 
 element fast without looking at html source
+
+ctl+alt+shift+mouse click any element on UI will show nearest bound element (same as before), 
+plus all attached handlers to it and print this info to console, useful to understand why 
+this button doesn't work - because of missing handler (c+a+s+mouse click) or because of ajax call error 
+(next record in log), or finally - wrong structure of json - compare response arrived with code
 
 DEV MODE could be turned on by providing 3rd argument to bindUi call or via direct setting jiant.DEV_MODE.
 Note, if you setting it after binding performed - debug click handlers not assigned.
