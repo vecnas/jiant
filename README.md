@@ -121,9 +121,54 @@ Full currently available API
     jiant.bindUi(prefix, root)
     
 should be called when all HTML elements are available, binds UI definition to actual HTML UI implementation.
-Prefix is string to add to element name for HTML resolution. For example, if use prefix "myapp_" in example above,
-then HTML elements should be named myapp_mainLayoutView. Empty prefix "" could be used to have exactly same 
-id and class names.
+prefix parameter is string to add to element name for HTML resolution. 
+For example, if use prefix "myapp_" in example above, then HTML elements should be named 
+myapp_mainLayoutView. Empty prefix "" could be used to have exactly same id and class names as declared in UI spec.
+root parameter is root of json, it could contain following nodes:
+
+    views - children of this element are bound as view
+    templates - children of this element are bound as templates
+    ajax - children of this template automatically replaced with ajax calls to server
+    
+Next is
+
+    handleErrorFn - function to be called on errors from server, by default it prints error to console, if available
+    
+This function accepts one parameter, error text.
+Two functions exposed for convenience, print info or error messages to console, if available:
+
+    logInfo
+    logError
+    
+Control types. Mainly used for UI document read convenience:
+
+    jiant.collection
+    jiant.container,
+    jiant.ctl,
+    jiant.fn,
+    jiant.form,
+    jiant.grid,
+    jiant.image,
+    jiant.input,
+    jiant.inputInt,
+    jiant.label,
+    jiant.lookup,
+    jiant.pager,
+    jiant.slider,
+    jiant.stub,
+    jiant.tabs
+
+Few of them add extra features to described HTML element:
+
+    jiant.tabs - called elem.tabs() during binding, will work only if jqueryui available
+    jiant.inputInt - adds keydown listener to bound HTML input, to restrict it to numbers and some other keys, 
+    like arrows, tab, home/end
+    jiant.pager - exposes object 
+        {onValueChange: function(callback), 
+         updatePager: function(page)}
+         and builds bootstrap-compatible HTML infrastructure inside of element declared as pager. 
+         That's experiment about building whole UI framework around Jiant
+
 
 Possible extensions
 -------------------
@@ -133,5 +178,5 @@ Possible extensions
 like now jiant.tabs are bound to jQuery.tabs call
 3) HTML element type verification, for example prevent binding of jiant.input to div element
 
-Summary of advantages
----------------------
+Summary
+-------
