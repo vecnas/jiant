@@ -50,6 +50,34 @@ var jiant = jiant || (function($) {
     }
   }
 
+  function pseudoserializeJSON(obj) {
+    var t = typeof(obj);
+    if (t != "object" || obj === null) {
+      // simple data type
+      if (t == "string") {
+        obj = '"' + obj + '"';
+      }
+      return String(obj);
+    } else {
+      // array or object
+      var json = [],
+          arr = (obj && obj.constructor == Array);
+
+      $.each(obj, function (k, v) {
+        t = typeof(v);
+        if (t == "string") {
+          v = '"' + v + '"';
+        }
+        else if (t == "object" && v !== null) {
+          v = pseudoserializeJSON(v);
+        }
+        json.push((arr ? "" : '"' + k + '":') + (v ? v : "\"\""));
+      });
+
+      return (arr ? "[" : "{") + String(json) + (arr ? "]" : "}");
+    }
+  }
+
   function parseTemplate(that, data) {
     data = data || {};
     var str = $.trim(that.html()),
@@ -246,7 +274,9 @@ var jiant = jiant || (function($) {
           try{
             data = $.parseJSON(data);
           } catch (ex) {}
-          logInfo(uri + " has returned " + data);
+          if (jiant.DEV_MODE) {
+            logInfo(uri + " has returned " + pseudoserializeJSON(data));
+          }
           callback(data);
         }
       }, error: function(jqXHR, textStatus, errorText) {
