@@ -308,13 +308,48 @@ applicationId.ajax section must contain function declarations only. Example:
 Each declaration is replaced by actual ajax performer function (jQuery.ajax).
 Last request parameter should be always async callback function.
 Anti cache parameter always added to call (named antiCache3721, contains current timestamp) to protect vs browser cache.
-Request results analized and passed as array or java object or raw data to callback function.
+Request results analized and passed as array or java object or raw data to callback function (defined automatically).
 When actual call performed, last argument always supposed to be callback, so any optional arguments should 
 be placed just before it, for example:
 
     myapp.ajax.getUserData(userId, function(contactData) {});
     myapp.ajax.getUserData(function(contactData) {}); // get currently logged user data, no userId sent to server
+    
+    myapp.ajax.getUserData(userId); //will interpret userId as callback and don't pass parameter to server
+    
+Important - when doing ajax call, {traditional: true} used. Complex parameters passed in following manner:
 
+    var contact = {
+      fname: "Tom",
+      lname: "Jerry",
+      moreComplexParam: {}
+    };
+    
+    myapp.ajax.saveContact(contact, function(result) {});
+    ------------------------
+    produces:
+    http://localhost/saveContact?contact.fname=Tom&contact.lname=Jerry&contact.moreComplexParam=[object]
+    
+If use pure Jquery - with traditional you will get
+
+    http://localhost/saveContact?contact=[object]
+
+and without traditional - fully encoded contact object like
+
+    http://localhost/saveContact?contact%5D.. etc
+
+This behaviour is for best Spring integration. If you dislike, always can still use direct jQuery call:
+
+    jQuery.ajax("/saveContact", etc....
+    
+    
+Spring
+------
+For better Spring (java framework) integration now 2 features added:
+1) passing complex parameters as name.field - see few rows above
+2) auto checking returned call object - because void controller methods return not proper json (empty string)
+and without use of Jiant - you always should know is returned value void or some data, and use jQuery.getJSON
+or jQuery.ajax depending on it
 
 
 Possible extensions
@@ -326,6 +361,7 @@ Possible extensions
 like now jiant.tabs are bound to jQuery.tabs call
 
 3) HTML element type verification, for example prevent binding of jiant.input to div element
+
 
 Summary
 -------
