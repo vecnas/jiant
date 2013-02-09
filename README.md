@@ -110,10 +110,29 @@ Fast start
     });
     
     
-How it works internally
------------------------
+How it works
+------------
 
-working on this section right now
+Views and templates are bound to HTML elements with id equal to prefix + name. 
+Controls inside of view or template are bound to classes inside of according element.
+So you can refer to same element using different controls:
+
+    <div id='_someView'>
+      <button class="_allCtls _ctlOk>Ok</button>
+      <button class="_allCtls _ctlCancel>Cancel</button>
+    </div>
+    
+    ----------------
+    
+    views: {
+      someView: {
+        ctlCancel: ctl,
+        ctlOk: ctl,
+        allCtls: collection
+      }
+    }
+
+All elements are bound on startup time, except jiant.lookup, which replaced by jQuery.find function.
     
 Full currently available API
 ----------------------------
@@ -162,7 +181,8 @@ Few of them add extra features to described HTML element:
 
     jiant.tabs - called elem.tabs() during binding, will work only if jqueryui available
     jiant.inputInt - adds keydown listener to bound HTML input, to restrict it to numbers and some other keys, 
-    like arrows, tab, home/end
+               like arrows, tab, home/end
+    jiant.lookup - replaced by jQuery.find function, such elements are not bound and verified at application start time
     jiant.pager - exposes object 
         {onValueChange: function(callback), 
          updatePager: function(page)}
@@ -174,8 +194,10 @@ Possible extensions
 -------------------
 
 1) replace binding function to bind UI to some stubs for testing purposes - view, template and ajax
+
 2) specific behaviour depending on UI element type (jiant.label, jiant.container, etc), 
 like now jiant.tabs are bound to jQuery.tabs call
+
 3) HTML element type verification, for example prevent binding of jiant.input to div element
 
 Summary
