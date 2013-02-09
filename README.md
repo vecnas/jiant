@@ -34,7 +34,7 @@ with DOM or string manipulation. So using View for unique widgets and templates 
 Fast start
 ----------
 
-1) you define UI specification as json variable in following form:
+1) define UI specification as json variable in following form:
 
     var myappId = myappId || (function(jiant) {    
       var container = jiant.container,
@@ -80,6 +80,7 @@ Fast start
     <ul id="_mainMenuView"></ul>
     
   or template:
+  
     <div id="_tmMenuItem">
       <li>
         <a class="_control">!!label!!</a>
