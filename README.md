@@ -152,27 +152,29 @@ references to them at any time, but can refer to controls of View only after bin
 Full currently available API
 ----------------------------
 
-    jiant.bindUi(prefix, root)
+    jiant.bindUi(prefix, root, devMode)
     
 should be called when all HTML elements are available, binds UI definition to actual HTML UI implementation.
 prefix parameter is string to add to element name for HTML resolution. 
 For example, if use prefix "myapp_" in example above, then HTML elements should be named 
 myapp_mainLayoutView. Empty prefix "" could be used to have exactly same id and class names as declared in UI spec.
-root parameter is root of json, it could contain following nodes:
+root parameter is root of json, it could contain following nodes (all are optional):
 
     views - children of this element are bound as view
     templates - children of this element are bound as templates
     ajax - children of this template automatically replaced with ajax calls to server
     
+Parameter devMode turns on and off DEV_MODE, by default it is off. logInfo works only in DEV_MODE, see below 
+more details.
 Next is
 
-    handleErrorFn - function to be called on errors from server, by default it prints error to console, if available
+    jiant.handleErrorFn - function to be called on errors from server, by default it prints error to console, if available
     
 This function accepts one parameter, error text.
 Two functions exposed for convenience, print info or error messages to console, if available:
 
-    logInfo
-    logError
+    jiant.logInfo
+    jiant.logError
     
 Control types. Mainly used for UI document read convenience:
 
@@ -204,6 +206,10 @@ Few of them add extra features to described HTML element:
          and builds bootstrap-compatible HTML infrastructure inside of element declared as pager. 
          That's experiment about building whole UI framework around Jiant
 
+
+Templates
+---------
+
 All templates expose function 
 
     parseTemplate(data)
@@ -227,7 +233,53 @@ for substituted values. For example:
     
 Note, that root element of template is not included into result, so when referring to template, 
 we talk abount innerHTML. For View - root element included, that's the difference.
+When using table rows as template, best layout is following:
 
+    <table style="display: none;">
+      <tbody id="_tmRelationFriend" >
+        <tr>
+          <td><span class="_ctlDetails context_help">!!name!!</span></td>
+          <td><span class="_ctlCancel clickable">X</span></td>
+        </tr>
+      </tbody>
+    </table>
+
+That's because browsers always add tbody element, so when declaring just <tr> - will get table with lot of tbodies.
+
+When using image src as substituted value:
+
+    <div id="_tmImage">
+      <img src="!!imgSrc!!"/>
+    </div>
+    ----------------------
+    In Chrome:
+    GET http://localhost/!!imgSrc!! 404 (Not Found) 
+
+getting 404 in console. There are 3 solutions: add images with such strange names to web application, 
+or just ignore, or put template as script body:
+
+    <script id="_tmImage" type="text/html">
+       <img class="_img" src="!!imgSrc!!"/>
+    </script>
+    --------------------
+    // this ok - 
+    templates: {
+      tmImage: {}
+    }
+    --------------------
+    // but this is not ok - 
+    templates: {
+      tmImage: {
+        img: ctl
+      }
+    }
+ 
+in last case whole DOM structure will be unavailable at start time, so referring template controls 
+will produce errors. However parsing template will still produce bound elements. 
+I personally always prefer don't use script tags for templates content.
+
+Ajax
+----
 
 Possible extensions
 -------------------
