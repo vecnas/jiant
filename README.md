@@ -1,7 +1,7 @@
 Jiant
 =====
 
-Javascript Interface Abstract Notation
+    Javascript Interface Abstract Notation
 
 The aim of this project is maximally reduce complexity of large ajax, highly dynamic 
 javascript project development and support. 
@@ -117,3 +117,21 @@ working on this section right now
     
 Full currently available API
 ----------------------------
+
+    jiant.bindUi(prefix, root)
+    
+should be called when all HTML elements are available, binds UI definition to actual HTML UI implementation.
+Prefix is string to add to element name for HTML resolution. For example, if use prefix "myapp_" in example above,
+then HTML elements should be named myapp_mainLayoutView. That's for clear visual separation of bound 
+to UI HTML elements. 
+
+Possible extensions
+-------------------
+
+1) replace binding function to bind UI to some stubs for testing purposes - view, template and ajax
+2) specific behaviour depending on UI element type (jiant.label, jiant.container, etc), 
+like now jiant.tabs are bound to jQuery.tabs call
+3) HTML element type verification, for example prevent binding of jiant.input to div element
+
+Summary of advantages
+---------------------
