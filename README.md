@@ -367,10 +367,15 @@ Summary
 -------
 
 I've found following application areas improved with Jiant:
+
 1) documentation, because of UI specification file
+
 2) performance, because of start time resolution
+
 3) quality, because of start time verification
+
 4) debug, because of possibility to put your hooks or debug staff into single place
+
 5) speed of modification, because of easier to find staff usage code
 
 
