@@ -363,8 +363,19 @@ like now jiant.tabs are bound to jQuery.tabs call
 3) HTML element type verification, for example prevent binding of jiant.input to div element
 
 
-Summary and Advertisement
--------------------------
+Summary
+-------
+
+I've found following application areas improved with Jiant:
+1) documentation, because of UI specification file
+2) performance, because of start time resolution
+3) quality, because of start time verification
+4) debug, because of possibility to put your hooks or debug staff into single place
+5) speed of modification, because of easier to find staff usage code
+
+
+Advertisement (full of excitement)
+----------------------------------
 
 what I get when using Jiant (because written it just to simplify my own life):
 
@@ -388,7 +399,7 @@ with working functionality, and Jiant notified me about it
 5) project fully documented - all ajax calls, views, templates and all are reachable via "go to usage" 
 in my favorite IDE
 
-6) highest level of abstraction when understanding code possible
+6) highest level of UI abstraction, may be it's possible to teach business analyst to describe interface in Jiant format?
 
 7) Jiant adds it's benefits without asking for your soul as cost, for example following code lines 2 and 3 are equal 
 except 3 is faster because reference to HTML element already resolved:
