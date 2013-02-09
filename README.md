@@ -122,8 +122,8 @@ Full currently available API
     
 should be called when all HTML elements are available, binds UI definition to actual HTML UI implementation.
 Prefix is string to add to element name for HTML resolution. For example, if use prefix "myapp_" in example above,
-then HTML elements should be named myapp_mainLayoutView. That's for clear visual separation of bound 
-to UI HTML elements. 
+then HTML elements should be named myapp_mainLayoutView. Empty prefix "" could be used to have exactly same 
+id and class names.
 
 Possible extensions
 -------------------
