@@ -148,7 +148,7 @@ while jQuery provides function "text".
 All controls are replaced by related jQuery objects. This means - we can refer to View or Template and store
 references to them at any time, but can refer to controls of View only after binding UI performed.
 
-    
+
 Full currently available API
 ----------------------------
 
@@ -205,6 +205,18 @@ Few of them add extra features to described HTML element:
          updatePager: function(page)}
          and builds bootstrap-compatible HTML infrastructure inside of element declared as pager. 
          That's experiment about building whole UI framework around Jiant
+
+Parameters:
+
+    jiant.DEV_MODE
+    jiant.PAGER_RADIUS
+
+first turns on development mode, could be set at any time or as 3rd argument for bindUi call. Dev mode means
+print info logs and alert developer about not bound elements as additional notification (to not miss error 
+because didn't take a look at console).
+
+seconds specifies "radius" of pager - amount of pages to show before and after currently selected, if jiant.pager
+control used
 
 
 Templates
@@ -278,8 +290,21 @@ in last case whole DOM structure will be unavailable at start time, so referring
 will produce errors. However parsing template will still produce bound elements. 
 I personally always prefer don't use script tags for templates content.
 
+
 Ajax
 ----
+
+applicationId.ajax section must contain function declarations only. Example:
+
+    ajax: {
+    
+       getContact: function(id, cb) {},
+       listContacts: function(cb) {},
+       saveContact: function(contactData, cb) {}
+       
+    }
+
+
 
 Possible extensions
 -------------------
