@@ -11,10 +11,10 @@ Global principles Jiant bases on
 ------------------------------------------
 1) any UI consists of View widgets, every widget is unique being in borders of interface. Examples of View:
 
-  a) ContactListView (represents list of contacts)
-  b) NewContactView (screen or widget for new contact creation)
-  c) MainMenuView (application main menu)
-  d) MainLayoutView (general layout of application)
+  <li> ContactListView (represents list of contacts)
+  <li> NewContactView (screen or widget for new contact creation)
+  <li> MainMenuView (application main menu)
+  <li> MainLayoutView (general layout of application)
 
 2) each View consists of components:
   a) MainLayoutView contains several panels for menu, main widget, tooolbar, etc
