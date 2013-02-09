@@ -309,6 +309,7 @@ applicationId.ajax section must contain function declarations only. Example:
        
     }
 
+Function name is equal to server URI to send request and parameter names should be equal to parameter names to send.
 Each declaration is replaced by actual ajax performer function (jQuery.ajax).
 Last request parameter should be always async callback function.
 Anti cache parameter always added to call (named antiCache3721, contains current timestamp) to protect vs browser cache.
