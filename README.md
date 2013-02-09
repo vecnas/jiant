@@ -299,10 +299,21 @@ applicationId.ajax section must contain function declarations only. Example:
     ajax: {
     
        getContact: function(id, cb) {},
+       getUserData: function(id, cb) {},
        listContacts: function(cb) {},
        saveContact: function(contactData, cb) {}
        
     }
+
+Each declaration is replaced by actual ajax performer function (jQuery.ajax).
+Last request parameter should be always async callback function.
+Anti cache parameter always added to call (named antiCache3721, contains current timestamp) to protect vs browser cache.
+Request results analized and passed as array or java object or raw data to callback function.
+When actual call performed, last argument always supposed to be callback, so any optional arguments should 
+be placed just before it, for example:
+
+    myapp.ajax.getUserData(userId, function(contactData) {});
+    myapp.ajax.getUserData(function(contactData) {}); // get currently logged user data, no userId sent to server
 
 
 
