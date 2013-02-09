@@ -50,6 +50,18 @@ var jiant = jiant || (function($) {
     }
   }
 
+  function maybeAddDevHook(uiElem, key, elem) {
+    if (jiant.DEV_MODE) {
+      uiElem.click(function(event) {
+        if (event.ctrlKey && event.shiftKey && event.altKey) {
+          alert(key + (elem ? ("." + elem) : ""));
+          event.preventDefault();
+          event.stopImmediatePropagation();
+        }
+      });
+    }
+  }
+
   function pseudoserializeJSON(obj) {
     var t = typeof(obj);
     if (t != "object" || obj === null) {
@@ -185,6 +197,7 @@ var jiant = jiant || (function($) {
         }
         subRoot[elem] = uiElem;
 //        _bindContent(subRoot[elem], key, elemContent, uiElem, prefix);
+        maybeAddDevHook(uiElem, key, elem);
         logInfo("    bound UI for: " + elem);
       }
     });
@@ -207,6 +220,7 @@ var jiant = jiant || (function($) {
       _bindContent(root[key], key, content, view, prefix);
       ensureSafeExtend(root[key], view);
       $.extend(root[key], view);
+      maybeAddDevHook(view, key);
     });
   }
 
@@ -224,6 +238,7 @@ var jiant = jiant || (function($) {
         var retVal = $(parseTemplate(tm, data));
         $.each(content, function (elem, elemType) {
           retVal[elem] = retVal.find("." + prefix + elem);
+          maybeAddDevHook(retVal[elem], key, elem);
         });
         return retVal;
       };
