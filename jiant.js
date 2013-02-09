@@ -1,8 +1,6 @@
 var jiant = jiant || (function($) {
 
-  var PAGER_COUNT = 6,
-
-      collection = {},
+  var collection = {},
       container = {},
       ctl = {},
       form = {},
@@ -85,14 +83,14 @@ var jiant = jiant || (function($) {
 
   function setupInputInt(input) {
     input.keydown(function(event) {
-      if (event.keyCode == key.down && input.val() > 0) {
+      if (event.keyCode == jiant.key.down && input.val() > 0) {
         input.val(input.val() - 1);
         return false;
-      } else if (event.keyCode == key.up) {
+      } else if (event.keyCode == jiant.key.up) {
         input.val(input.val() + 1);
         return false;
-      } else if (event.keyCode == key.backspace || event.keyCode == key.del || event.keyCode == key.end
-          || event.keyCode == key.home || event.keyCode == key.tab || event.keyCode == key.enter) {
+      } else if (event.keyCode == jiant.key.backspace || event.keyCode == jiant.key.del || event.keyCode == jiant.key.end
+          || event.keyCode == jiant.key.home || event.keyCode == jiant.key.tab || event.keyCode == jiant.key.enter) {
       } else if (event.shiftKey || (event.keyCode < 48 || event.keyCode > 57) && (event.keyCode < 96 || event.keyCode > 105 )) {
         event.preventDefault();
         return false;
@@ -106,7 +104,7 @@ var jiant = jiant || (function($) {
   }
 
   function logInfo(s) {
-    window.console && window.console.info && window.console.info(s);
+    jiant.DEV_MODE && window.console && window.console.info && window.console.info(s);
   }
 
   function setupPager(uiElem) {
@@ -122,8 +120,8 @@ var jiant = jiant || (function($) {
 //      $.each(page, function(key, value) {
 //        logInfo(key + " === " + value);
 //      });
-      var from = Math.max(0, page.number - PAGER_COUNT / 2),
-          to = Math.min(page.number + PAGER_COUNT / 2, page.totalPages);
+      var from = Math.max(0, page.number - jiant.PAGER_RADIUS / 2),
+          to = Math.min(page.number + jiant.PAGER_RADIUS / 2, page.totalPages);
       for (var i = from; i < to; i++) {
         var cls = "";
         if (i == page.number) {
@@ -248,6 +246,7 @@ var jiant = jiant || (function($) {
           try{
             data = $.parseJSON(data);
           } catch (ex) {}
+          logInfo(uri + " has returned " + data);
           callback(data);
         }
       }, error: function(jqXHR, textStatus, errorText) {
@@ -260,7 +259,8 @@ var jiant = jiant || (function($) {
     logError(errorDetails);
   }
 
-  function bindUi(prefix, root) {
+  function bindUi(prefix, root, devMode) {
+    jiant.DEV_MODE = devMode;
     errString = "";
     bindingsResult = true;
     if (root.views) {
@@ -272,12 +272,15 @@ var jiant = jiant || (function($) {
     if (root.ajax) {
       _bindAjax(root.ajax);
     }
-    if (!bindingsResult) {
+    if (jiant.DEV_MODE && !bindingsResult) {
       alert("Some elements not bound to HTML properly, check console" + errString);
     }
   }
 
   return {
+    PAGER_RADIUS: 6,
+    DEV_MODE: false,
+
     bindUi: bindUi,
     handleErrorFn: defaultAjaxErrorsHandle,
     logInfo: logInfo,
@@ -297,7 +300,10 @@ var jiant = jiant || (function($) {
     pager: pager,
     slider: slider,
     stub: stub,
-    tabs: tabs
+    tabs: tabs,
+
+    key: {left: 37, up: 38, right: 39, down: 40, del: 46, backspace: 8, tab: 9, end: 35, home: 36, enter: 13, ctrl: 17}
+
   };
 
 })(jQuery);
