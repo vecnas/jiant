@@ -345,8 +345,11 @@ This behaviour is for best Spring integration. If you dislike, always can still 
     
 Spring
 ------
+
 For better Spring (java framework) integration now 2 features added:
+
 1) passing complex parameters as name.field - see few rows above
+
 2) auto checking returned call object - because void controller methods return not proper json (empty string)
 and without use of Jiant - you always should know is returned value void or some data, and use jQuery.getJSON
 or jQuery.ajax depending on it
