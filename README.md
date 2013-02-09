@@ -15,7 +15,7 @@ Jiant is more of philosophy how to develop application, not particular technical
 
 Global principles Jiant bases on
 --------------------------------
-1) any UI consists of View widgets, every widget is unique being in frames of interface. Examples of View:
+1) any UI consists of View widgets, every widget is unique in frames of interface. Examples of View:
 
     a) ContactListView (represents list of contacts)
     b) NewContactView (screen or widget for new contact creation)
@@ -368,8 +368,11 @@ any ajax actual calls:
     
 any errors added to final error alert (shown only if errors present in code).
 
-ctl+alt+shift+mouse click any element on UI will show nearest bound element, useful to identificate required 
+ctl+alt+shift+mouse click any element on UI will show nearest bound element, useful to identify UI 
 element fast without looking at html source
+
+DEV MODE could be turned on by providing 3rd argument to bindUi call or via direct setting jiant.DEV_MODE.
+Note, if you setting it after binding performed - debug click handlers not assigned.
 
     
 Spring
