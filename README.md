@@ -137,6 +137,10 @@ So you can refer to same element using different controls:
 All elements are bound at startup time, except jiant.lookup, which replaced by jQuery.find function.
 When binding elements, Jiant reports all missing HTML elements to console, and finally gives summary alert 
 to developer with clear description, like "expected element of class _someClass inside of #someId view".
+Examples of error message:
+
+    non existing object referred by class under object id '_tmRelationProposal', check stack trace for details, expected obj class: _ctlAccept 
+    non existing object referred by id, check stack trace for details, expected obj id: _reward 
 
 Templates actually bound twice - first on declaration, at startup time, and later after parsing template 
 and returning resulting element - declared controls also bound to variables.
@@ -341,7 +345,32 @@ and without traditional - fully encoded contact object like
 This behaviour is for best Spring integration. If you dislike, always can still use direct jQuery call:
 
     jQuery.ajax("/saveContact", etc....
+
+
+DEV MODE
+--------
+
+To simplify development - DEV MODE introduced. When in dev mode - lot of debug printed into console, all bindings:
+
+    binding UI for view: dailyBonus jiant.js:147
+        bound UI for: container jiant.js:147
+        bound UI for: ctls 
+        
+ajax bindings:
+
+    binding ajax for function: getUserHomeInfo 
+    binding ajax for function: getUserStatistics
+    binding ajax for function: i18n 
     
+any ajax actual calls:
+
+    getChannelToken has returned {"obj":"channel-ek7t0k-1360440635275-111"} 
+    
+any errors added to final error alert (shown only if errors present in code).
+
+ctl+alt+shift+mouse click any element on UI will show nearest bound element, useful to identificate required 
+element fast without looking at html source
+
     
 Spring
 ------
