@@ -1,4 +1,4 @@
-jiant
+Jiant
 =====
 
 Javascript Interface Abstract Notation
@@ -7,9 +7,10 @@ The aim of this project is maximally reduce complexity of large jscript project 
 It provides means for modern auto-complete tools. Jiant eliminates usage of strings for UI elements identification
 as far as possible, replacing it by variables.
 
-Global principles
------------------
+Global principles Jiant bases on
+------------------------------------------
 1) any UI consists of View widgets, every widget is unique being in borders of interface. Examples of View:
+
   a) ContactListView (represents list of contacts)
   b) NewContactView (screen or widget for new contact creation)
   c) MainMenuView (application main menu)
