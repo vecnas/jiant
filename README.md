@@ -47,8 +47,9 @@ First, create HelloJiant application, html file:
             jiant.bindUi("_", hello);
             
             // program logic
-            hello.views.mainView.ctl.click(function() {
-              hello.views.mainView.label.html("Hello!");
+            var view = hello.views.mainView;
+            view.ctl.click(function() {
+              view.label.html("Hello!");
             });
             
           });          
