@@ -13,6 +13,51 @@ from execution time to start time where possible.
 Jiant is more of philosophy how to develop application, not particular technical implementation of set of tricks.
 
 
+Hello Jiant
+-----------
+
+First, create HelloJiant application, html file:
+
+    <html>
+    <head>
+      <script type="text/javascript" src="https://ajax.googleapis.com/ajax/libs/jquery/1.9.0/jquery.js"></script>
+      <script type="text/javascript" src='jiant.js'></script>
+    </head>
+    <body>
+      <div id="_mainView">
+        <div class="_label"></div>
+        <button class="_ctl">Say hello</button>
+      </div>
+      
+      <script>
+          
+          // specify UI
+          var hello = {
+            views: {
+              mainView: {
+                label: jiant.label,
+                ctl: jiant.ctl
+              }
+            }
+          };
+
+          $(function () {
+            
+            // bind UI to actual HTML implementation
+            jiant.bindUi("_", hello);
+            
+            // program logic
+            hello.views.mainView.ctl.click(function() {
+              hello.views.mainView.label.html("Hello!");
+            });
+            
+          });          
+          
+      </script>
+    </body>
+    </html>
+
+
 Global principles Jiant bases on
 --------------------------------
 1) any UI consists of View widgets, every widget is unique in frames of interface. Examples of View:
