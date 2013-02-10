@@ -16,7 +16,8 @@ Jiant is more of philosophy how to develop application, not particular technical
 Hello Jiant
 -----------
 
-First, create HelloJiant application, it says Hello after user clicks button, create html file and put jiant.js near it:
+First, create HelloJiant application, it says "Hello" after user clicks button. 
+Create html file and put jiant.js near it:
 
     <html>
     <head>
