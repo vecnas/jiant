@@ -290,13 +290,13 @@ var jiant = jiant || (function($) {
       if (! callData["antiCache3721"]) {
         callData["antiCache3721"] = new Date().getTime();
       }
-      $.ajax(uri, {data: callData, traditional: true, success: function(data) {
+      $.ajax(jiant.AJAX_PREFIX + uri + jiant.AJAX_SUFFIX, {data: callData, traditional: true, success: function(data) {
         if (callback) {
           try{
             data = $.parseJSON(data);
           } catch (ex) {}
           if (jiant.DEV_MODE) {
-            logInfo(uri + " has returned " + pseudoserializeJSON(data));
+            logInfo(uri + "Result: " + pseudoserializeJSON(data));
           }
           callback(data);
         }
@@ -338,8 +338,10 @@ var jiant = jiant || (function($) {
   }
 
   return {
-    PAGER_RADIUS: 6,
+    AJAX_PREFIX: "",
+    AJAX_SUFFIX: "",
     DEV_MODE: false,
+    PAGER_RADIUS: 6,
 
     bindUi: bindUi,
     handleErrorFn: defaultAjaxErrorsHandle,
