@@ -36,8 +36,8 @@ Create html file and put jiant.js near it:
           var hello = {
             views: {
               mainView: {
-                label: jiant.label,
-                ctl: jiant.ctl
+                label: 1, // or label: jiant.label
+                ctl: 1 // or ctl: jiant.ctl
               }
             }
           };
