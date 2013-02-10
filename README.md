@@ -60,6 +60,8 @@ Create html file and put jiant.js near it:
     </body>
     </html>
 
+Generally, to start use Jiant you need to learn only one function bindUi and agree to base principles in next section.
+
 
 Global principles Jiant bases on
 --------------------------------
