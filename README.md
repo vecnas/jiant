@@ -212,14 +212,17 @@ Few of them add extra features to described HTML element:
 
 Parameters:
 
+    jiant.AJAX_PREFIX
+    jiant.AJAX_SUFFIX
     jiant.DEV_MODE
     jiant.PAGER_RADIUS
 
-first turns on development mode, could be set at any time or as 3rd argument for bindUi call. Dev mode means
+AJAX prefix and suffix are added to AJAX function names to get actual URI to do ajax call
+DEV_MODE turns on development mode, could be set at any time or as 3rd argument for bindUi call. Dev mode means
 print info logs and alert developer about not bound elements as additional notification (to not miss error 
-because didn't take a look at console).
+because didn't take a look at console)
 
-seconds specifies "radius" of pager - amount of pages to show before and after currently selected, if jiant.pager
+PAGER_RADIUS specifies "radius" of pager - amount of pages to show before and after currently selected, if jiant.pager
 control used
 
 
@@ -310,6 +313,15 @@ applicationId.ajax section must contain function declarations only. Example:
     }
 
 Function name is equal to server URI to send request and parameter names should be equal to parameter names to send.
+jiant.AJAX_PREFIX and jiant.AJAX_SUFFIX specify prefix and suffix for actual AJAX calls, for example
+
+    jiant.AJAX_PREFIX = "ajax/";
+    jiant.AJAX_SUFFIX = ".asp";
+    myapp.ajax.doCall();
+    ------------------------------
+    // resulting call URL is:
+    ajax/doCall.asp
+    
 Each declaration is replaced by actual ajax performer function (jQuery.ajax).
 Last request parameter should be always async callback function.
 Anti cache parameter always added to call (named antiCache3721, contains current timestamp) to protect vs browser cache.
