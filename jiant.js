@@ -1,7 +1,9 @@
+//version 0.01
 var jiant = jiant || (function($) {
 
   var collection = {},
       container = {},
+      containerPaged = {},
       ctl = {},
       form = {},
       fn = function(param) {},
@@ -33,7 +35,8 @@ var jiant = jiant || (function($) {
       tabs = {},
 
       bindingsResult = true,
-      errString;
+      errString,
+      errorHandlers = {};
 
   function ensureExists(obj, idName, className) {
     if (!obj || !obj.length) {
@@ -98,6 +101,9 @@ var jiant = jiant || (function($) {
 
   function parseTemplate(that, data) {
     data = data || {};
+    if (! that.html) {
+      that = $(that);
+    }
     var str = $.trim(that.html()),
         _tmplCache = {},
         err = "";
@@ -145,6 +151,13 @@ var jiant = jiant || (function($) {
     });
   }
 
+  function setupForm(elem) {
+    elem.submitForm = function(url, cb) {
+      url = url || elem.attr("action");
+      $.post(url, elem.serialize(), cb);
+    };
+  }
+
   function logError(error) {
     window.console && window.console.error && window.console.error(error);
   }
@@ -185,6 +198,66 @@ var jiant = jiant || (function($) {
     }
   }
 
+  function setupContainerPaged(uiElem) {
+    var prev = $("<div>&lt;&lt;</div>"),
+        next = $("<div>&gt;&gt;</div>"),
+        container = $("<div></div>"),
+        pageSize = 8,
+        offset = 0;
+    prev.addClass("paged-prev");
+    next.addClass("paged-next");
+    container.addClass("paged-container");
+    uiElem.empty();
+    uiElem.append(prev);
+    uiElem.append(container);
+    uiElem.append(next);
+    prev.click(function() {
+      offset -= pageSize;
+      sync();
+    });
+    next.click(function() {
+      offset += pageSize;
+      sync();
+    });
+    uiElem.append = function(elem) {
+      container.append(elem);
+      sync();
+    };
+    uiElem.empty = function() {
+      container.empty();
+      sync();
+    };
+    uiElem.setHorizontal = function(bool) {
+      var display = bool ? "inline-block" : "block";
+      prev.css("display", display);
+      next.css("display", display);
+      container.css("display", display);
+    };
+    uiElem.setPageSize = function(val) {
+      pageSize = val;
+      sync();
+    };
+    uiElem.setHorizontal(true);
+
+    function sync() {
+      offset = Math.max(offset, 0);
+      offset = Math.min(offset, container.children().length - 1);
+      prev.css("visibility", offset > 0 ? "visible" : "hidden");
+      next.css("visibility", offset < container.children().length - pageSize ? "visible" : "hidden");
+      $.each(container.children(), function(idx, domElem) {
+        var elem = $(domElem);
+//        logInfo("comparing " + idx + " vs " + offset + " - " + (offset+pageSize));
+        if (idx >= offset && idx < offset + pageSize) {
+          logInfo("showing");
+          elem.show();
+        } else {
+          elem.hide();
+        }
+      });
+    }
+
+  }
+
   function _bindContent(subRoot, key, content, view, prefix) {
     $.each(content, function (elem, elemContent) {
 //      window.console && window.console.logInfo(elem + "    : " + subRoot[elem]);
@@ -194,14 +267,18 @@ var jiant = jiant || (function($) {
       } else {
         var uiElem = view.find("." + prefix + elem);
         ensureExists(uiElem, prefix + key, prefix + elem);
-        if (elemContent == tabs && uiElem.tabs) {
-          uiElem.tabs();
-        } else if (elemContent == inputInt) {
-          setupInputInt(uiElem);
-        } else if (elemContent == pager) {
-          setupPager(uiElem);
-        }
         subRoot[elem] = uiElem;
+        if (elemContent == tabs && uiElem.tabs) {
+          subRoot[elem].tabs();
+        } else if (elemContent == inputInt) {
+          setupInputInt(subRoot[elem]);
+        } else if (elemContent == pager) {
+          setupPager(subRoot[elem]);
+        } else if (elemContent == form) {
+          setupForm(subRoot[elem]);
+        } else if (elemContent == containerPaged) {
+          setupContainerPaged(subRoot[elem]);
+        }
 //        _bindContent(subRoot[elem], key, elemContent, uiElem, prefix);
         maybeAddDevHook(uiElem, key, elem);
         logInfo("    bound UI for: " + elem);
@@ -254,6 +331,10 @@ var jiant = jiant || (function($) {
     });
   }
 
+  function parseTemplate2Text(tm, data) {
+    return parseTemplate(tm, data);
+  }
+
   function getParamNames(func) {
     var funStr = func.toString();
     return funStr.slice(funStr.indexOf('(')+1, funStr.indexOf(')')).match(/([^\s,]+)/g);
@@ -268,6 +349,18 @@ var jiant = jiant || (function($) {
     });
   }
 
+  function parseForAjaxCall(root, path, actual) {
+    if ($.isArray(actual)) {
+      root[path] = actual;
+    } else if ($.isPlainObject(actual)) {
+      $.each(actual, function(key, value) {
+        parseForAjaxCall(root, path + "." + key, value);
+      });
+    } else {
+      root[path] = actual;
+    }
+  }
+
   function makeAjaxPerformer(uri, params) {
     return function() {
       var callData = {},
@@ -276,15 +369,7 @@ var jiant = jiant || (function($) {
       $.each(params, function(idx, param) {
         if (idx < outerArgs.length - 1) {
           var actual = outerArgs[idx];
-          if ($.isArray(actual)) {
-            callData[param] = actual;
-          } else if ($.isPlainObject(actual)) {
-            $.each(actual, function(key, value) {
-              callData[param + "." + key] = value;
-            });
-          } else {
-            callData[param] = actual;
-          }
+          parseForAjaxCall(callData, param, actual);
         }
       });
       if (! callData["antiCache3721"]) {
@@ -295,13 +380,17 @@ var jiant = jiant || (function($) {
           try{
             data = $.parseJSON(data);
           } catch (ex) {}
-          if (jiant.DEV_MODE) {
-            logInfo(uri + "Result: " + pseudoserializeJSON(data));
-          }
+//          if (jiant.DEV_MODE) {
+//            logInfo(uri + "Result= " + pseudoserializeJSON(data) + " ;");
+//          }
           callback(data);
         }
       }, error: function(jqXHR, textStatus, errorText) {
-        jiant.handleErrorFn(jqXHR.responseText);
+        if (errorHandlers[uri]) {
+          errorHandlers[uri](jqXHR.responseText);
+        } else {
+          jiant.handleErrorFn(jqXHR.responseText);
+        }
       }});
     };
   }
@@ -337,6 +426,10 @@ var jiant = jiant || (function($) {
     }
   }
 
+  function setUriErrorHandler(uri, fn) {
+    errorHandlers[uri] = fn;
+  }
+
   return {
     AJAX_PREFIX: "",
     AJAX_SUFFIX: "",
@@ -345,11 +438,15 @@ var jiant = jiant || (function($) {
 
     bindUi: bindUi,
     handleErrorFn: defaultAjaxErrorsHandle,
+    setUriErrorHandler: setUriErrorHandler,
     logInfo: logInfo,
     logError: logError,
+    parseTemplate: function(text, data) {return $(parseTemplate(text, data));},
+    parseTemplate2Text: parseTemplate2Text,
 
     collection: collection,
     container: container,
+    containerPaged: containerPaged,
     ctl : ctl,
     fn: fn,
     form: form,
