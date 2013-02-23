@@ -1,4 +1,4 @@
-//version 0.01
+//version 0.02
 var jiant = jiant || (function($) {
 
   var collection = {},
@@ -13,18 +13,9 @@ var jiant = jiant || (function($) {
       inputInt = {},
       label = {},
       lookup = function(selector) {},
+      on = function(cb) {},
       pager = {},
       slider = {},
-//      slider = {
-//        ctl: ctl,
-//        decrement: ctl,
-//        increment: ctl,
-//        input: input,
-//        max: ctl,
-//        min: ctl,
-//        roller: ctl,
-//        rollerBg: ctl
-//      },
       stub = function() {
         var callerName = "not available";
         if (arguments && arguments.callee && arguments.callee.caller) {
@@ -34,6 +25,7 @@ var jiant = jiant || (function($) {
       },
       tabs = {},
 
+      eventBus = $({}),
       bindingsResult = true,
       errString,
       errorHandlers = {};
@@ -303,7 +295,7 @@ var jiant = jiant || (function($) {
       _bindContent(root[key], key, content, view, prefix);
       ensureSafeExtend(root[key], view);
       $.extend(root[key], view);
-      maybeAddDevHook(view, key);
+      maybeAddDevHook(view, key, undefined);
     });
   }
 
@@ -333,6 +325,24 @@ var jiant = jiant || (function($) {
 
   function parseTemplate2Text(tm, data) {
     return parseTemplate(tm, data);
+  }
+
+  function _bindEvents(events) {
+    $.each(events, function(name, spec) {
+      logInfo("binding event: " + name);
+      events[name].fire = function() {
+        logInfo("    EVENT fire. " + name);
+        logInfo(arguments);
+        eventBus.trigger(name, arguments);
+      };
+      events[name].on = function(cb) {eventBus.on(name, function() {
+//        logInfo("    EVENT. on");
+//        logInfo(arguments);
+        var args = $.makeArray(arguments);
+        args.splice(0, 1);
+        cb && cb.apply(cb, args);
+      })};
+    });
   }
 
   function getParamNames(func) {
@@ -375,14 +385,12 @@ var jiant = jiant || (function($) {
       if (! callData["antiCache3721"]) {
         callData["antiCache3721"] = new Date().getTime();
       }
+      logInfo("    AJAX call. " + uri);
       $.ajax(jiant.AJAX_PREFIX + uri + jiant.AJAX_SUFFIX, {data: callData, traditional: true, success: function(data) {
         if (callback) {
           try{
             data = $.parseJSON(data);
           } catch (ex) {}
-//          if (jiant.DEV_MODE) {
-//            logInfo(uri + "Result= " + pseudoserializeJSON(data) + " ;");
-//          }
           callback(data);
         }
       }, error: function(jqXHR, textStatus, errorText) {
@@ -421,6 +429,9 @@ var jiant = jiant || (function($) {
     if (root.ajax) {
       _bindAjax(root.ajax);
     }
+    if (root.events) {
+      _bindEvents(root.events);
+    }
     if (jiant.DEV_MODE && !bindingsResult) {
       alert("Some elements not bound to HTML properly, check console" + errString);
     }
@@ -456,6 +467,7 @@ var jiant = jiant || (function($) {
     inputInt: inputInt,
     label: label,
     lookup: lookup,
+    on: on,
     pager: pager,
     slider: slider,
     stub: stub,
