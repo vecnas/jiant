@@ -1,4 +1,4 @@
-//version 0.02
+//version 0.03
 var jiant = jiant || (function($) {
 
   var collection = {},
@@ -27,8 +27,7 @@ var jiant = jiant || (function($) {
 
       eventBus = $({}),
       bindingsResult = true,
-      errString,
-      errorHandlers = {};
+      errString;
 
   function ensureExists(obj, idName, className) {
     if (!obj || !obj.length) {
@@ -364,7 +363,8 @@ var jiant = jiant || (function($) {
       root[path] = actual;
     } else if ($.isPlainObject(actual)) {
       $.each(actual, function(key, value) {
-        parseForAjaxCall(root, path + "." + key, value);
+        parseForAjaxCall(root, key, value);
+//        parseForAjaxCall(root, path + "." + key, value);
       });
     } else {
       root[path] = actual;
@@ -374,10 +374,17 @@ var jiant = jiant || (function($) {
   function makeAjaxPerformer(uri, params) {
     return function() {
       var callData = {},
-          callback = arguments[arguments.length - 1],
+          callback,
+          errHandler,
           outerArgs = arguments;
+      if ($.isFunction(outerArgs[outerArgs.length - 2])) {
+        callback = outerArgs[outerArgs.length - 2];
+        errHandler = outerArgs[outerArgs.length - 1];
+      } else if ($.isFunction(outerArgs[outerArgs.length - 1])) {
+        callback = outerArgs[outerArgs.length - 1];
+      }
       $.each(params, function(idx, param) {
-        if (idx < outerArgs.length - 1) {
+        if (idx < outerArgs.length && !$.isFunction(outerArgs[idx]) && outerArgs[idx] != undefined && outerArgs[idx] != null) {
           var actual = outerArgs[idx];
           parseForAjaxCall(callData, param, actual);
         }
@@ -394,8 +401,8 @@ var jiant = jiant || (function($) {
           callback(data);
         }
       }, error: function(jqXHR, textStatus, errorText) {
-        if (errorHandlers[uri]) {
-          errorHandlers[uri](jqXHR.responseText);
+        if (errHandler) {
+          errHandler(jqXHR.responseText);
         } else {
           jiant.handleErrorFn(jqXHR.responseText);
         }
@@ -437,10 +444,6 @@ var jiant = jiant || (function($) {
     }
   }
 
-  function setUriErrorHandler(uri, fn) {
-    errorHandlers[uri] = fn;
-  }
-
   return {
     AJAX_PREFIX: "",
     AJAX_SUFFIX: "",
@@ -449,7 +452,6 @@ var jiant = jiant || (function($) {
 
     bindUi: bindUi,
     handleErrorFn: defaultAjaxErrorsHandle,
-    setUriErrorHandler: setUriErrorHandler,
     logInfo: logInfo,
     logError: logError,
     parseTemplate: function(text, data) {return $(parseTemplate(text, data));},
