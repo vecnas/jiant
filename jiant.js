@@ -1,4 +1,9 @@
-//version 0.04
+// 0.01 : ajax alpha, views, templates
+// 0.02 : event bus
+// 0.03 : ajax with callback and errHandler per call
+// 0.04 : bind plugin
+// 0.05 : states
+
 var jiant = jiant || (function($) {
 
   var collection = {},
@@ -26,6 +31,8 @@ var jiant = jiant || (function($) {
       },
       tabs = {},
 
+      stateHandlersBus = $({}),
+      lastState = undefined,
       eventBus = $({}),
       bindingsResult = true,
       errString;
@@ -327,6 +334,8 @@ var jiant = jiant || (function($) {
     return parseTemplate(tm, data);
   }
 
+// ------------ events staff ----------------
+
   function _bindEvents(events) {
     $.each(events, function(name, spec) {
       logInfo("binding event: " + name);
@@ -345,14 +354,112 @@ var jiant = jiant || (function($) {
     });
   }
 
+// ------------ states staff ----------------
+
   function _bindStates(states) {
-    $.each(states, function(name, state) {
+    if (! $.History) {
+      var err = "No history plugin and states configured. Don't use states or add $.History plugin";
+      jiant.logError(err);
+      if (jiant.DEV_MODE) {
+        alert(err);
+      }
+      return;
+    }
+    $.each(states, function(name, stateSpec) {
       logInfo("binding state: " + name);
-      
+      stateSpec.go = go(name, stateSpec.root);
+      stateSpec.start = function(cb) {
+        stateHandlersBus.on(name + "_start", function() {
+          var args = $.makeArray(arguments);
+          args.splice(0, 1);
+          cb && cb.apply(cb, args);
+        });
+      };
+      stateSpec.end = function(cb) {
+        stateHandlersBus.on(name + "_end", function() {
+          var args = $.makeArray(arguments);
+          args.splice(0, 1);
+          cb && cb.apply(cb, args);
+        });
+      };
+    });
+    $.History.bind(function (state) {
+      var parsed = parseState(),
+          stateId = parsed.now[0],
+          handler = states[stateId],
+          params = parsed.now;
+      params.splice(0, 1);
+      if (lastState && lastState != stateId) {
+        stateHandlersBus.trigger(lastState + "_end");
+      }
+      lastState = stateId;
+      stateHandlersBus.trigger(stateId + "_start", params);
     });
   }
 
-  function goRoot() {}
+  function go(stateId, root) {
+    return function() {
+      var parsed = parseState(),
+          prevState = parsed.now;
+      parsed.now = [stateId];
+      $.each(arguments, function(idx, arg) {
+        if (arg != undefined) {
+          parsed.now.push(pack(arg + ""));
+        } else if (prevState[0] == stateId && prevState[idx + 1] != undefined) {
+          parsed.now.push(pack(prevState[idx + 1] + ""));
+        } else {
+          parsed.now.push(pack(arg + ""));
+        }
+      });
+      if (root) {
+        parsed.root = parsed.now;
+      }
+      setState(parsed);
+    };
+  }
+
+  function goRoot() {
+    var parsed = parseState();
+    parsed.now = parsed.root;
+    setState(parsed);
+  }
+
+  function setState(parsed) {
+    var s = "root=" + parsed.root + "|now=" + parsed.now;
+    $.History.go(s);
+  }
+
+  function parseState() {
+    var state = $.History.getState();
+    var arr = state.split("|");
+    var parsed = {};
+    $.each(arr, function(idx, item) {
+      var itemArr = item.split("="),
+          args = [];
+      if (itemArr.length >= 2) {
+        args = itemArr[1].split(",");
+      }
+      parsed[itemArr[0]] = [];
+      $.each(args, function(idx, arg) {
+        parsed[itemArr[0]].push(unpack(arg));
+      });
+    });
+    return parsed;
+  }
+
+  function pack(s) {
+    return s ? s.replace(/;/g, ";;").replace(/,/g, ";1").replace(/=/g, ";2").replace(/\|/g, ";3") : "";
+  }
+
+  function unpack(s) {
+    return s ? s.replace(/;3/g, "|").replace(/;2/g, "=").replace(/;1/g, ",").replace(/;;/g, ";") : "";
+  }
+
+  function refreshState() {
+    $.History.trigger($.History.getState());
+  }
+
+// ------------ ajax staff ----------------
 
   function getParamNames(func) {
     var funStr = func.toString();
@@ -424,6 +531,8 @@ var jiant = jiant || (function($) {
     logError(errorDetails);
   }
 
+// ------------ base staff ----------------
+
   function maybeSetDevModeFromQueryString() {
     if ((window.location + "").toLowerCase().indexOf("jiant.dev_mode") >= 0) {
       jiant.DEV_MODE = true;
@@ -471,6 +580,7 @@ var jiant = jiant || (function($) {
     bindUi: bindUi,
     goRoot: goRoot,
     goState: goState,
+    refreshState: refreshState,
 
     handleErrorFn: defaultAjaxErrorsHandle,
     logInfo: logInfo,
