@@ -1,4 +1,4 @@
-//version 0.03
+//version 0.04
 var jiant = jiant || (function($) {
 
   var collection = {},
@@ -14,6 +14,7 @@ var jiant = jiant || (function($) {
       label = {},
       lookup = function(selector) {},
       on = function(cb) {},
+      goState = function(params, preserveOmitted) {},
       pager = {},
       slider = {},
       stub = function() {
@@ -344,6 +345,15 @@ var jiant = jiant || (function($) {
     });
   }
 
+  function _bindStates(states) {
+    $.each(states, function(name, state) {
+      logInfo("binding state: " + name);
+      
+    });
+  }
+
+  function goRoot() {}
+
   function getParamNames(func) {
     var funStr = func.toString();
     return funStr.slice(funStr.indexOf('(')+1, funStr.indexOf(')')).match(/([^\s,]+)/g);
@@ -439,9 +449,16 @@ var jiant = jiant || (function($) {
     if (root.events) {
       _bindEvents(root.events);
     }
+    if (root.states) {
+      _bindStates(root.states);
+    }
     if (jiant.DEV_MODE && !bindingsResult) {
       alert("Some elements not bound to HTML properly, check console" + errString);
     }
+  }
+
+  function bind(obj1, obj2) {
+    $.extend(obj1, obj2);
   }
 
   return {
@@ -450,7 +467,11 @@ var jiant = jiant || (function($) {
     DEV_MODE: false,
     PAGER_RADIUS: 6,
 
+    bind: bind,
     bindUi: bindUi,
+    goRoot: goRoot,
+    goState: goState,
+
     handleErrorFn: defaultAjaxErrorsHandle,
     logInfo: logInfo,
     logError: logError,
