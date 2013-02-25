@@ -15,7 +15,7 @@ jQuery(function ($) {
 
   askView.setNameCtl.click(function() {
     name = askView.nameInput.val();
-    helloJiant.states.main.go({name: name}, true);
+    helloJiant.states.main.go(name, undefined);
   });
 
   askView.addTemplateCtl.click(function() {
@@ -43,24 +43,27 @@ jQuery(function ($) {
     app.events.custom2.fire("Some rnd params");
   });
 
-  app.states.main.start(function(params) {
-    if (params.color) {
-      $("body").css("background-color", params.color);
-    }
-    showView.nameLabel.html(params.name);
+  app.states.main.start(function(name, color) {
+    showView.nameLabel.html(name);
+    $("body").css("background-color", color);
+    askView.show();
+  });
+
+  app.states.main.end(function(name, color) {
+    askView.hide();
   });
 
   askView.ctlNavCustom1.click(function() {
-    app.states.customEventsView.go({eventType: "custom1"});
+    app.states.customEventsView.go("custom1");
   });
   askView.ctlNavCustom2.click(function() {
-    app.states.customEventsView.go({eventType: "custom2"});
+    app.states.customEventsView.go("custom2");
   });
   askView.ctlNavMainBlue.click(function() {
-    app.states.main.go({color: "blue"}, true);
+    app.states.main.go(undefined, "blue");
   });
   askView.ctlNavMainGreen.click(function() {
-    app.states.main.go({color: "green"}, true);
+    app.states.main.go(undefined, "green");
   });
 
 
@@ -78,9 +81,9 @@ jQuery(function ($) {
       counts.custom2++;
     });
 
-    app.states.customEventsView.start(function(params) {
+    app.states.customEventsView.start(function(eventType) {
       app.views.customEventsView.show();
-      var eventType = params.eventType == "custom1" ? "custom1" : "custom2";
+      eventType = eventType == "custom1" ? "custom1" : "custom2";
       app.views.customEventsView.eventsTypeLabel.html(eventType);
       app.views.customEventsView.eventsCountLabel.html("" + counts[eventType]);
     });
@@ -89,10 +92,10 @@ jQuery(function ($) {
     });
 
     app.views.customEventsView.ctlMain.click(function() {
-      app.states.main.go({}, false);
+      app.states.main.go(undefined, undefined);
     });
     app.views.customEventsView.ctlMainBlue.click(function() {
-      app.states.main.go({color: "blue"}, true);
+      app.states.main.go(undefined, "blue");
     });
     app.views.customEventsView.ctlRoot.click(function() {
       jiant.goRoot();
