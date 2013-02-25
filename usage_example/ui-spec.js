@@ -1,13 +1,63 @@
 var helloJiant = helloJiant || (function(jiant) {
 
-  var ctl = jiant.ctl,
+  var goState = jiant.goState,
+      collection = jiant.collection,
       container = jiant.container,
+      ctl = jiant.ctl,
+      form = jiant.form,
+      fn = jiant.fn,
+      grid = jiant.grid,
+      image = jiant.image,
       input = jiant.input,
+      inputInt = jiant.inputInt,
       label = jiant.label,
       lookup = jiant.lookup,
-      tabs = jiant.tabs,
-      fn = jiant.fn;
+      on = jiant.on,
+      pager = jiant.pager,
+      slider = jiant.slider,
+      stub = jiant.stub,
+      tabs = jiant.tabs;
+
   return {
+
+    ajax: {
+
+      getData: function(cb) {},
+      getDataItem: function(id, cb) {},
+      saveData: function(data2save, cb) {}
+
+    },
+
+    events: {
+
+      custom1: {
+        fire: function(message, userName) {},
+        on: on
+      },
+      custom2: {
+        fire: function(someParamToPass) {},
+        on: on
+      }
+
+    },
+
+    states: {
+
+      main: {
+        go: goState,
+        start: on,
+        end: on,
+        root: true
+      },
+
+      customEventsView: {
+        go: goState,
+        start: on,
+        end: on,
+        root: false
+      }
+
+    },
 
     views: {
 
@@ -16,8 +66,23 @@ var helloJiant = helloJiant || (function(jiant) {
         addTemplate2Ctl: ctl,
         brokenCtl: ctl,
         colorizeLookupsCtl: ctl,
+        ctlNavCustom1: ctl,
+        ctlNavCustom2: ctl,
+        ctlNavMainBlue: ctl,
+        ctlNavMainGreen: ctl,
+        fire1Ctl: ctl,
+        fire2Ctl: ctl,
         nameInput: input,
         setNameCtl: ctl
+      },
+
+      customEventsView: {
+        ctlRoot: ctl,
+        ctlMain: ctl,
+        ctlMainBlue: ctl,
+        eventsCountLabel: label,
+        eventsTypeLabel: label,
+        logContainer: container
       },
 
       showView: {
