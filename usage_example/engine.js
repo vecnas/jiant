@@ -45,7 +45,8 @@ jQuery(function ($) {
 
   app.states.main.start(function(name, color) {
     showView.nameLabel.html(name);
-    $("body").css("background-color", color);
+    askView.nameInput.val(name);
+    askView.css("background-color", color);
     askView.show();
   });
 
@@ -92,7 +93,7 @@ jQuery(function ($) {
     });
 
     app.views.customEventsView.ctlMain.click(function() {
-      app.states.main.go(undefined, undefined);
+      app.states.main.go("", "");
     });
     app.views.customEventsView.ctlMainBlue.click(function() {
       app.states.main.go(undefined, "blue");
