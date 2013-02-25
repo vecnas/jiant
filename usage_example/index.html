@@ -3,19 +3,9 @@
 <head>
     <title>Hello Jiant</title>
     <script type="text/javascript" src="http://ajax.googleapis.com/ajax/libs/jquery/1.9.0/jquery.js"></script>
-    <script type="text/javascript" src="../jiant.js"> </script>
-    <script type="text/javascript" src="ui-spec.js"> </script>
-    <script type="text/javascript" src="engine.js"> </script>
-<!--
-    <script>
-        var runtimeTest = helloJiant.views.askView;
-        jQuery(function ($) {
-            window.setTimeout(function() {
-                alert(runtimeTest == helloJiant.views.askView);
-            }, 1000);
-        });
-    </script>
--->
+    <script type="text/javascript" src="js/jiant.js"> </script>
+    <script type="text/javascript" src="js/ui-spec.js"> </script>
+    <script type="text/javascript" src="js/engine.js"> </script>
 </head>
 <body>
 
@@ -24,8 +14,17 @@
 Most important - all views and templates are referred before binding ui. Only controls inside view are used after binding
 
 <div id="_askView">
-    <input class="_nameInput"/><button class="_setNameCtl">Set name</button>
-    <br><button class="_brokenCtl">This button broken</button>
+    <input class="_nameInput"/><button class="_setNameCtl">Set name persisting color</button>
+    <br><button class="_brokenCtl">This button just alerts</button>
+    <hr>
+    <br><button class="_fire1Ctl">Fire custom1</button>
+    <br><button class="_fire2Ctl">Fire custom2</button>
+    <hr>
+    <button class="_ctlNavMainGreen">to green main state persisting name</button>
+    <button class="_ctlNavMainBlue">to blue main state persisting name</button>
+    <button class="_ctlNavCustom1">to view custom1</button>
+    <button class="_ctlNavCustom2">to view custom2</button>
+    <hr>
     <br><button class="_addTemplateCtl">Add templated content</button>
     <br><button class="_addTemplate2Ctl">Add templated content 2, clickable name</button>
     <br><button class="_colorizeLookupsCtl">Colorize lookups!</button>
@@ -44,6 +43,14 @@ Most important - all views and templates are referred before binding ui. Only co
 
 <div id="_templ2" style="display: none;">
     <div>Some another templated content, to check switch, <b class="_name">CLICK 2 SET NAME only here !!name!!</b>, now name substituted after generation!</div>
+</div>
+
+<div id="_customEventsView" style="display: none;">
+    <div>Count of custom events of type <span class="_eventsTypeLabel"></span> is <span class="_eventsCountLabel"></span></div>
+    <button class="_ctlRoot">to root state</button>
+    <button class="_ctlMain">to completely empty main state</button>
+    <button class="_ctlMainBlue">to blue main state persisting name</button>
+    <div class="_logContainer"></div>
 </div>
 
 </body>
