@@ -44,14 +44,14 @@ var helloJiant = helloJiant || (function(jiant) {
     states: {
 
       main: {
-        go: goState,
+        go: function(name, color) {},
         start: on,
         end: on,
         root: true
       },
 
       customEventsView: {
-        go: goState,
+        go: function(eventType) {},
         start: on,
         end: on,
         root: false
