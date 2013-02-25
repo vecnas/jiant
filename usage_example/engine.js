@@ -15,7 +15,7 @@ jQuery(function ($) {
 
   askView.setNameCtl.click(function() {
     name = askView.nameInput.val();
-    showView.nameLabel.html(name);
+    helloJiant.states.main.go({name: name}, true);
   });
 
   askView.addTemplateCtl.click(function() {
@@ -47,6 +47,7 @@ jQuery(function ($) {
     if (params.color) {
       $("body").css("background-color", params.color);
     }
+    showView.nameLabel.html(params.name);
   });
 
   askView.ctlNavCustom1.click(function() {
@@ -69,11 +70,11 @@ jQuery(function ($) {
       custom2: 0
     };
     app.events.custom1.on(function(message, userName) {
-      app.views.customEventsView.logContainer.append($(" got custom1 event with message: " + message + " with name: " + userName));
+      app.views.customEventsView.logContainer.append("got custom1 event with message: " + message + " with name: " + userName);
       counts.custom1++;
     });
     app.events.custom2.on(function(someParamToPass) {
-      app.views.customEventsView.logContainer.append($(" got custom2 event with params: " + someParamToPass));
+      app.views.customEventsView.logContainer.append("got custom2 event with params: " + someParamToPass);
       counts.custom2++;
     });
 
