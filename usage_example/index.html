@@ -3,16 +3,17 @@
 <head>
     <title>Hello Jiant</title>
     <script type="text/javascript" src="http://ajax.googleapis.com/ajax/libs/jquery/1.9.0/jquery.js"></script>
-    <script type="text/javascript" src="js/jquery.history.js"> </script>
-    <script type="text/javascript" src="js/jiant.js"> </script>
-    <script type="text/javascript" src="js/ui-spec.js"> </script>
-    <script type="text/javascript" src="js/engine.js"> </script>
+    <script type="text/javascript" src="../jquery.history.js"> </script>
+    <script type="text/javascript" src="../jiant.js"> </script>
+    <script type="text/javascript" src="ui-spec.js"> </script>
+    <script type="text/javascript" src="anonym.js"> </script>
+    <script type="text/javascript" src="engine.js"> </script>
 </head>
 <body>
 
 <div id="_mainView"></div>
 
-Most important - all views and templates are referred before binding ui. Only controls inside view are used after binding
+All views and templates are referred before binding ui. Only controls inside views are used after binding
 
 <div id="_askView" style="display: none;">
     <input class="_nameInput"/><button class="_setNameCtl">Set name persisting color</button>
