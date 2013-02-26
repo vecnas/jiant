@@ -3,6 +3,7 @@
 // 0.03 : ajax with callback and errHandler per call
 // 0.04 : bind plugin
 // 0.05 : states
+// 0.06 : onUiBound event for anonymous plugins, empty hash state
 
 var jiant = jiant || (function($) {
 
@@ -31,10 +32,11 @@ var jiant = jiant || (function($) {
       },
       tabs = {},
 
-      stateHandlersBus = $({}),
+      internalBus = $({}),
       lastState = undefined,
       eventBus = $({}),
       bindingsResult = true,
+      uiBound = false,
       errString;
 
   function ensureExists(obj, idName, className) {
@@ -369,14 +371,14 @@ var jiant = jiant || (function($) {
       logInfo("binding state: " + name);
       stateSpec.go = go(name, stateSpec.root);
       stateSpec.start = function(cb) {
-        stateHandlersBus.on(name + "_start", function() {
+        internalBus.on(name + "_start", function() {
           var args = $.makeArray(arguments);
           args.splice(0, 1);
           cb && cb.apply(cb, args);
         });
       };
       stateSpec.end = function(cb) {
-        stateHandlersBus.on(name + "_end", function() {
+        internalBus.on(name + "_end", function() {
           var args = $.makeArray(arguments);
           args.splice(0, 1);
           cb && cb.apply(cb, args);
@@ -390,10 +392,10 @@ var jiant = jiant || (function($) {
           params = parsed.now;
       params.splice(0, 1);
       if (lastState && lastState != stateId) {
-        stateHandlersBus.trigger(lastState + "_end");
+        internalBus.trigger(lastState + "_end");
       }
       lastState = stateId;
-      stateHandlersBus.trigger(stateId + "_start", params);
+      internalBus.trigger((stateId ? stateId : "") + "_start", params);
     });
   }
 
@@ -444,6 +446,8 @@ var jiant = jiant || (function($) {
         parsed[itemArr[0]].push(unpack(arg));
       });
     });
+    parsed.now = parsed.now || [];
+    parsed.root = parsed.root || [];
     return parsed;
   }
 
@@ -548,26 +552,48 @@ var jiant = jiant || (function($) {
     bindingsResult = true;
     if (root.views) {
       _bindUi(prefix, root.views);
+    } else {
+      root.views = {};
     }
     if (root.templates) {
       _bindTemplates(prefix, root.templates);
+    } else {
+      root.templates = {};
     }
     if (root.ajax) {
       _bindAjax(root.ajax);
+    } else {
+      root.ajax = {};
     }
     if (root.events) {
       _bindEvents(root.events);
+    } else {
+      root.events = {};
     }
     if (root.states) {
       _bindStates(root.states);
+    } else {
+      root.states = {};
     }
     if (jiant.DEV_MODE && !bindingsResult) {
       alert("Some elements not bound to HTML properly, check console" + errString);
     }
+    uiBound = true;
+    internalBus.trigger("uiBound");
   }
 
   function bind(obj1, obj2) {
     $.extend(obj1, obj2);
+  }
+
+  function onUiBound(cb) {
+    if (uiBound) {
+      cb && cb();
+    } else {
+      internalBus.on("uiBound", function() {
+        cb && cb();
+      });
+    }
   }
 
   return {
@@ -580,6 +606,7 @@ var jiant = jiant || (function($) {
     bindUi: bindUi,
     goRoot: goRoot,
     goState: goState,
+    onUiBound: onUiBound,
     refreshState: refreshState,
 
     handleErrorFn: defaultAjaxErrorsHandle,
