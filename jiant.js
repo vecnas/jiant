@@ -32,11 +32,10 @@ var jiant = jiant || (function($) {
       },
       tabs = {},
 
-      internalBus = $({}),
       lastState = undefined,
       eventBus = $({}),
       bindingsResult = true,
-      uiBound = false,
+      uiBoundRoot = undefined,
       errString;
 
   function ensureExists(obj, idName, className) {
@@ -344,15 +343,18 @@ var jiant = jiant || (function($) {
       events[name].fire = function() {
         logInfo("    EVENT fire. " + name);
         logInfo(arguments);
-        eventBus.trigger(name, arguments);
+        eventBus.trigger(name + ".event", arguments);
       };
-      events[name].on = function(cb) {eventBus.on(name, function() {
+      events[name].on = function (cb) {
+        logInfo("    assigning event handler to " + name);
+        eventBus.on(name + ".event", function () {
 //        logInfo("    EVENT. on");
 //        logInfo(arguments);
-        var args = $.makeArray(arguments);
-        args.splice(0, 1);
-        cb && cb.apply(cb, args);
-      })};
+          var args = $.makeArray(arguments);
+          args.splice(0, 1);
+          cb && cb.apply(cb, args);
+        })
+      };
     });
   }
 
@@ -371,14 +373,14 @@ var jiant = jiant || (function($) {
       logInfo("binding state: " + name);
       stateSpec.go = go(name, stateSpec.root);
       stateSpec.start = function(cb) {
-        internalBus.on(name + "_start", function() {
+        eventBus.on(name + "_start", function() {
           var args = $.makeArray(arguments);
           args.splice(0, 1);
           cb && cb.apply(cb, args);
         });
       };
       stateSpec.end = function(cb) {
-        internalBus.on(name + "_end", function() {
+        eventBus.on(name + "_end", function() {
           var args = $.makeArray(arguments);
           args.splice(0, 1);
           cb && cb.apply(cb, args);
@@ -392,10 +394,10 @@ var jiant = jiant || (function($) {
           params = parsed.now;
       params.splice(0, 1);
       if (lastState && lastState != stateId) {
-        internalBus.trigger(lastState + "_end");
+        eventBus.trigger(lastState + "_end");
       }
       lastState = stateId;
-      internalBus.trigger((stateId ? stateId : "") + "_start", params);
+      eventBus.trigger((stateId ? stateId : "") + "_start", params);
     });
   }
 
@@ -578,8 +580,8 @@ var jiant = jiant || (function($) {
     if (jiant.DEV_MODE && !bindingsResult) {
       alert("Some elements not bound to HTML properly, check console" + errString);
     }
-    uiBound = true;
-    internalBus.trigger("uiBound");
+    uiBoundRoot = root;
+    eventBus.trigger("jiant.uiBound");
   }
 
   function bind(obj1, obj2) {
@@ -587,11 +589,11 @@ var jiant = jiant || (function($) {
   }
 
   function onUiBound(cb) {
-    if (uiBound) {
-      cb && cb();
+    if (uiBoundRoot) {
+      cb && cb($, uiBoundRoot);
     } else {
-      internalBus.on("uiBound", function() {
-        cb && cb();
+      eventBus.on("jiant.uiBound", function() {
+        cb && cb($, uiBoundRoot);
       });
     }
   }
