@@ -4,6 +4,7 @@
 // 0.04 : bind plugin
 // 0.05 : states
 // 0.06 : onUiBound event for anonymous plugins, empty hash state
+// 0.07 : crossdomain views load, setupForm check for form, pager update
 
 var jiant = jiant || (function($) {
 
@@ -151,7 +152,14 @@ var jiant = jiant || (function($) {
     });
   }
 
-  function setupForm(elem) {
+  function setupForm(elem, key, name) {
+    var tagName = elem[0].tagName.toLowerCase();
+    if (tagName != "form") {
+      jiant.logError(key + "." + name + " form element assigned to non-form: " + tagName);
+      if (jiant.DEV_MODE) {
+        alert(key + "." + name + " form element assigned to non-form: " + tagName);
+      }
+    }
     elem.submitForm = function(url, cb) {
       url = url || elem.attr("action");
       $.post(url, elem.serialize(), cb);
@@ -181,6 +189,9 @@ var jiant = jiant || (function($) {
 //      });
       var from = Math.max(0, page.number - jiant.PAGER_RADIUS / 2),
           to = Math.min(page.number + jiant.PAGER_RADIUS / 2, page.totalPages);
+      if (from > 0) {
+        addPageCtl(1, "").find("a").css("margin-right", "20px");
+      }
       for (var i = from; i < to; i++) {
         var cls = "";
         if (i == page.number) {
@@ -188,13 +199,17 @@ var jiant = jiant || (function($) {
         }
         addPageCtl(i + 1, cls);
       }
+      if (to < page.totalPages - 1) {
+        addPageCtl(page.totalPages, "").find("a").css("margin-left", "20px");
+      }
     };
     function addPageCtl(value, ctlClass) {
-      var ctl = $(parseTemplate($("<b><li class='!!ctlClass!!'><a>!!label!!</a></li></b>"), {label: value, ctlClass: ctlClass}));
+      var ctl = $(parseTemplate($("<b><li class='!!ctlClass!!' style='cursor: pointer;'><a>!!label!!</a></li></b>"), {label: value, ctlClass: ctlClass}));
       root.append(ctl);
       ctl.click(function() {
         pagerBus.trigger("ValueChange", value);
       });
+      return ctl;
     }
   }
 
@@ -255,7 +270,6 @@ var jiant = jiant || (function($) {
         }
       });
     }
-
   }
 
   function _bindContent(subRoot, key, content, view, prefix) {
@@ -275,7 +289,7 @@ var jiant = jiant || (function($) {
         } else if (elemContent == pager) {
           setupPager(subRoot[elem]);
         } else if (elemContent == form) {
-          setupForm(subRoot[elem]);
+          setupForm(subRoot[elem], key, elem);
         } else if (elemContent == containerPaged) {
           setupContainerPaged(subRoot[elem]);
         }
@@ -294,7 +308,7 @@ var jiant = jiant || (function($) {
     });
   }
 
-  function _bindUi(prefix, root) {
+  function _bindViews(prefix, root) {
     prefix = prefix || "";
     $.each(root, function (key, content) {
       logInfo("binding UI for view: " + key);
@@ -319,6 +333,7 @@ var jiant = jiant || (function($) {
       });
       root[key].parseTemplate = function(data) {
         var retVal = $(parseTemplate(tm, data));
+        jiant.logInfo(retVal.length);
         $.each(content, function (elem, elemType) {
           retVal[elem] = retVal.find("." + prefix + elem);
           maybeAddDevHook(retVal[elem], key, elem);
@@ -545,7 +560,7 @@ var jiant = jiant || (function($) {
     }
   }
 
-  function bindUi(prefix, root, devMode) {
+  function _bindUi(prefix, root, devMode) {
     jiant.DEV_MODE = devMode;
     if (! devMode) {
       maybeSetDevModeFromQueryString();
@@ -553,7 +568,7 @@ var jiant = jiant || (function($) {
     errString = "";
     bindingsResult = true;
     if (root.views) {
-      _bindUi(prefix, root.views);
+      _bindViews(prefix, root.views);
     } else {
       root.views = {};
     }
@@ -582,6 +597,25 @@ var jiant = jiant || (function($) {
     }
     uiBoundRoot = root;
     eventBus.trigger("jiant.uiBound");
+  }
+
+  function bindUi(prefix, root, devMode, viewsUrl, injectId) {
+    if (viewsUrl) {
+      var injectionPoint = injectId ? $("#" + injectId) : $("body");
+      injectionPoint.load(viewsUrl, {}, function() {
+        $.ajaxSetup({
+          contentType:"application/json",
+          dataType:'jsonp',
+          xhrFields: {
+             withCredentials: true
+          },
+          crossDomain: true
+        });
+        _bindUi(prefix, root, devMode);
+      });
+    } else {
+      _bindUi(prefix, root, devMode);
+    }
   }
 
   function bind(obj1, obj2) {
