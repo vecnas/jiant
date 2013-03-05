@@ -5,6 +5,7 @@
 // 0.05 : states
 // 0.06 : onUiBound event for anonymous plugins, empty hash state
 // 0.07 : crossdomain views load, setupForm check for form, pager update
+// 0.08 : templates IE attribute quotes workaround from http://weblogs.asp.net/alexeigorkov/archive/2010/03/16/lazy-html-attributes-wrapping-in-internet-explorer.aspx
 
 var jiant = jiant || (function($) {
 
@@ -102,12 +103,13 @@ var jiant = jiant || (function($) {
 
   function parseTemplate(that, data) {
     data = data || {};
-    if (! that.html) {
-      that = $(that);
-    }
-    var str = $.trim(that.html()),
+//    if (! that.html) {
+//      that = $(that);
+//    }
+    var str = $.trim($(that).html()),
         _tmplCache = {},
         err = "";
+    str = str.replace(/=(!!([^!!]+)!!)/g, '="$1"');
     try {
       var func = _tmplCache[str];
       if (!func) {
@@ -272,6 +274,8 @@ var jiant = jiant || (function($) {
     }
   }
 
+// ------------ views ----------------
+
   function _bindContent(subRoot, key, content, view, prefix) {
     $.each(content, function (elem, elemContent) {
 //      window.console && window.console.logInfo(elem + "    : " + subRoot[elem]);
@@ -321,6 +325,8 @@ var jiant = jiant || (function($) {
     });
   }
 
+// ------------ templates ----------------
+
   function _bindTemplates(prefix, root) {
     prefix = prefix || "";
     $.each(root, function(key, content) {
@@ -333,7 +339,7 @@ var jiant = jiant || (function($) {
       });
       root[key].parseTemplate = function(data) {
         var retVal = $(parseTemplate(tm, data));
-        jiant.logInfo(retVal.length);
+//        jiant.logInfo(retVal.length);
         $.each(content, function (elem, elemType) {
           retVal[elem] = retVal.find("." + prefix + elem);
           maybeAddDevHook(retVal[elem], key, elem);
@@ -607,7 +613,7 @@ var jiant = jiant || (function($) {
           contentType:"application/json",
           dataType:'jsonp',
           xhrFields: {
-             withCredentials: true
+            withCredentials: true
           },
           crossDomain: true
         });
@@ -669,7 +675,8 @@ var jiant = jiant || (function($) {
     stub: stub,
     tabs: tabs,
 
-    key: {left: 37, up: 38, right: 39, down: 40, del: 46, backspace: 8, tab: 9, end: 35, home: 36, enter: 13, ctrl: 17}
+    key: {left: 37, up: 38, right: 39, down: 40, del: 46, backspace: 8, tab: 9, end: 35, home: 36, enter: 13, ctrl: 17,
+      a: 65, c: 67, u: 85, w: 87, space: 32, 1: 49, 2: 50, 3: 51, 4: 52, 5: 53, 6: 54}
 
   };
 
