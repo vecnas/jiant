@@ -6,6 +6,7 @@
 // 0.06 : onUiBound event for anonymous plugins, empty hash state
 // 0.07 : crossdomain views load, setupForm check for form, pager update
 // 0.08 : templates IE attribute quotes workaround from http://weblogs.asp.net/alexeigorkov/archive/2010/03/16/lazy-html-attributes-wrapping-in-internet-explorer.aspx
+// 0.09 : templates IE redone, to avoid bug with "a=!!val!!" situation, isMSIE flag added
 
 var jiant = jiant || (function($) {
 
@@ -101,6 +102,17 @@ var jiant = jiant || (function($) {
     }
   }
 
+  function msieDom2Html(elem) {
+    $.each(elem.find("*"), function(idx, child) {
+      $.each(child.attributes, function(i, attr) {
+        if (attr.value.indexOf(" ") < 0 && attr.value.indexOf("!!") >= 0) {
+          $(child).attr(attr.name, attr.value.replace(/!!/g, "!! "));
+        }
+      });
+    });
+    return $.trim($(elem).html()).replace(/!!/g, "!! ");
+  }
+
   function parseTemplate(that, data) {
     data = data || {};
 //    if (! that.html) {
@@ -109,7 +121,11 @@ var jiant = jiant || (function($) {
     var str = $.trim($(that).html()),
         _tmplCache = {},
         err = "";
-    str = str.replace(/=(!!([^!!]+)!!)/g, '="$1"');
+    if (!jiant.isMSIE) {
+      str = str.replace(/!!/g, "!! ");
+    } else {
+      str = msieDom2Html($(that));
+    }
     try {
       var func = _tmplCache[str];
       if (!func) {
@@ -120,7 +136,7 @@ var jiant = jiant || (function($) {
                     .replace(/'(?=[^#]*#>)/g, "\t")
                     .split("'").join("\\'")
                     .split("\t").join("'")
-                    .replace(/!!(.+?)!!/g, "',$1,'")
+                    .replace(/!! (.+?)!! /g, "',$1,'")
                     .split("!?").join("');")
                     .split("?!").join("p.push('")
                 + "');}return p.join('');";
@@ -265,7 +281,7 @@ var jiant = jiant || (function($) {
         var elem = $(domElem);
 //        logInfo("comparing " + idx + " vs " + offset + " - " + (offset+pageSize));
         if (idx >= offset && idx < offset + pageSize) {
-          logInfo("showing");
+//          logInfo("showing");
           elem.show();
         } else {
           elem.hide();
@@ -362,8 +378,8 @@ var jiant = jiant || (function($) {
     $.each(events, function(name, spec) {
       logInfo("binding event: " + name);
       events[name].fire = function() {
-        logInfo("    EVENT fire. " + name);
-        logInfo(arguments);
+//        logInfo("    EVENT fire. " + name);
+//        logInfo(arguments);
         eventBus.trigger(name + ".event", arguments);
       };
       events[name].on = function (cb) {
@@ -643,6 +659,7 @@ var jiant = jiant || (function($) {
     AJAX_SUFFIX: "",
     DEV_MODE: false,
     PAGER_RADIUS: 6,
+    isMSIE: eval("/*@cc_on!@*/!1"),
 
     bind: bind,
     bindUi: bindUi,
