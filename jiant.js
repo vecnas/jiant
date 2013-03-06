@@ -315,7 +315,7 @@ var jiant = jiant || (function($) {
         }
 //        _bindContent(subRoot[elem], key, elemContent, uiElem, prefix);
         maybeAddDevHook(uiElem, key, elem);
-        logInfo("    bound UI for: " + elem);
+//        logInfo("    bound UI for: " + elem);
       }
     });
   }
