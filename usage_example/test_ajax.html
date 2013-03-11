@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title></title>
+    <script type="text/javascript" src="http://ajax.googleapis.com/ajax/libs/jquery/1.9.0/jquery.min.js"></script>
+    <script src="../jiant.js"></script>
+</head>
+<body>
+
+<div id="_main">
+    <button class="_ctl">Do Ajax1</button>
+    <button class="_ctl2">Do Ajax2</button>
+    <div class="_container"></div>
+</div>
+
+<script>
+    var app = {
+        ajax: {
+            test: function(cb) {},
+            testOverridenUrl: function(param, cb) {return "/custom-root/some_overriden_url.extension";}
+        },
+        views: {
+            main: {
+                container: jiant.container,
+                ctl: jiant.ctl,
+                ctl2: jiant.ctl
+            }
+        }
+    };
+    $(function() {
+        jiant.bindUi("_", app, true);
+        jiant.AJAX_PREFIX = "/some-prefix/";
+        app.views.main.ctl.click(function() {
+            app.ajax.test();
+        });
+        app.views.main.ctl2.click(function() {
+            app.ajax.testOverridenUrl(12);
+        });
+    });
+</script>
+</body>
+</html>
