@@ -8,6 +8,7 @@
 // 0.08 : broken for some ie cases, templates IE attribute quotes workaround from http://weblogs.asp.net/alexeigorkov/archive/2010/03/16/lazy-html-attributes-wrapping-in-internet-explorer.aspx
 // 0.09 : broken for some ie cases, templates IE redone, to avoid bug with "a=!!val!!" situation, isMSIE flag added
 // 0.10 : templates IE one more redone, attributes DOM manipulation, for templates parse, parse template starting with plain text by adding comment, template controls binding
+// 0.11: ajax url override for ajax calls via returning value from specification function
 
 var jiant = jiant || (function($) {
 
@@ -519,7 +520,7 @@ var jiant = jiant || (function($) {
       logInfo("binding ajax for function: " + uri);
       var params = getParamNames(funcSpec);
       params.splice(params.length - 1, 1);
-      root[uri] = makeAjaxPerformer(uri, params);
+      root[uri] = makeAjaxPerformer(uri, params, $.isFunction(root[uri]) ? root[uri]() : undefined);
     });
   }
 
@@ -536,7 +537,7 @@ var jiant = jiant || (function($) {
     }
   }
 
-  function makeAjaxPerformer(uri, params) {
+  function makeAjaxPerformer(uri, params, hardUrl) {
     return function() {
       var callData = {},
           callback,
@@ -557,8 +558,9 @@ var jiant = jiant || (function($) {
       if (! callData["antiCache3721"]) {
         callData["antiCache3721"] = new Date().getTime();
       }
-      logInfo("    AJAX call. " + uri);
-      $.ajax(jiant.AJAX_PREFIX + uri + jiant.AJAX_SUFFIX, {data: callData, traditional: true, success: function(data) {
+      var url = hardUrl ? hardUrl : jiant.AJAX_PREFIX + uri + jiant.AJAX_SUFFIX;
+      logInfo("    AJAX call. " + uri + " to server url: " + url);
+      $.ajax(url, {data: callData, traditional: true, success: function(data) {
         if (callback) {
           try{
             data = $.parseJSON(data);
