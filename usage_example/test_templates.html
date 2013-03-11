@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title></title>
+    <script type="text/javascript" src="http://ajax.googleapis.com/ajax/libs/jquery/1.9.0/jquery.min.js"></script>
+    <script src="../jiant.js"></script>
+</head>
+<body>
+
+<div id="_tmTest">
+    !!v1!!
+    <div style="border: 1px solid green;">!!v1!!</div>
+    <div style="border: 1px solid blue;">!!v2!!</div>
+    !!v2!!
+    int: <input class="_inp" value="!!v2!!" name="!!v1!!"/>
+    <i>
+        <input value="a=!!v2!!" name="c!!v1!!"/>
+    </i>
+    <textarea>!!v1!!</textarea>
+</div>
+
+<div id="_main">
+    <button class="_ctl">Do</button>
+    <div class="_container"></div>
+</div>
+
+<script>
+    var app = {
+        templates: {
+            tmTest: {
+                inp: jiant.inputInt
+            }
+        },
+        views: {
+            main: {
+                container: jiant.container,
+                ctl: jiant.ctl
+            }
+        }
+    };
+    $(function() {
+        jiant.bindUi("_", app, true);
+        app.views.main.ctl.click(function() {
+            var tm = app.templates.tmTest.parseTemplate({v1: "with spaces here", v2: "and value with spaces"});
+            app.views.main.container.append(tm);
+        });
+    });
+</script>
+</body>
+</html>
