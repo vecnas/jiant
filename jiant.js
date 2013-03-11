@@ -5,8 +5,9 @@
 // 0.05 : states
 // 0.06 : onUiBound event for anonymous plugins, empty hash state
 // 0.07 : crossdomain views load, setupForm check for form, pager update
-// 0.08 : templates IE attribute quotes workaround from http://weblogs.asp.net/alexeigorkov/archive/2010/03/16/lazy-html-attributes-wrapping-in-internet-explorer.aspx
-// 0.09 : templates IE redone, to avoid bug with "a=!!val!!" situation, isMSIE flag added
+// 0.08 : broken for some ie cases, templates IE attribute quotes workaround from http://weblogs.asp.net/alexeigorkov/archive/2010/03/16/lazy-html-attributes-wrapping-in-internet-explorer.aspx
+// 0.09 : broken for some ie cases, templates IE redone, to avoid bug with "a=!!val!!" situation, isMSIE flag added
+// 0.10 : templates IE one more redone, attributes DOM manipulation, for templates parse, parse template starting with plain text by adding comment, template controls binding
 
 var jiant = jiant || (function($) {
 
@@ -19,7 +20,7 @@ var jiant = jiant || (function($) {
       grid = {},
       image = {},
       input = {},
-      inputInt = {},
+      inputInt = {inp:"int"},
       label = {},
       lookup = function(selector) {},
       on = function(cb) {},
@@ -106,11 +107,11 @@ var jiant = jiant || (function($) {
     $.each(elem.find("*"), function(idx, child) {
       $.each(child.attributes, function(i, attr) {
         if (attr.value.indexOf(" ") < 0 && attr.value.indexOf("!!") >= 0) {
-          $(child).attr(attr.name, attr.value.replace(/!!/g, "!! "));
+          $(child).attr(attr.name, attr.value.replace(/!!/g, "e2013e03e11eee "));
         }
       });
     });
-    return $.trim($(elem).html()).replace(/!!/g, "!! ");
+    return $.trim($(elem).html()).replace(/!!/g, "!! ").replace(/e2013e03e11eee /g, "!! ");
   }
 
   function parseTemplate(that, data) {
@@ -290,6 +291,21 @@ var jiant = jiant || (function($) {
     }
   }
 
+  function setupExtras(uiElem, elemContent, key, elem) {
+    if (elemContent == tabs && uiElem.tabs) {
+      uiElem.tabs();
+    } else if (elemContent == inputInt) {
+      setupInputInt(uiElem);
+    } else if (elemContent == pager) {
+      setupPager(uiElem);
+    } else if (elemContent == form) {
+      setupForm(uiElem, key, elem);
+    } else if (elemContent == containerPaged) {
+      setupContainerPaged(uiElem);
+    }
+    maybeAddDevHook(uiElem, key, elem);
+  }
+
 // ------------ views ----------------
 
   function _bindContent(subRoot, key, content, view, prefix) {
@@ -302,19 +318,7 @@ var jiant = jiant || (function($) {
         var uiElem = view.find("." + prefix + elem);
         ensureExists(uiElem, prefix + key, prefix + elem);
         subRoot[elem] = uiElem;
-        if (elemContent == tabs && uiElem.tabs) {
-          subRoot[elem].tabs();
-        } else if (elemContent == inputInt) {
-          setupInputInt(subRoot[elem]);
-        } else if (elemContent == pager) {
-          setupPager(subRoot[elem]);
-        } else if (elemContent == form) {
-          setupForm(subRoot[elem], key, elem);
-        } else if (elemContent == containerPaged) {
-          setupContainerPaged(subRoot[elem]);
-        }
-//        _bindContent(subRoot[elem], key, elemContent, uiElem, prefix);
-        maybeAddDevHook(uiElem, key, elem);
+        setupExtras(uiElem, elemContent, key, elem);
 //        logInfo("    bound UI for: " + elem);
       }
     });
@@ -350,14 +354,15 @@ var jiant = jiant || (function($) {
       var tm = $("#" + prefix + key);
       ensureExists(tm, prefix + key);
       $.each(content, function (elem, elemType) {
-        root[key][elem] = tm.find("." + prefix + elem);
-        ensureExists(root[key][elem], prefix + key, prefix + elem);
+//        root[key][elem] = tm.find("." + prefix + elem);
+        ensureExists(tm.find("." + prefix + elem), prefix + key, prefix + elem);
       });
       root[key].parseTemplate = function(data) {
-        var retVal = $(parseTemplate(tm, data));
+        var retVal = $("<!--" + key + "-->" + parseTemplate(tm, data)); // add comment to force jQuery to read it as HTML fragment
 //        jiant.logInfo(retVal.length);
         $.each(content, function (elem, elemType) {
-          retVal[elem] = retVal.find("." + prefix + elem);
+          retVal[elem] = retVal.filter("." + prefix + elem);
+          setupExtras(retVal[elem], root[key][elem], key, elem);
           maybeAddDevHook(retVal[elem], key, elem);
         });
         return retVal;
