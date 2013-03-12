@@ -9,6 +9,7 @@
 // 0.09 : broken for some ie cases, templates IE redone, to avoid bug with "a=!!val!!" situation, isMSIE flag added
 // 0.10 : templates IE one more redone, attributes DOM manipulation, for templates parse, parse template starting with plain text by adding comment, template controls binding
 // 0.11: ajax url override for ajax calls via returning value from specification function
+// 0.11b: return from submitForm
 
 var jiant = jiant || (function($) {
 
@@ -182,7 +183,7 @@ var jiant = jiant || (function($) {
     }
     elem.submitForm = function(url, cb) {
       url = url || elem.attr("action");
-      $.post(url, elem.serialize(), cb);
+      return $.post(url, elem.serialize(), cb);
     };
   }
 
