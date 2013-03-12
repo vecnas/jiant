@@ -10,17 +10,24 @@
 <div id="_tmTest">
     !!v1!!
     <div style="border: 1px solid green;">!!v1!!</div>
-    <div style="border: 1px solid blue;">!!v2!!</div>
+    <div style="border: 1px solid blue;">!!v2!!
+        <div><button class="_ctl">click for alert</button></div>
+    </div>
     !!v2!!
     int: <input class="_inp" value="!!v2!!" name="!!v1!!"/>
     <i>
         <input value="a=!!v2!!" name="c!!v1!!"/>
+        <button class="_ctl">click for alert</button>
     </i>
     <textarea>!!v1!!</textarea>
+    <button class="_ctl">click for alert</button>
 </div>
 
 <div id="_main">
     <button class="_ctl">Do</button>
+    <input class="_field1"/>
+    <input class="_field2"/>
+    <textarea class="_field2">aga</textarea>
     <div class="_container"></div>
 </div>
 
@@ -28,13 +35,16 @@
     var app = {
         templates: {
             tmTest: {
-                inp: jiant.inputInt
+                inp: jiant.inputInt,
+                ctl: jiant.ctl
             }
         },
         views: {
             main: {
                 container: jiant.container,
-                ctl: jiant.ctl
+                ctl: jiant.ctl,
+                field1: jiant.input,
+                field2: jiant.input
             }
         }
     };
@@ -43,6 +53,10 @@
         app.views.main.ctl.click(function() {
             var tm = app.templates.tmTest.parseTemplate({v1: "with spaces here", v2: "and value with spaces"});
             app.views.main.container.append(tm);
+            tm.ctl.click(function() {
+                alert(1);
+            });
+            app.views.main.propagate({field1: "ASTA!", field2: "LA VISTA!", ctl: "MAMBA"});
         });
     });
 </script>
