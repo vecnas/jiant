@@ -9,7 +9,7 @@
 // 0.09 : broken for some ie cases, templates IE redone, to avoid bug with "a=!!val!!" situation, isMSIE flag added
 // 0.10 : templates IE one more redone, attributes DOM manipulation, for templates parse, parse template starting with plain text by adding comment, template controls binding
 // 0.11: ajax url override for ajax calls via returning value from specification function
-// 0.11b: return from submitForm
+// 0.12: return from submitForm, template parse results binding changed to merge of filter and find to support no-root templates, added propagate(data) function to views
 
 var jiant = jiant || (function($) {
 
@@ -334,6 +334,27 @@ var jiant = jiant || (function($) {
     });
   }
 
+  function makePropagationFunction(content) {
+    var map = {};
+    $.each(content, function (key, elem) {
+      map[key] = elem;
+    });
+    return function(data) {
+      $.each(map, function (key, elem) {
+        if (data[key]) {
+          var tagName = elem[0].tagName.toLowerCase();
+          if (tagName == "input" || tagName == "textarea") {
+            elem.val(data[key]);
+          } else if (tagName == "img") {
+            elem.attr("src", data[key]);
+          } else {
+            elem.html(data[key]);
+          }
+        }
+      });
+    }
+  }
+
   function _bindViews(prefix, root) {
     prefix = prefix || "";
     $.each(root, function (key, content) {
@@ -342,6 +363,7 @@ var jiant = jiant || (function($) {
       ensureExists(view, prefix + key);
       _bindContent(root[key], key, content, view, prefix);
       ensureSafeExtend(root[key], view);
+      root[key].propagate = makePropagationFunction(content);
       $.extend(root[key], view);
       maybeAddDevHook(view, key, undefined);
     });
@@ -356,16 +378,16 @@ var jiant = jiant || (function($) {
       var tm = $("#" + prefix + key);
       ensureExists(tm, prefix + key);
       $.each(content, function (elem, elemType) {
-//        root[key][elem] = tm.find("." + prefix + elem);
         ensureExists(tm.find("." + prefix + elem), prefix + key, prefix + elem);
       });
       root[key].parseTemplate = function(data) {
         var retVal = $("<!--" + key + "-->" + parseTemplate(tm, data)); // add comment to force jQuery to read it as HTML fragment
-//        jiant.logInfo(retVal.length);
         $.each(content, function (elem, elemType) {
-          retVal[elem] = retVal.filter("." + prefix + elem);
-          setupExtras(retVal[elem], root[key][elem], key, elem);
-          maybeAddDevHook(retVal[elem], key, elem);
+          if (elem != "parseTemplate" && elem != "parseTemplate2Text") {
+            retVal[elem] = $.merge(retVal.filter("." + prefix + elem), retVal.find("." + prefix + elem));
+            setupExtras(retVal[elem], root[key][elem], key, elem);
+            maybeAddDevHook(retVal[elem], key, elem);
+          }
         });
         return retVal;
       };
