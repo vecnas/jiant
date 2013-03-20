@@ -11,6 +11,7 @@
 // 0.11: ajax url override for ajax calls via returning value from specification function
 // 0.12: return from submitForm, template parse results binding changed to merge of filter and find to support no-root templates, added propagate(data) function to views
 // 0.13: comment node removed from template parse results
+// 0.14: events[name].listenersCount++;
 
 var jiant = jiant || (function($) {
 
@@ -408,6 +409,7 @@ var jiant = jiant || (function($) {
   function _bindEvents(events) {
     $.each(events, function(name, spec) {
       logInfo("binding event: " + name);
+      events[name].listenersCount = 0;
       events[name].fire = function() {
 //        logInfo("    EVENT fire. " + name);
 //        logInfo(arguments);
@@ -415,6 +417,7 @@ var jiant = jiant || (function($) {
       };
       events[name].on = function (cb) {
         logInfo("    assigning event handler to " + name);
+        events[name].listenersCount++;
         eventBus.on(name + ".event", function () {
 //        logInfo("    EVENT. on");
 //        logInfo(arguments);
