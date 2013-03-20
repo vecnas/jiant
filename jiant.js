@@ -10,6 +10,7 @@
 // 0.10 : templates IE one more redone, attributes DOM manipulation, for templates parse, parse template starting with plain text by adding comment, template controls binding
 // 0.11: ajax url override for ajax calls via returning value from specification function
 // 0.12: return from submitForm, template parse results binding changed to merge of filter and find to support no-root templates, added propagate(data) function to views
+// 0.13: comment node removed from template parse results
 
 var jiant = jiant || (function($) {
 
@@ -381,7 +382,7 @@ var jiant = jiant || (function($) {
         ensureExists(tm.find("." + prefix + elem), prefix + key, prefix + elem);
       });
       root[key].parseTemplate = function(data) {
-        var retVal = $("<!--" + key + "-->" + parseTemplate(tm, data)); // add comment to force jQuery to read it as HTML fragment
+        var retVal = $("<!-- -->" + parseTemplate(tm, data)); // add comment to force jQuery to read it as HTML fragment
         $.each(content, function (elem, elemType) {
           if (elem != "parseTemplate" && elem != "parseTemplate2Text") {
             retVal[elem] = $.merge(retVal.filter("." + prefix + elem), retVal.find("." + prefix + elem));
@@ -389,6 +390,7 @@ var jiant = jiant || (function($) {
             maybeAddDevHook(retVal[elem], key, elem);
           }
         });
+        retVal.splice(0, 1); // remove first comment
         return retVal;
       };
       root[key].parseTemplate2Text = function(data) {
