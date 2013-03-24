@@ -12,6 +12,7 @@
 // 0.12: return from submitForm, template parse results binding changed to merge of filter and find to support no-root templates, added propagate(data) function to views
 // 0.13: comment node removed from template parse results
 // 0.14: events[name].listenersCount++;
+// 0.15: parseInt for inputInt value arrow up
 
 var jiant = jiant || (function($) {
 
@@ -163,7 +164,7 @@ var jiant = jiant || (function($) {
         input.val(input.val() - 1);
         return false;
       } else if (event.keyCode == jiant.key.up) {
-        input.val(input.val() + 1);
+        input.val(parseInt(input.val()) + 1);
         return false;
       } else if (event.keyCode == jiant.key.backspace || event.keyCode == jiant.key.del || event.keyCode == jiant.key.end
           || event.keyCode == jiant.key.home || event.keyCode == jiant.key.tab || event.keyCode == jiant.key.enter) {
