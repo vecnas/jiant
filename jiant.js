@@ -13,6 +13,7 @@
 // 0.13: comment node removed from template parse results
 // 0.14: events[name].listenersCount++;
 // 0.15: parseInt for inputInt value arrow up
+// 0.16: state parameters - undefined replacement by current value properly, inputDate added, works when datepicker available, formatDate, formatTime added
 
 var jiant = jiant || (function($) {
 
@@ -25,7 +26,8 @@ var jiant = jiant || (function($) {
       grid = {},
       image = {},
       input = {},
-      inputInt = {inp:"int"},
+      inputInt = {},
+      inputDate = {},
       label = {},
       lookup = function(selector) {},
       on = function(cb) {},
@@ -106,6 +108,25 @@ var jiant = jiant || (function($) {
 
       return (arr ? "[" : "{") + String(json) + (arr ? "]" : "}");
     }
+  }
+
+  function formatDate(millis) {
+    var dt = new Date(millis);
+    return $.datepicker.formatDate("yy-mm-dd", dt);
+  }
+
+  function formatTime(millis) {
+    var dt = new Date(millis);
+    return lfill(dt.getHours()) + ":" + lfill(dt.getMinutes());
+  }
+
+  function formatTimeSeconds(millis) {
+    var dt = new Date(millis);
+    return lfill(dt.getHours()) + ":" + lfill(dt.getMinutes() + ":" + lfill(dt.getSeconds()));
+  }
+
+  function lfill(val) {
+    return val < 10 ? "0" + val : val;
   }
 
   function msieDom2Html(elem) {
@@ -301,6 +322,8 @@ var jiant = jiant || (function($) {
       uiElem.tabs();
     } else if (elemContent == inputInt) {
       setupInputInt(uiElem);
+    } else if (elemContent == inputDate && uiElem.datepicker) {
+      uiElem.datepicker();
     } else if (elemContent == pager) {
       setupPager(uiElem);
     } else if (elemContent == form) {
@@ -465,6 +488,11 @@ var jiant = jiant || (function($) {
           handler = states[stateId],
           params = parsed.now;
       params.splice(0, 1);
+      $.each(params, function(idx, p) {
+        if (p == "undefined") {
+          params[idx] = undefined;
+        }
+      });
       if (lastState && lastState != stateId) {
         eventBus.trigger(lastState + "_end");
       }
@@ -716,9 +744,13 @@ var jiant = jiant || (function($) {
     ctl : ctl,
     fn: fn,
     form: form,
+    formatDate: formatDate,
+    formatTime: formatTime,
+    formatTimeSeconds: formatTimeSeconds,
     grid: grid,
     image: image,
     input: input,
+    inputDate: inputDate,
     inputInt: inputInt,
     label: label,
     lookup: lookup,
