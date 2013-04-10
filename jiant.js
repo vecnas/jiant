@@ -14,6 +14,7 @@
 // 0.14: events[name].listenersCount++;
 // 0.15: parseInt for inputInt value arrow up
 // 0.16: state parameters - undefined replacement by current value properly, inputDate added, works when datepicker available, formatDate, formatTime added
+// 0.17: propagate "0" and "" passed as valid values
 
 var jiant = jiant || (function($) {
 
@@ -367,7 +368,7 @@ var jiant = jiant || (function($) {
     });
     return function(data) {
       $.each(map, function (key, elem) {
-        if (data[key]) {
+        if (data[key] != undefined && data[key] != null) {
           var tagName = elem[0].tagName.toLowerCase();
           if (tagName == "input" || tagName == "textarea") {
             elem.val(data[key]);
