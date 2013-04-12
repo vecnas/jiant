@@ -199,6 +199,9 @@ var jiant = jiant || (function($) {
   }
 
   function setupForm(elem, key, name) {
+    if (! elem[0]) {
+      return;
+    }
     var tagName = elem[0].tagName.toLowerCase();
     if (tagName != "form") {
       jiant.logError(key + "." + name + " form element assigned to non-form: " + tagName);
