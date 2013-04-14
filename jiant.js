@@ -15,6 +15,7 @@
 // 0.15: parseInt for inputInt value arrow up
 // 0.16: state parameters - undefined replacement by current value properly, inputDate added, works when datepicker available, formatDate, formatTime added
 // 0.17: propagate "0" and "" passed as valid values
+// 0.18: default state "end" not triggered - fixed
 
 var jiant = jiant || (function($) {
 
@@ -83,6 +84,7 @@ var jiant = jiant || (function($) {
     }
   }
 
+  // not serialization actually, for example when text contains " - generates invalid output. just for dev purposes
   function pseudoserializeJSON(obj) {
     var t = typeof(obj);
     if (t != "object" || obj === null) {
@@ -479,7 +481,7 @@ var jiant = jiant || (function($) {
         });
       };
       stateSpec.end = function(cb) {
-        eventBus.on(name + "_end", function() {
+        eventBus.on("state." + name + ".end", function() {
           var args = $.makeArray(arguments);
           args.splice(0, 1);
           cb && cb.apply(cb, args);
@@ -497,8 +499,8 @@ var jiant = jiant || (function($) {
           params[idx] = undefined;
         }
       });
-      if (lastState && lastState != stateId) {
-        eventBus.trigger(lastState + "_end");
+      if (lastState != undefined && lastState != stateId) {
+        eventBus.trigger("state." + lastState + ".end");
       }
       lastState = stateId;
       eventBus.trigger((stateId ? stateId : "") + "_start", params);
@@ -765,6 +767,7 @@ var jiant = jiant || (function($) {
     tabs: tabs,
 
     key: {left: 37, up: 38, right: 39, down: 40, del: 46, backspace: 8, tab: 9, end: 35, home: 36, enter: 13, ctrl: 17,
+      escape: 27,
       a: 65, c: 67, u: 85, w: 87, space: 32, 1: 49, 2: 50, 3: 51, 4: 52, 5: 53, 6: 54}
 
   };
