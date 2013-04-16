@@ -16,6 +16,7 @@
 // 0.16: state parameters - undefined replacement by current value properly, inputDate added, works when datepicker available, formatDate, formatTime added
 // 0.17: propagate "0" and "" passed as valid values
 // 0.18: default state "end" not triggered - fixed
+// 0.19: DEBUG_MODE added, state start vs trigger check in debug mode, event usage check in debug mode
 
 var jiant = jiant || (function($) {
 
@@ -49,7 +50,9 @@ var jiant = jiant || (function($) {
       eventBus = $({}),
       bindingsResult = true,
       uiBoundRoot = undefined,
-      errString;
+      errString,
+      statesUsed = {},
+      eventsUsed = {};
 
   function ensureExists(obj, idName, className) {
     if (!obj || !obj.length) {
@@ -225,6 +228,22 @@ var jiant = jiant || (function($) {
     jiant.DEV_MODE && window.console && window.console.info && window.console.info(s);
   }
 
+
+  function debug(s) {
+    if (window.console && window.console.error) {
+      window.console.error(s);
+//      var callerName = "not available";
+//      if (arguments && arguments.callee && arguments.callee.caller) {
+//        callerName = arguments.callee.caller.name;
+//        callerName && window.console.debug(callerName);
+//        arguments.callee.caller.caller && arguments.callee.caller.caller.name && window.console.debug(arguments.callee.caller.caller.name);
+//      }
+      return true;
+    } else {
+      return false;
+    }
+  }
+
   function setupPager(uiElem) {
     var pagerBus = $({}),
         root = $("<ul></ul>");
@@ -340,6 +359,12 @@ var jiant = jiant || (function($) {
     maybeAddDevHook(uiElem, key, elem);
   }
 
+  function getStackTrace() {
+    var obj = {stack: {}};
+    Error.captureStackTrace && Error.captureStackTrace(obj, getStackTrace);
+    return obj.stack;
+  }
+
 // ------------ views ----------------
 
   function _bindContent(subRoot, key, content, view, prefix) {
@@ -441,16 +466,20 @@ var jiant = jiant || (function($) {
       logInfo("binding event: " + name);
       events[name].listenersCount = 0;
       events[name].fire = function() {
-//        logInfo("    EVENT fire. " + name);
-//        logInfo(arguments);
+        jiant.DEBUG_MODE.events && debug("fire event: " + name);
+        jiant.DEBUG_MODE.events && (! eventsUsed[name]) && (eventsUsed[name] = name);
         eventBus.trigger(name + ".event", arguments);
       };
       events[name].on = function (cb) {
-        logInfo("    assigning event handler to " + name);
+        var trace;
+        if (jiant.DEBUG_MODE.events) {
+          debug("assigning event handler to: " + name);
+          eventsUsed[name] && debug(" !!! Event handler assigned after fire occured, possible error, for event " + name);
+          trace = getStackTrace();
+        }
         events[name].listenersCount++;
         eventBus.on(name + ".event", function () {
-//        logInfo("    EVENT. on");
-//        logInfo(arguments);
+          jiant.DEBUG_MODE.events && debug("called event handler: " + name + ", registered at " + trace);
           var args = $.makeArray(arguments);
           args.splice(0, 1);
           cb && cb.apply(cb, args);
@@ -474,14 +503,28 @@ var jiant = jiant || (function($) {
       logInfo("binding state: " + name);
       stateSpec.go = go(name, stateSpec.root);
       stateSpec.start = function(cb) {
-        eventBus.on(name + "_start", function() {
+        var trace;
+        if (jiant.DEBUG_MODE.states) {
+          debug("register state start handler: " + name);
+          statesUsed[name] && debug(" !!! State start handler registered after state triggered, possible error, for state " + name);
+          trace = getStackTrace();
+        }
+        eventBus.on("state." + name + ".start", function() {
+          jiant.DEBUG_MODE.states && debug("called state start handler: " + name + ", registered at " + trace);
           var args = $.makeArray(arguments);
           args.splice(0, 1);
           cb && cb.apply(cb, args);
         });
       };
       stateSpec.end = function(cb) {
+        var trace;
+        if (jiant.DEBUG_MODE.states) {
+          debug("register state end handler: " + name);
+          statesUsed[name] && debug(" !!! State end handler registered after state triggered, possible error, for state " + name);
+          trace = getStackTrace();
+        }
         eventBus.on("state." + name + ".end", function() {
+          jiant.DEBUG_MODE.states && debug("called state end handler: " + name + ", registered at " + trace);
           var args = $.makeArray(arguments);
           args.splice(0, 1);
           cb && cb.apply(cb, args);
@@ -500,10 +543,14 @@ var jiant = jiant || (function($) {
         }
       });
       if (lastState != undefined && lastState != stateId) {
+        jiant.DEBUG_MODE.states && debug("trigger state end: " + (lastState ? lastState : ""));
         eventBus.trigger("state." + lastState + ".end");
       }
       lastState = stateId;
-      eventBus.trigger((stateId ? stateId : "") + "_start", params);
+      stateId = (stateId ? stateId : "");
+      jiant.DEBUG_MODE.states && debug("trigger state start: " + stateId);
+      jiant.DEBUG_MODE.states && (! statesUsed[stateId]) && (statesUsed[stateId] = stateId);
+      eventBus.trigger("state." + stateId + ".start", params);
     });
   }
 
@@ -628,6 +675,7 @@ var jiant = jiant || (function($) {
           try{
             data = $.parseJSON(data);
           } catch (ex) {}
+          jiant.DEBUG_MODE.ajax && debug("Ajax call results for uri " + uri) && debug(data);
           callback(data);
         }
       }, error: function(jqXHR, textStatus, errorText) {
@@ -652,11 +700,24 @@ var jiant = jiant || (function($) {
     }
   }
 
+  function maybeSetDebugModeFromQueryString() {
+    if ((window.location + "").toLowerCase().indexOf("jiant.debug_events") >= 0) {
+      jiant.DEBUG_MODE.events = 1;
+    }
+    if ((window.location + "").toLowerCase().indexOf("jiant.debug_states") >= 0) {
+      jiant.DEBUG_MODE.states = 1;
+    }
+    if ((window.location + "").toLowerCase().indexOf("jiant.debug_ajax") >= 0) {
+      jiant.DEBUG_MODE.ajax = 1;
+    }
+  }
+
   function _bindUi(prefix, root, devMode) {
     jiant.DEV_MODE = devMode;
     if (! devMode) {
       maybeSetDevModeFromQueryString();
     }
+    maybeSetDebugModeFromQueryString();
     errString = "";
     bindingsResult = true;
     if (root.views) {
@@ -728,6 +789,11 @@ var jiant = jiant || (function($) {
     AJAX_PREFIX: "",
     AJAX_SUFFIX: "",
     DEV_MODE: false,
+    DEBUG_MODE: {
+      states: 0,
+      events: 0,
+      ajax: 0
+    },
     PAGER_RADIUS: 6,
     isMSIE: eval("/*@cc_on!@*/!1"),
 
