@@ -17,6 +17,7 @@
 // 0.17: propagate "0" and "" passed as valid values
 // 0.18: default state "end" not triggered - fixed
 // 0.19: DEBUG_MODE added, state start vs trigger check in debug mode, event usage check in debug mode
+// 0.20: appId introduced
 
 var jiant = jiant || (function($) {
 
@@ -720,6 +721,11 @@ var jiant = jiant || (function($) {
     maybeSetDebugModeFromQueryString();
     errString = "";
     bindingsResult = true;
+    if (! root.id) {
+      jiant.logError("!!! Application id not specified. Not recommended since 0.20. Use 'id' property of application root to specify application id");
+    } else {
+      jiant.logInfo("Loading application, id: " + root.id);
+    }
     if (root.views) {
       _bindViews(prefix, root.views);
     } else {
@@ -749,7 +755,7 @@ var jiant = jiant || (function($) {
       alert("Some elements not bound to HTML properly, check console" + errString);
     }
     uiBoundRoot = root;
-    eventBus.trigger("jiant.uiBound");
+    eventBus.trigger("jiant.uiBound." + (root.id ? root.id : ""));
   }
 
   function bindUi(prefix, root, devMode, viewsUrl, injectId) {
@@ -775,11 +781,16 @@ var jiant = jiant || (function($) {
     $.extend(obj1, obj2);
   }
 
-  function onUiBound(cb) {
+  function onUiBound(appId, cb) {
+    if (! cb) {
+      jiant.logError("!!! Registering anonymous logic without application id. Not recommended since 0.20");
+      cb = appId;
+      appId = "";
+    }
     if (uiBoundRoot) {
       cb && cb($, uiBoundRoot);
     } else {
-      eventBus.on("jiant.uiBound", function() {
+      eventBus.on("jiant.uiBound." + appId, function() {
         cb && cb($, uiBoundRoot);
       });
     }
