@@ -18,6 +18,7 @@
 // 0.18: default state "end" not triggered - fixed
 // 0.19: DEBUG_MODE added, state start vs trigger check in debug mode, event usage check in debug mode
 // 0.20: appId introduced
+// 0.21: root state not packed, go back not packed - fixed, propagate added to parseTemplate results
 
 var jiant = jiant || (function($) {
 
@@ -440,6 +441,7 @@ var jiant = jiant || (function($) {
       });
       root[key].parseTemplate = function(data) {
         var retVal = $("<!-- -->" + parseTemplate(tm, data)); // add comment to force jQuery to read it as HTML fragment
+        root[key].propagate = makePropagationFunction(content);
         $.each(content, function (elem, elemType) {
           if (elem != "parseTemplate" && elem != "parseTemplate2Text") {
             retVal[elem] = $.merge(retVal.filter("." + prefix + elem), retVal.find("." + prefix + elem));
@@ -570,7 +572,14 @@ var jiant = jiant || (function($) {
         }
       });
       if (root) {
-        parsed.root = parsed.now;
+        parsed.root = [];
+        $.each(parsed.now, function(idx, param) {
+          parsed.root.push(param);
+        });
+      } else {
+        $.each(parsed.root, function(idx, param) {
+          parsed.root[idx] = pack(param);
+        });
       }
       setState(parsed);
     };
@@ -578,12 +587,16 @@ var jiant = jiant || (function($) {
 
   function goRoot() {
     var parsed = parseState();
-    parsed.now = parsed.root;
+    parsed.now = [];
+    $.each(parsed.root, function(idx, param) {
+      parsed.now.push(pack(param));
+      parsed.root[idx] = pack(param);
+    });
     setState(parsed);
   }
 
   function setState(parsed) {
-    var s = "root=" + parsed.root + "|now=" + parsed.now;
+    var s = "now=" + parsed.now + "|root=" + parsed.root;
     $.History.go(s);
   }
 
