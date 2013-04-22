@@ -19,6 +19,7 @@
 // 0.19: DEBUG_MODE added, state start vs trigger check in debug mode, event usage check in debug mode
 // 0.20: appId introduced
 // 0.21: root state not packed, go back not packed - fixed, propagate added to parseTemplate results
+// 0.22: onUiBound accepts both app and app.id as first param
 
 var jiant = jiant || (function($) {
 
@@ -803,6 +804,9 @@ var jiant = jiant || (function($) {
     if (uiBoundRoot) {
       cb && cb($, uiBoundRoot);
     } else {
+      if ($.isPlainObject(appId)) {
+        appId = appId.id;
+      }
       eventBus.on("jiant.uiBound." + appId, function() {
         cb && cb($, uiBoundRoot);
       });
