@@ -130,7 +130,7 @@ var jiant = jiant || (function($) {
 
   function formatTimeSeconds(millis) {
     var dt = new Date(millis);
-    return lfill(dt.getHours()) + ":" + lfill(dt.getMinutes() + ":" + lfill(dt.getSeconds()));
+    return lfill(dt.getHours()) + ":" + lfill(dt.getMinutes()) + ":" + lfill(dt.getSeconds());
   }
 
   function lfill(val) {
