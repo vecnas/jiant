@@ -13,3 +13,5 @@ from execution time to start time where possible.
 Jiant is more of philosophy how to develop application, not particular technical implementation of set of tricks.
 
 Documentation website on Jiant: http://sites.google.com/site/jiantscript/
+
+Website updated to Jiant version 0.23
