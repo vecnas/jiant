@@ -20,6 +20,7 @@
 // 0.20: appId introduced
 // 0.21: root state not packed, go back not packed - fixed, propagate added to parseTemplate results
 // 0.22: onUiBound accepts both app and app.id as first param
+// 0.23: model initial auto-implementation added for method names "add", "remove", "setXXX", "getXXX", "findByXXX"; .xl added
 
 var jiant = jiant || (function($) {
 
@@ -463,6 +464,92 @@ var jiant = jiant || (function($) {
     return parseTemplate(tm, data);
   }
 
+// ------------ model staff ----------------
+
+  function assignOnHandler(obj, eventName, fname) {
+    obj[fname].on = function(cb) {
+      var trace;
+      if (jiant.DEBUG_MODE.events) {
+        debug("assigning event handler to " + eventName);
+        eventsUsed[eventName] && debug(" !!! Event handler assigned after fire occured, possible error, for event " + eventName);
+        trace = getStackTrace();
+      }
+      obj[fname].listenersCount++;
+      eventBus.on(eventName, function () {
+        jiant.DEBUG_MODE.events && debug("called event handler: " + eventName + ", registered at " + trace);
+        var args = $.makeArray(arguments);
+        args.splice(0, 1);
+        cb && cb.apply(cb, args);
+      })
+    };
+  }
+
+  function bindFunctions(name, spec, obj) {
+    var storage = [];
+    $.each(spec, function(fname, funcSpec) {
+      var eventName = name + "." + fname + ".event";
+      jiant.logInfo("  implementing model function " + fname);
+      if (fname == "all") {
+        obj[fname] = function() {
+          return storage;
+        };
+      } else if (fname == "add") {
+        var params = getParamNames(funcSpec);
+        obj[fname] = function() {
+          var newObj = {};
+          $.each(arguments, function(idx, arg) {
+            params[idx] && (newObj[params[idx]] = arg);
+          });
+          storage.push(newObj);
+          bindFunctions(name, spec, newObj);
+          jiant.DEBUG_MODE.events && debug("fire event: " + eventName);
+          jiant.DEBUG_MODE.events && (! eventsUsed[eventName]) && (eventsUsed[eventName] = name);
+          eventBus.trigger(eventName, newObj);
+          return newObj;
+        };
+        assignOnHandler(obj, eventName, fname);
+      } else if (fname == "remove") {
+        obj[fname] = function(elem) {
+          storage = $.grep(storage, function(value) {return value != elem;});
+          jiant.DEBUG_MODE.events && debug("fire event: " + eventName);
+          jiant.DEBUG_MODE.events && (! eventsUsed[eventName]) && (eventsUsed[eventName] = name);
+          eventBus.trigger(eventName, elem);
+          return elem;
+        };
+        assignOnHandler(obj, eventName, fname);
+      } else if (fname.indexOf("findBy") == 0) {
+        var fieldName = fname.substring(6).toLowerCase();
+        obj[fname] = function(val) {
+          return $.grep(storage, function(value) {return value[fieldName] == val});
+        };
+      } else if (fname.indexOf("set") == 0) {
+        var fieldName = fname.substring(3).toLowerCase();
+        obj[fname] = function(val) {
+          obj[fieldName] = val;
+          jiant.DEBUG_MODE.events && debug("fire event: " + eventName);
+          jiant.DEBUG_MODE.events && (! eventsUsed[eventName]) && (eventsUsed[eventName] = name);
+          eventBus.trigger(eventName, [obj, val]);
+          return obj[fieldName];
+        };
+        assignOnHandler(obj, eventName, fname);
+      } else if (fname.indexOf("get") == 0) {
+        var fieldName = fname.substring(3).toLowerCase();
+        obj[fname] = function(val) {
+          return obj[fieldName];
+        };
+      } else {
+        jiant.logError("Unsupported model functionality declaration, can't implement: " + fname);
+      }
+    });
+  }
+
+  function _bindModels(models) {
+    $.each(models, function(name, spec) {
+      jiant.logInfo("implementing model " + name);
+      bindFunctions(name, spec, spec);
+    });
+  }
+
 // ------------ events staff ----------------
 
   function _bindEvents(events) {
@@ -764,6 +851,11 @@ var jiant = jiant || (function($) {
       _bindStates(root.states);
     } else {
       root.states = {};
+    }
+    if (root.models) {
+      _bindModels(root.models);
+    } else {
+      root.models = {};
     }
     if (jiant.DEV_MODE && !bindingsResult) {
       alert("Some elements not bound to HTML properly, check console" + errString);
