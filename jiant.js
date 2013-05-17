@@ -22,6 +22,7 @@
 // 0.22: onUiBound accepts both app and app.id as first param
 // 0.23: model initial auto-implementation added for method names "add", "remove", "setXXX", "getXXX", "findByXXX"; .xl added
 // 0.24: model modified, "set"/"get" replaced by single method xxx(optional_param), in jquery style, added global "on" event for any model change. incompatible with 0.23
+// 0.25: radio button handled properly in propagate function
 
 var jiant = jiant || (function($) {
 
@@ -397,7 +398,8 @@ var jiant = jiant || (function($) {
   }
 
   function makePropagationFunction(content) {
-    var map = {};
+    var map = {},
+        types = ["text", "hidden", undefined];
     $.each(content, function (key, elem) {
       map[key] = elem;
     });
@@ -406,7 +408,15 @@ var jiant = jiant || (function($) {
         if (data[key] != undefined && data[key] != null) {
           var tagName = elem[0].tagName.toLowerCase();
           if (tagName == "input" || tagName == "textarea") {
-            elem.val(data[key]);
+            var el = $(elem[0]),
+                tp = el.attr("type");
+            if ($.inArray(tp, types) >= 0) {
+              elem.val(data[key]);
+            } else if (tp == "radio") {
+              $.each(elem, function(idx, subelem) {
+                $(subelem).prop("checked", subelem.value == data[key]);
+              });
+            }
           } else if (tagName == "img") {
             elem.attr("src", data[key]);
           } else {
