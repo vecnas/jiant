@@ -564,34 +564,21 @@ var jiant = jiant || (function($) {
         obj[fname] = function(val) {
           return $.grep(storage, function(value) {return value[fieldName] == val});
         };
-//      } else if (fname.indexOf("set") == 0 && fname.length > 3) {
-//        var fieldName = fname.substring(3).toLowerCase();
-//        obj[fname] = function(val) {
-//          obj[fieldName] = val;
-//          jiant.DEBUG_MODE.events && debug("fire event: " + eventName);
-//          jiant.DEBUG_MODE.events && (! eventsUsed[eventName]) && (eventsUsed[eventName] = name);
-//          eventBus.trigger(eventName, [obj, val]);
-//          return obj[fieldName];
-//        };
-//        assignOnHandler(obj, eventName, fname);
-//      } else if (fname.indexOf("get") == 0 && fname.length > 3) {
-//        var fieldName = fname.substring(3).toLowerCase();
-//        obj[fname] = function(val) {
-//          return obj[fieldName];
-//        };
       } else {
         obj[fname] = function(val) {
           var fieldName = fldPrefix + fname;
           if (arguments.length == 0) {
             return obj[fieldName];
           } else {
-            obj[fieldName] = val;
-            jiant.DEBUG_MODE.events && debug("fire event: " + eventName);
-            jiant.DEBUG_MODE.events && (! eventsUsed[eventName]) && (eventsUsed[eventName] = name);
-            eventBus.trigger(eventName, [obj, val]);
-            jiant.DEBUG_MODE.events && debug("fire event: " + globalChangeEventName);
-            jiant.DEBUG_MODE.events && (! eventsUsed[globalChangeEventName]) && (eventsUsed[globalChangeEventName] = name);
-            eventBus.trigger(globalChangeEventName, [obj, fname, val]);
+            if (obj[fieldName] !== val) {
+              obj[fieldName] = val;
+              jiant.DEBUG_MODE.events && debug("fire event: " + eventName);
+              jiant.DEBUG_MODE.events && (! eventsUsed[eventName]) && (eventsUsed[eventName] = name);
+              eventBus.trigger(eventName, [obj, val]);
+              jiant.DEBUG_MODE.events && debug("fire event: " + globalChangeEventName);
+              jiant.DEBUG_MODE.events && (! eventsUsed[globalChangeEventName]) && (eventsUsed[globalChangeEventName] = name);
+              eventBus.trigger(globalChangeEventName, [obj, fname, val]);
+            }
             return obj[fieldName];
           }
         };
