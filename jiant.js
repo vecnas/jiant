@@ -21,6 +21,7 @@
 // 0.21: root state not packed, go back not packed - fixed, propagate added to parseTemplate results
 // 0.22: onUiBound accepts both app and app.id as first param
 // 0.23: model initial auto-implementation added for method names "add", "remove", "setXXX", "getXXX", "findByXXX"; .xl added
+// 0.24: model modified, "set"/"get" replaced by single method xxx(optional_param), in jquery style, added global "on" event for any model change. incompatible with 0.23
 
 var jiant = jiant || (function($) {
 
@@ -467,14 +468,18 @@ var jiant = jiant || (function($) {
 // ------------ model staff ----------------
 
   function assignOnHandler(obj, eventName, fname) {
-    obj[fname].on = function(cb) {
+    var fn = function(cb) {
       var trace;
       if (jiant.DEBUG_MODE.events) {
         debug("assigning event handler to " + eventName);
         eventsUsed[eventName] && debug(" !!! Event handler assigned after fire occured, possible error, for event " + eventName);
         trace = getStackTrace();
       }
-      obj[fname].listenersCount++;
+      if (fname) {
+        obj[fname].listenersCount++;
+      } else {
+        obj.listenersCount++;
+      }
       eventBus.on(eventName, function () {
         jiant.DEBUG_MODE.events && debug("called event handler: " + eventName + ", registered at " + trace);
         var args = $.makeArray(arguments);
@@ -482,63 +487,106 @@ var jiant = jiant || (function($) {
         cb && cb.apply(cb, args);
       })
     };
+    if (fname) {
+      obj[fname].on = fn;
+      obj[fname].listenersCount = 0;
+    } else {
+      obj.on = fn;
+      obj.listenersCount = 0;
+    }
   }
 
   function bindFunctions(name, spec, obj) {
-    var storage = [];
+    var storage = [],
+        fldPrefix = "fld_prefix_",
+        predefined = ["add", "all", "on", "remove"];
+    $.each(predefined, function(idx, fn) {
+      if (! spec[fn]) {
+        spec[fn] = fn;
+        jiant.logInfo("  !Adding not declared function to model: " + fn);
+      }
+    });
     $.each(spec, function(fname, funcSpec) {
-      var eventName = name + "." + fname + ".event";
+      var eventName = name + "_" + fname + "_event",
+          globalChangeEventName = name + "_globalevent";
       jiant.logInfo("  implementing model function " + fname);
       if (fname == "all") {
         obj[fname] = function() {
           return storage;
         };
+      } else if (fname == "on") {
+        assignOnHandler(obj, globalChangeEventName);
       } else if (fname == "add") {
         var params = getParamNames(funcSpec);
         obj[fname] = function() {
           var newObj = {};
           $.each(arguments, function(idx, arg) {
-            params[idx] && (newObj[params[idx]] = arg);
+            params[idx] && (newObj[fldPrefix + params[idx]] = arg);
           });
           storage.push(newObj);
           bindFunctions(name, spec, newObj);
           jiant.DEBUG_MODE.events && debug("fire event: " + eventName);
           jiant.DEBUG_MODE.events && (! eventsUsed[eventName]) && (eventsUsed[eventName] = name);
           eventBus.trigger(eventName, newObj);
+          jiant.DEBUG_MODE.events && debug("fire event: " + globalChangeEventName);
+          jiant.DEBUG_MODE.events && (! eventsUsed[globalChangeEventName]) && (eventsUsed[globalChangeEventName] = name);
+          eventBus.trigger(globalChangeEventName, [newObj, fname]);
           return newObj;
         };
         assignOnHandler(obj, eventName, fname);
       } else if (fname == "remove") {
         obj[fname] = function(elem) {
+          var prevLen = storage.length;
           storage = $.grep(storage, function(value) {return value != elem;});
-          jiant.DEBUG_MODE.events && debug("fire event: " + eventName);
-          jiant.DEBUG_MODE.events && (! eventsUsed[eventName]) && (eventsUsed[eventName] = name);
-          eventBus.trigger(eventName, elem);
+          if (storage.length != prevLen) {
+            jiant.DEBUG_MODE.events && debug("fire event: " + eventName);
+            jiant.DEBUG_MODE.events && (! eventsUsed[eventName]) && (eventsUsed[eventName] = name);
+            eventBus.trigger(eventName, elem);
+            jiant.DEBUG_MODE.events && debug("fire event: " + globalChangeEventName);
+            jiant.DEBUG_MODE.events && (! eventsUsed[globalChangeEventName]) && (eventsUsed[globalChangeEventName] = name);
+            eventBus.trigger(globalChangeEventName, [elem, fname]);
+          }
           return elem;
         };
         assignOnHandler(obj, eventName, fname);
-      } else if (fname.indexOf("findBy") == 0) {
-        var fieldName = fname.substring(6).toLowerCase();
+      } else if (fname.indexOf("findBy") == 0 && fname.length > 6) {
+        var fieldName = fldPrefix + fname.substring(6).toLowerCase();
         obj[fname] = function(val) {
           return $.grep(storage, function(value) {return value[fieldName] == val});
         };
-      } else if (fname.indexOf("set") == 0) {
-        var fieldName = fname.substring(3).toLowerCase();
+//      } else if (fname.indexOf("set") == 0 && fname.length > 3) {
+//        var fieldName = fname.substring(3).toLowerCase();
+//        obj[fname] = function(val) {
+//          obj[fieldName] = val;
+//          jiant.DEBUG_MODE.events && debug("fire event: " + eventName);
+//          jiant.DEBUG_MODE.events && (! eventsUsed[eventName]) && (eventsUsed[eventName] = name);
+//          eventBus.trigger(eventName, [obj, val]);
+//          return obj[fieldName];
+//        };
+//        assignOnHandler(obj, eventName, fname);
+//      } else if (fname.indexOf("get") == 0 && fname.length > 3) {
+//        var fieldName = fname.substring(3).toLowerCase();
+//        obj[fname] = function(val) {
+//          return obj[fieldName];
+//        };
+      } else {
         obj[fname] = function(val) {
-          obj[fieldName] = val;
-          jiant.DEBUG_MODE.events && debug("fire event: " + eventName);
-          jiant.DEBUG_MODE.events && (! eventsUsed[eventName]) && (eventsUsed[eventName] = name);
-          eventBus.trigger(eventName, [obj, val]);
-          return obj[fieldName];
+          var fieldName = fldPrefix + fname;
+          if (arguments.length == 0) {
+            return obj[fieldName];
+          } else {
+            obj[fieldName] = val;
+            jiant.DEBUG_MODE.events && debug("fire event: " + eventName);
+            jiant.DEBUG_MODE.events && (! eventsUsed[eventName]) && (eventsUsed[eventName] = name);
+            eventBus.trigger(eventName, [obj, val]);
+            jiant.DEBUG_MODE.events && debug("fire event: " + globalChangeEventName);
+            jiant.DEBUG_MODE.events && (! eventsUsed[globalChangeEventName]) && (eventsUsed[globalChangeEventName] = name);
+            eventBus.trigger(globalChangeEventName, [obj, fname, val]);
+            return obj[fieldName];
+          }
         };
         assignOnHandler(obj, eventName, fname);
-      } else if (fname.indexOf("get") == 0) {
-        var fieldName = fname.substring(3).toLowerCase();
-        obj[fname] = function(val) {
-          return obj[fieldName];
-        };
-      } else {
-        jiant.logError("Unsupported model functionality declaration, can't implement: " + fname);
+//        jiant.logError("Unsupported model functionality declaration, can't implement: " + fname);
       }
     });
   }
@@ -865,6 +913,7 @@ var jiant = jiant || (function($) {
   }
 
   function bindUi(prefix, root, devMode, viewsUrl, injectId) {
+    var startedAt = new Date().getMilliseconds();
     if (viewsUrl) {
       var injectionPoint = injectId ? $("#" + injectId) : $("body");
       injectionPoint.load(viewsUrl, {}, function() {
@@ -881,6 +930,7 @@ var jiant = jiant || (function($) {
     } else {
       _bindUi(prefix, root, devMode);
     }
+    jiant.logInfo("UI bound in " + (new Date().getMilliseconds() - startedAt) + "ms");
   }
 
   function bind(obj1, obj2) {
