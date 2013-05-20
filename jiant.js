@@ -23,6 +23,7 @@
 // 0.23: model initial auto-implementation added for method names "add", "remove", "setXXX", "getXXX", "findByXXX"; .xl added
 // 0.24: model modified, "set"/"get" replaced by single method xxx(optional_param), in jquery style, added global "on" event for any model change. incompatible with 0.23
 // 0.25: radio button handled properly in propagate function
+// 0.26: jiant.STATE_EXTERNAL_BASE added for navigation to another page in frames of state change, fixed multiple apps on a page mixing
 
 var jiant = jiant || (function($) {
 
@@ -55,7 +56,7 @@ var jiant = jiant || (function($) {
       lastState = undefined,
       eventBus = $({}),
       bindingsResult = true,
-      uiBoundRoot = undefined,
+      uiBoundRoot = {},
       errString,
       statesUsed = {},
       eventsUsed = {};
@@ -645,7 +646,7 @@ var jiant = jiant || (function($) {
           statesUsed[name] && debug(" !!! State start handler registered after state triggered, possible error, for state " + name);
           trace = getStackTrace();
         }
-        eventBus.on("state." + name + ".start", function() {
+        eventBus.on("state_" + name + "_start", function() {
           jiant.DEBUG_MODE.states && debug("called state start handler: " + name + ", registered at " + trace);
           var args = $.makeArray(arguments);
           args.splice(0, 1);
@@ -659,7 +660,7 @@ var jiant = jiant || (function($) {
           statesUsed[name] && debug(" !!! State end handler registered after state triggered, possible error, for state " + name);
           trace = getStackTrace();
         }
-        eventBus.on("state." + name + ".end", function() {
+        eventBus.on("state_" + name + "_end", function() {
           jiant.DEBUG_MODE.states && debug("called state end handler: " + name + ", registered at " + trace);
           var args = $.makeArray(arguments);
           args.splice(0, 1);
@@ -680,13 +681,13 @@ var jiant = jiant || (function($) {
       });
       if (lastState != undefined && lastState != stateId) {
         jiant.DEBUG_MODE.states && debug("trigger state end: " + (lastState ? lastState : ""));
-        eventBus.trigger("state." + lastState + ".end");
+        eventBus.trigger("state_" + lastState + "_end");
       }
       lastState = stateId;
       stateId = (stateId ? stateId : "");
       jiant.DEBUG_MODE.states && debug("trigger state start: " + stateId);
       jiant.DEBUG_MODE.states && (! statesUsed[stateId]) && (statesUsed[stateId] = stateId);
-      eventBus.trigger("state." + stateId + ".start", params);
+      eventBus.trigger("state_" + stateId + "_start", params);
     });
   }
 
@@ -730,7 +731,11 @@ var jiant = jiant || (function($) {
 
   function setState(parsed) {
     var s = "now=" + parsed.now + "|root=" + parsed.root;
-    $.History.go(s);
+    if (jiant.STATE_EXTERNAL_BASE) {
+      window.location.assign(jiant.STATE_EXTERNAL_BASE + "#" + s);
+    } else {
+      $.History.go(s);
+    }
   }
 
   function parseState() {
@@ -905,8 +910,10 @@ var jiant = jiant || (function($) {
     if (jiant.DEV_MODE && !bindingsResult) {
       alert("Some elements not bound to HTML properly, check console" + errString);
     }
-    uiBoundRoot = root;
-    eventBus.trigger("jiant.uiBound." + (root.id ? root.id : ""));
+    var appId = (root.id ? root.id : "no_app_id");
+    uiBoundRoot[appId] = appId;
+    var eventId = "jiant_uiBound_" + appId;
+    eventBus.trigger(eventId);
   }
 
   function bindUi(prefix, root, devMode, viewsUrl, injectId) {
@@ -938,15 +945,17 @@ var jiant = jiant || (function($) {
     if (! cb) {
       jiant.logError("!!! Registering anonymous logic without application id. Not recommended since 0.20");
       cb = appId;
-      appId = "";
-    }
-    if (uiBoundRoot) {
-      cb && cb($, uiBoundRoot);
+      appId = "no_app_id";
     } else {
       if ($.isPlainObject(appId)) {
         appId = appId.id;
       }
-      eventBus.on("jiant.uiBound." + appId, function() {
+    }
+    if (uiBoundRoot[appId]) {
+      cb && cb($, uiBoundRoot[appId]);
+    } else {
+      var eventId = "jiant_uiBound_" + appId;
+      eventBus.on(eventId, function() {
         cb && cb($, uiBoundRoot);
       });
     }
@@ -963,6 +972,7 @@ var jiant = jiant || (function($) {
     },
     PAGER_RADIUS: 6,
     isMSIE: eval("/*@cc_on!@*/!1"),
+    STATE_EXTERNAL_BASE: undefined,
 
     bind: bind,
     bindUi: bindUi,
