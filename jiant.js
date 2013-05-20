@@ -911,7 +911,7 @@ var jiant = jiant || (function($) {
       alert("Some elements not bound to HTML properly, check console" + errString);
     }
     var appId = (root.id ? root.id : "no_app_id");
-    uiBoundRoot[appId] = appId;
+    uiBoundRoot[appId] = root;
     var eventId = "jiant_uiBound_" + appId;
     eventBus.trigger(eventId);
   }
@@ -956,7 +956,7 @@ var jiant = jiant || (function($) {
     } else {
       var eventId = "jiant_uiBound_" + appId;
       eventBus.on(eventId, function() {
-        cb && cb($, uiBoundRoot);
+        cb && cb($, uiBoundRoot[appId]);
       });
     }
   }
