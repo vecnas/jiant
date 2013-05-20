@@ -24,6 +24,7 @@
 // 0.24: model modified, "set"/"get" replaced by single method xxx(optional_param), in jquery style, added global "on" event for any model change. incompatible with 0.23
 // 0.25: radio button handled properly in propagate function
 // 0.26: jiant.STATE_EXTERNAL_BASE added for navigation to another page in frames of state change, fixed multiple apps on a page mixing
+// 0.27: predefined model functions not created automatically more
 
 var jiant = jiant || (function($) {
 
@@ -509,14 +510,14 @@ var jiant = jiant || (function($) {
 
   function bindFunctions(name, spec, obj) {
     var storage = [],
-        fldPrefix = "fld_prefix_",
-        predefined = ["add", "all", "on", "remove"];
-    $.each(predefined, function(idx, fn) {
-      if (! spec[fn]) {
-        spec[fn] = fn;
-        jiant.logInfo("  !Adding not declared function to model: " + fn);
-      }
-    });
+        fldPrefix = "fld_prefix_";
+//        predefined = ["add", "all", "on", "remove"];
+//    $.each(predefined, function(idx, fn) {
+//      if (! spec[fn]) {
+//        spec[fn] = fn;
+//        jiant.logInfo("  !Adding not declared function to model: " + fn);
+//      }
+//    });
     $.each(spec, function(fname, funcSpec) {
       var eventName = name + "_" + fname + "_event",
           globalChangeEventName = name + "_globalevent";
