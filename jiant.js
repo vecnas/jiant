@@ -25,6 +25,7 @@
 // 0.25: radio button handled properly in propagate function
 // 0.26: jiant.STATE_EXTERNAL_BASE added for navigation to another page in frames of state change, fixed multiple apps on a page mixing
 // 0.27: predefined model functions not created automatically more
+// 0.28: ajaxPrefix, ajaxSuffix, stateExternalBase per application for multi-app support
 
 var jiant = jiant || (function($) {
 
@@ -628,7 +629,7 @@ var jiant = jiant || (function($) {
 
 // ------------ states staff ----------------
 
-  function _bindStates(states) {
+  function _bindStates(states, stateExternalBase) {
     if (! $.History) {
       var err = "No history plugin and states configured. Don't use states or add $.History plugin";
       jiant.logError(err);
@@ -639,7 +640,7 @@ var jiant = jiant || (function($) {
     }
     $.each(states, function(name, stateSpec) {
       logInfo("binding state: " + name);
-      stateSpec.go = go(name, stateSpec.root);
+      stateSpec.go = go(name, stateSpec.root, stateExternalBase);
       stateSpec.start = function(cb) {
         var trace;
         if (jiant.DEBUG_MODE.states) {
@@ -692,7 +693,7 @@ var jiant = jiant || (function($) {
     });
   }
 
-  function go(stateId, root) {
+  function go(stateId, root, stateExternalBase) {
     return function() {
       var parsed = parseState(),
           prevState = parsed.now;
@@ -716,7 +717,7 @@ var jiant = jiant || (function($) {
           parsed.root[idx] = pack(param);
         });
       }
-      setState(parsed);
+      setState(parsed, stateExternalBase);
     };
   }
 
@@ -727,13 +728,14 @@ var jiant = jiant || (function($) {
       parsed.now.push(pack(param));
       parsed.root[idx] = pack(param);
     });
-    setState(parsed);
+    setState(parsed, undefined); // external base not used
   }
 
-  function setState(parsed) {
+  function setState(parsed, stateExternalBase) {
     var s = "now=" + parsed.now + "|root=" + parsed.root;
-    if (jiant.STATE_EXTERNAL_BASE) {
-      window.location.assign(jiant.STATE_EXTERNAL_BASE + "#" + s);
+    var extBase = stateExternalBase ? stateExternalBase : jiant.STATE_EXTERNAL_BASE;
+    if (extBase) {
+      window.location.assign(extBase + "#" + s);
     } else {
       $.History.go(s);
     }
@@ -778,12 +780,12 @@ var jiant = jiant || (function($) {
     return funStr.slice(funStr.indexOf('(')+1, funStr.indexOf(')')).match(/([^\s,]+)/g);
   }
 
-  function _bindAjax(root) {
+  function _bindAjax(root, ajaxPrefix, ajaxSuffix) {
     $.each(root, function(uri, funcSpec) {
       logInfo("binding ajax for function: " + uri);
       var params = getParamNames(funcSpec);
       params.splice(params.length - 1, 1);
-      root[uri] = makeAjaxPerformer(uri, params, $.isFunction(root[uri]) ? root[uri]() : undefined);
+      root[uri] = makeAjaxPerformer(ajaxPrefix, ajaxSuffix, uri, params, $.isFunction(root[uri]) ? root[uri]() : undefined);
     });
   }
 
@@ -800,7 +802,7 @@ var jiant = jiant || (function($) {
     }
   }
 
-  function makeAjaxPerformer(uri, params, hardUrl) {
+  function makeAjaxPerformer(ajaxPrefix, ajaxSuffix, uri, params, hardUrl) {
     return function() {
       var callData = {},
           callback,
@@ -821,7 +823,9 @@ var jiant = jiant || (function($) {
       if (! callData["antiCache3721"]) {
         callData["antiCache3721"] = new Date().getTime();
       }
-      var url = hardUrl ? hardUrl : jiant.AJAX_PREFIX + uri + jiant.AJAX_SUFFIX;
+      var pfx = ajaxPrefix ? ajaxPrefix : jiant.AJAX_PREFIX;
+      var sfx = ajaxSuffix ? ajaxSuffix : jiant.AJAX_SUFFIX;
+      var url = hardUrl ? hardUrl : pfx + uri + sfx;
       logInfo("    AJAX call. " + uri + " to server url: " + url);
       $.ajax(url, {data: callData, traditional: true, success: function(data) {
         if (callback) {
@@ -889,7 +893,7 @@ var jiant = jiant || (function($) {
       root.templates = {};
     }
     if (root.ajax) {
-      _bindAjax(root.ajax);
+      _bindAjax(root.ajax, root.ajaxPrefix, root.ajaxSuffix);
     } else {
       root.ajax = {};
     }
@@ -899,7 +903,7 @@ var jiant = jiant || (function($) {
       root.events = {};
     }
     if (root.states) {
-      _bindStates(root.states);
+      _bindStates(root.states, root.stateExternalBase);
     } else {
       root.states = {};
     }
