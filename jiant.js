@@ -26,6 +26,7 @@
 // 0.26: jiant.STATE_EXTERNAL_BASE added for navigation to another page in frames of state change, fixed multiple apps on a page mixing
 // 0.27: predefined model functions not created automatically more
 // 0.28: ajaxPrefix, ajaxSuffix, stateExternalBase per application for multi-app support
+// 0.28.1: minor fix for "" comparison
 
 var jiant = jiant || (function($) {
 
