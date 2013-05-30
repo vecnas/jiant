@@ -733,7 +733,7 @@ var jiant = jiant || (function($) {
 
   function setState(parsed, stateExternalBase) {
     var s = "now=" + parsed.now + "|root=" + parsed.root;
-    var extBase = stateExternalBase ? stateExternalBase : jiant.STATE_EXTERNAL_BASE;
+    var extBase = (stateExternalBase || stateExternalBase == "") ? stateExternalBase : jiant.STATE_EXTERNAL_BASE;
     if (extBase) {
       window.location.assign(extBase + "#" + s);
     } else {
@@ -823,8 +823,8 @@ var jiant = jiant || (function($) {
       if (! callData["antiCache3721"]) {
         callData["antiCache3721"] = new Date().getTime();
       }
-      var pfx = ajaxPrefix ? ajaxPrefix : jiant.AJAX_PREFIX;
-      var sfx = ajaxSuffix ? ajaxSuffix : jiant.AJAX_SUFFIX;
+      var pfx = (ajaxPrefix || ajaxPrefix == "") ? ajaxPrefix : jiant.AJAX_PREFIX;
+      var sfx = (ajaxSuffix || ajaxSuffix == "") ? ajaxSuffix : jiant.AJAX_SUFFIX;
       var url = hardUrl ? hardUrl : pfx + uri + sfx;
       logInfo("    AJAX call. " + uri + " to server url: " + url);
       $.ajax(url, {data: callData, traditional: true, success: function(data) {
