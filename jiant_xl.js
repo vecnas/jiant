@@ -2,7 +2,9 @@ jiant.xl = {
 
   ctl2state: function(ctl, state, selectedCssClass) {
     return function() {
-      ctl.click(state.go);
+      ctl.click(function() {
+        state.go();
+      });
       selectedCssClass && state.start(function() {
         ctl.addClass(selectedCssClass);
       });
