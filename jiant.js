@@ -239,11 +239,11 @@ var jiant = jiant || (function($) {
         url += jiant.AJAX_SUFFIX;
       }
       var data = {
-              type: "POST",
-              url: url,
-              data: elem.serialize(),
-              success: cb
-            };
+        type: "POST",
+        url: url,
+        data: elem.serialize(),
+        success: cb
+      };
       if (appRoot.crossDomain) {
         data.contentType = "application/json";
         data.dataType = 'jsonp';
@@ -521,7 +521,7 @@ var jiant = jiant || (function($) {
       eventBus.on(eventName, function () {
         jiant.DEBUG_MODE.events && debug("called event handler: " + eventName + ", registered at " + trace);
         var args = $.makeArray(arguments);
-        args.splice(0, 1);
+        args.splice(0, 2);
         cb && cb.apply(cb, args);
       })
     };
