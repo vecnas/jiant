@@ -27,6 +27,7 @@
 // 0.27: predefined model functions not created automatically more
 // 0.28: ajaxPrefix, ajaxSuffix, stateExternalBase per application for multi-app support
 // 0.28.1: minor fix for "" comparison
+// 0.29: refreshState() workaround for used History plugin timeout, states tuning, per app cross domain via flag for multiple app cross/noncross domain mix, form influenced by ajax pre/suff
 
 var jiant = jiant || (function($) {
 
@@ -213,7 +214,7 @@ var jiant = jiant || (function($) {
     });
   }
 
-  function setupForm(elem, key, name) {
+  function setupForm(appRoot, elem, key, name) {
     if (! elem[0]) {
       return;
     }
@@ -225,7 +226,17 @@ var jiant = jiant || (function($) {
       }
     }
     elem.submitForm = function(url, cb) {
-      url = url || elem.attr("action");
+      url = url ? url : elem.attr("action");
+      if (appRoot.ajaxPrefix) {
+        url = appRoot.ajaxPrefix + url;
+      } else if (jiant.AJAX_PREFIX) {
+        url = jiant.AJAX_PREFIX = url;
+      }
+      if (appRoot.ajaxSuffix) {
+        url += appRoot.ajaxSuffix;
+      } else if (jiant.AJAX_SUFFIX) {
+        url += jiant.AJAX_SUFFIX;
+      }
       return $.post(url, elem.serialize(), cb);
     };
   }
@@ -352,7 +363,7 @@ var jiant = jiant || (function($) {
     }
   }
 
-  function setupExtras(uiElem, elemContent, key, elem) {
+  function setupExtras(appRoot, uiElem, elemContent, key, elem) {
     if (elemContent == tabs && uiElem.tabs) {
       uiElem.tabs();
     } else if (elemContent == inputInt) {
@@ -362,7 +373,7 @@ var jiant = jiant || (function($) {
     } else if (elemContent == pager) {
       setupPager(uiElem);
     } else if (elemContent == form) {
-      setupForm(uiElem, key, elem);
+      setupForm(appRoot, uiElem, key, elem);
     } else if (elemContent == containerPaged) {
       setupContainerPaged(uiElem);
     }
@@ -377,7 +388,7 @@ var jiant = jiant || (function($) {
 
 // ------------ views ----------------
 
-  function _bindContent(subRoot, key, content, view, prefix) {
+  function _bindContent(appRoot, subRoot, key, content, view, prefix) {
     $.each(content, function (elem, elemContent) {
 //      window.console && window.console.logInfo(elem + "    : " + subRoot[elem]);
       if (subRoot[elem] == lookup) {
@@ -387,7 +398,7 @@ var jiant = jiant || (function($) {
         var uiElem = view.find("." + prefix + elem);
         ensureExists(uiElem, prefix + key, prefix + elem);
         subRoot[elem] = uiElem;
-        setupExtras(uiElem, elemContent, key, elem);
+        setupExtras(appRoot, uiElem, elemContent, key, elem);
 //        logInfo("    bound UI for: " + elem);
       }
     });
@@ -431,13 +442,13 @@ var jiant = jiant || (function($) {
     }
   }
 
-  function _bindViews(prefix, root) {
+  function _bindViews(prefix, root, appRoot) {
     prefix = prefix || "";
     $.each(root, function (key, content) {
       logInfo("binding UI for view: " + key);
       var view = $("#" + prefix + key);
       ensureExists(view, prefix + key);
-      _bindContent(root[key], key, content, view, prefix);
+      _bindContent(appRoot, root[key], key, content, view, prefix);
       ensureSafeExtend(root[key], view);
       root[key].propagate = makePropagationFunction(content);
       $.extend(root[key], view);
@@ -447,7 +458,7 @@ var jiant = jiant || (function($) {
 
 // ------------ templates ----------------
 
-  function _bindTemplates(prefix, root) {
+  function _bindTemplates(prefix, root, appRoot) {
     prefix = prefix || "";
     $.each(root, function(key, content) {
       logInfo("binding UI for template: " + key);
@@ -462,7 +473,7 @@ var jiant = jiant || (function($) {
         $.each(content, function (elem, elemType) {
           if (elem != "parseTemplate" && elem != "parseTemplate2Text") {
             retVal[elem] = $.merge(retVal.filter("." + prefix + elem), retVal.find("." + prefix + elem));
-            setupExtras(retVal[elem], root[key][elem], key, elem);
+            setupExtras(appRoot, retVal[elem], root[key][elem], key, elem);
             maybeAddDevHook(retVal[elem], key, elem);
           }
         });
@@ -771,7 +782,9 @@ var jiant = jiant || (function($) {
   }
 
   function refreshState() {
-    $.History.trigger($.History.getState());
+    window.setTimeout(function() {
+      $.History.trigger($.History.getState());
+    }, 250); // workaround for used History plugin timeout delay
   }
 
 // ------------ ajax staff ----------------
@@ -781,12 +794,12 @@ var jiant = jiant || (function($) {
     return funStr.slice(funStr.indexOf('(')+1, funStr.indexOf(')')).match(/([^\s,]+)/g);
   }
 
-  function _bindAjax(root, ajaxPrefix, ajaxSuffix) {
+  function _bindAjax(root, ajaxPrefix, ajaxSuffix, crossDomain) {
     $.each(root, function(uri, funcSpec) {
       logInfo("binding ajax for function: " + uri);
       var params = getParamNames(funcSpec);
       params.splice(params.length - 1, 1);
-      root[uri] = makeAjaxPerformer(ajaxPrefix, ajaxSuffix, uri, params, $.isFunction(root[uri]) ? root[uri]() : undefined);
+      root[uri] = makeAjaxPerformer(ajaxPrefix, ajaxSuffix, uri, params, $.isFunction(root[uri]) ? root[uri]() : undefined, crossDomain);
     });
   }
 
@@ -803,7 +816,7 @@ var jiant = jiant || (function($) {
     }
   }
 
-  function makeAjaxPerformer(ajaxPrefix, ajaxSuffix, uri, params, hardUrl) {
+  function makeAjaxPerformer(ajaxPrefix, ajaxSuffix, uri, params, hardUrl, crossDomain) {
     return function() {
       var callData = {},
           callback,
@@ -828,21 +841,29 @@ var jiant = jiant || (function($) {
       var sfx = (ajaxSuffix || ajaxSuffix == "") ? ajaxSuffix : jiant.AJAX_SUFFIX;
       var url = hardUrl ? hardUrl : pfx + uri + sfx;
       logInfo("    AJAX call. " + uri + " to server url: " + url);
-      $.ajax(url, {data: callData, traditional: true, success: function(data) {
+      var settings = {data: callData, traditional: true, success: function(data) {
         if (callback) {
-          try{
+          try {
             data = $.parseJSON(data);
-          } catch (ex) {}
+          } catch (ex) {
+          }
           jiant.DEBUG_MODE.ajax && debug("Ajax call results for uri " + uri) && debug(data);
           callback(data);
         }
-      }, error: function(jqXHR, textStatus, errorText) {
+      }, error: function (jqXHR, textStatus, errorText) {
         if (errHandler) {
           errHandler(jqXHR.responseText);
         } else {
           jiant.handleErrorFn(jqXHR.responseText);
         }
-      }});
+      }};
+      if (crossDomain) {
+        settings.contentType = "application/json";
+        settings.dataType = 'jsonp';
+        settings.xhrFields = {withCredentials: true};
+        settings.crossDomain = true;
+      }
+      $.ajax(url, settings);
     };
   }
 
@@ -884,17 +905,17 @@ var jiant = jiant || (function($) {
       jiant.logInfo("Loading application, id: " + root.id);
     }
     if (root.views) {
-      _bindViews(prefix, root.views);
+      _bindViews(prefix, root.views, root);
     } else {
       root.views = {};
     }
     if (root.templates) {
-      _bindTemplates(prefix, root.templates);
+      _bindTemplates(prefix, root.templates, root);
     } else {
       root.templates = {};
     }
     if (root.ajax) {
-      _bindAjax(root.ajax, root.ajaxPrefix, root.ajaxSuffix);
+      _bindAjax(root.ajax, root.ajaxPrefix, root.ajaxSuffix, root.crossDomain);
     } else {
       root.ajax = {};
     }
@@ -927,14 +948,6 @@ var jiant = jiant || (function($) {
     if (viewsUrl) {
       var injectionPoint = injectId ? $("#" + injectId) : $("body");
       injectionPoint.load(viewsUrl, {}, function() {
-        $.ajaxSetup({
-          contentType:"application/json",
-          dataType:'jsonp',
-          xhrFields: {
-            withCredentials: true
-          },
-          crossDomain: true
-        });
         _bindUi(prefix, root, devMode);
       });
     } else {
