@@ -28,6 +28,7 @@
 // 0.28: ajaxPrefix, ajaxSuffix, stateExternalBase per application for multi-app support
 // 0.28.1: minor fix for "" comparison
 // 0.29: refreshState() workaround for used History plugin timeout, states tuning, per app cross domain via flag for multiple app cross/noncross domain mix, form influenced by ajax pre/suff
+// 0.30: cross domain settings for submitForm
 
 var jiant = jiant || (function($) {
 
@@ -237,7 +238,19 @@ var jiant = jiant || (function($) {
       } else if (jiant.AJAX_SUFFIX) {
         url += jiant.AJAX_SUFFIX;
       }
-      return $.post(url, elem.serialize(), cb);
+      var data = {
+              type: "POST",
+              url: url,
+              data: elem.serialize(),
+              success: cb
+            };
+      if (appRoot.crossDomain) {
+        data.contentType = "application/json";
+        data.dataType = 'jsonp';
+        data.xhrFields = {withCredentials: true};
+        data.crossDomain = true;
+      }
+      return $.ajax(data);
     };
   }
 
