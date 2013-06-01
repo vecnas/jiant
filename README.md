@@ -14,4 +14,4 @@ Jiant is more of philosophy how to develop application, not particular technical
 
 Documentation website on Jiant: http://sites.google.com/site/jiantscript/
 
-Website updated to Jiant version 0.23
+Website updated to Jiant version 0.30
