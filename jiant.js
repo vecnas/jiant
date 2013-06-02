@@ -29,6 +29,7 @@
 // 0.28.1: minor fix for "" comparison
 // 0.29: refreshState() workaround for used History plugin timeout, states tuning, per app cross domain via flag for multiple app cross/noncross domain mix, form influenced by ajax pre/suff
 // 0.30: cross domain settings for submitForm
+// 0.31: addAll() method added to model
 
 var jiant = jiant || (function($) {
 
@@ -521,7 +522,8 @@ var jiant = jiant || (function($) {
       eventBus.on(eventName, function () {
         jiant.DEBUG_MODE.events && debug("called event handler: " + eventName + ", registered at " + trace);
         var args = $.makeArray(arguments);
-        args.splice(0, 2);
+        args.splice(0, 1);
+//        args.splice(0, 2);
         cb && cb.apply(cb, args);
       })
     };
@@ -537,7 +539,7 @@ var jiant = jiant || (function($) {
   function bindFunctions(name, spec, obj) {
     var storage = [],
         fldPrefix = "fld_prefix_";
-//        predefined = ["add", "all", "on", "remove"];
+//        predefined = ["add", "addAll, "all", "on", "remove"];
 //    $.each(predefined, function(idx, fn) {
 //      if (! spec[fn]) {
 //        spec[fn] = fn;
@@ -570,6 +572,29 @@ var jiant = jiant || (function($) {
           jiant.DEBUG_MODE.events && (! eventsUsed[globalChangeEventName]) && (eventsUsed[globalChangeEventName] = name);
           eventBus.trigger(globalChangeEventName, [newObj, fname]);
           return newObj;
+        };
+        assignOnHandler(obj, eventName, fname);
+      } else if (fname == "addAll") {
+//        eventName = name + "_add_event";
+        obj[fname] = function(arr) {
+          var newArr = [];
+          $.each(arr, function(idx, item) {
+            var newObj = {};
+            $.each(item, function(name, param) {
+//              jiant.logInfo(name + ": " + param);
+              newObj[fldPrefix + name] = param;
+            });
+            storage.push(newObj);
+            newArr.push(newObj);
+            bindFunctions(name, spec, newObj);
+          });
+          jiant.DEBUG_MODE.events && debug("fire event: " + eventName);
+          jiant.DEBUG_MODE.events && (! eventsUsed[eventName]) && (eventsUsed[eventName] = name);
+          eventBus.trigger(eventName, [newArr]);
+          jiant.DEBUG_MODE.events && debug("fire event: " + globalChangeEventName);
+          jiant.DEBUG_MODE.events && (! eventsUsed[globalChangeEventName]) && (eventsUsed[globalChangeEventName] = name);
+          eventBus.trigger(globalChangeEventName, [newArr, fname]);
+          return newArr;
         };
         assignOnHandler(obj, eventName, fname);
       } else if (fname == "remove") {
