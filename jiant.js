@@ -29,7 +29,8 @@
 // 0.28.1: minor fix for "" comparison
 // 0.29: refreshState() workaround for used History plugin timeout, states tuning, per app cross domain via flag for multiple app cross/noncross domain mix, form influenced by ajax pre/suff
 // 0.30: cross domain settings for submitForm
-// 0.31: addAll() method added to model
+// 0.31: addAll() method added to model with auto-wrap for all source object properties
+// 0.32: propagate() fixed for templates, propagate(model) with auto data binding added, customRenderer(elem, value, isUpdate) for view/template controls
 
 var jiant = jiant || (function($) {
 
@@ -378,17 +379,17 @@ var jiant = jiant || (function($) {
   }
 
   function setupExtras(appRoot, uiElem, elemContent, key, elem) {
-    if (elemContent == tabs && uiElem.tabs) {
+    if ((elemContent == tabs || elemContent.tabsTmInner) && uiElem.tabs) {
       uiElem.tabs();
-    } else if (elemContent == inputInt) {
+    } else if (elemContent == inputInt || elemContent.inputIntTmInner) {
       setupInputInt(uiElem);
-    } else if (elemContent == inputDate && uiElem.datepicker) {
+    } else if ((elemContent == inputDate || elemContent.inputDateTmInner) && uiElem.datepicker) {
       uiElem.datepicker();
-    } else if (elemContent == pager) {
+    } else if (elemContent == pager || elemContent.pagerTmInner) {
       setupPager(uiElem);
-    } else if (elemContent == form) {
+    } else if (elemContent == form || elemContent.formTmInner) {
       setupForm(appRoot, uiElem, key, elem);
-    } else if (elemContent == containerPaged) {
+    } else if (elemContent == containerPaged || elemContent.containerPagedTmInner) {
       setupContainerPaged(uiElem);
     }
     maybeAddDevHook(uiElem, key, elem);
@@ -426,33 +427,57 @@ var jiant = jiant || (function($) {
     });
   }
 
-  function makePropagationFunction(content) {
-    var map = {},
-        types = ["text", "hidden", undefined];
-    $.each(content, function (key, elem) {
+  function makePropagationFunction(spec, obj) {
+    var map = {};
+    $.each(spec, function (key, elem) {
       map[key] = elem;
     });
-    return function(data) {
+    return function(data, subscribe4updates) {
+      subscribe4updates = (subscribe4updates == undefined) ? true : subscribe4updates;
       $.each(map, function (key, elem) {
         if (data[key] != undefined && data[key] != null) {
-          var tagName = elem[0].tagName.toLowerCase();
-          if (tagName == "input" || tagName == "textarea") {
-            var el = $(elem[0]),
-                tp = el.attr("type");
-            if ($.inArray(tp, types) >= 0) {
-              elem.val(data[key]);
-            } else if (tp == "radio") {
-              $.each(elem, function(idx, subelem) {
-                $(subelem).prop("checked", subelem.value == data[key]);
+          var val = data[key];
+          elem = obj[key];
+          if ($.isFunction(val)) {
+            getRenderer(spec, key)(elem, val());
+            if (subscribe4updates && $.isFunction(val.on)) {
+              val.on(function(obj, newVal) {
+                getRenderer(spec, key)(elem, newVal, true);
               });
             }
-          } else if (tagName == "img") {
-            elem.attr("src", data[key]);
           } else {
-            elem.html(data[key]);
+            getRenderer(spec, key)(elem, val);
           }
         }
       });
+    }
+  }
+
+  function getRenderer(spec, key) {
+    if (spec[key] && spec[key].customRenderer && $.isFunction(spec[key].customRenderer)) {
+      return spec[key].customRenderer;
+    } else {
+      return updateViewElement;
+    }
+  }
+
+  function updateViewElement(elem, val) {
+    var types = ["text", "hidden", undefined];
+    var tagName = elem[0].tagName.toLowerCase();
+    if (tagName == "input" || tagName == "textarea") {
+      var el = $(elem[0]),
+          tp = el.attr("type");
+      if ($.inArray(tp, types) >= 0) {
+        elem.val(val);
+      } else if (tp == "radio") {
+        $.each(elem, function(idx, subelem) {
+          $(subelem).prop("checked", subelem.value == val);
+        });
+      }
+    } else if (tagName == "img") {
+      elem.attr("src", val);
+    } else {
+      elem.html(val);
     }
   }
 
@@ -464,13 +489,30 @@ var jiant = jiant || (function($) {
       ensureExists(view, prefix + key);
       _bindContent(appRoot, root[key], key, content, view, prefix);
       ensureSafeExtend(root[key], view);
-      root[key].propagate = makePropagationFunction(content);
+      root[key].propagate = makePropagationFunction(content, content);
       $.extend(root[key], view);
       maybeAddDevHook(view, key, undefined);
     });
   }
 
 // ------------ templates ----------------
+
+  function calcInnerTmKey(elem) {
+    switch (elem) {
+      case (label): return "labelTmInner";
+      case (ctl): return "ctlTmInner";
+      case (container): return "containerTmInner";
+      case (containerPaged): return "containerPagedTmInner";
+      case (form): return "formTmInner";
+      case (pager): return "pagerTmInner";
+      case (image): return "imageTmInner";
+      case (grid): return "gridTmInner";
+      case (input): return "inputTmInner";
+      case (inputInt): return "inputIntTmInner";
+      case (inputDate): return "inputDateTmInner";
+      default: return "customTmInner";
+    }
+  }
 
   function _bindTemplates(prefix, root, appRoot) {
     prefix = prefix || "";
@@ -480,10 +522,12 @@ var jiant = jiant || (function($) {
       ensureExists(tm, prefix + key);
       $.each(content, function (elem, elemType) {
         ensureExists(tm.find("." + prefix + elem), prefix + key, prefix + elem);
+        var innerTmKey = calcInnerTmKey(content[elem]);
+        content[elem] = {};
+        content[elem][innerTmKey] = true;
       });
       root[key].parseTemplate = function(data) {
         var retVal = $("<!-- -->" + parseTemplate(tm, data)); // add comment to force jQuery to read it as HTML fragment
-        root[key].propagate = makePropagationFunction(content);
         $.each(content, function (elem, elemType) {
           if (elem != "parseTemplate" && elem != "parseTemplate2Text") {
             retVal[elem] = $.merge(retVal.filter("." + prefix + elem), retVal.find("." + prefix + elem));
@@ -492,6 +536,7 @@ var jiant = jiant || (function($) {
           }
         });
         retVal.splice(0, 1); // remove first comment
+        retVal.propagate = makePropagationFunction(content, retVal);
         return retVal;
       };
       root[key].parseTemplate2Text = function(data) {
@@ -549,7 +594,7 @@ var jiant = jiant || (function($) {
     $.each(spec, function(fname, funcSpec) {
       var eventName = name + "_" + fname + "_event",
           globalChangeEventName = name + "_globalevent";
-      jiant.logInfo("  implementing model function " + fname);
+//      jiant.logInfo("  implementing model function " + fname);
       if (fname == "all") {
         obj[fname] = function() {
           return storage;
@@ -822,7 +867,7 @@ var jiant = jiant || (function($) {
   function refreshState() {
     window.setTimeout(function() {
       $.History.trigger($.History.getState());
-    }, 250); // workaround for used History plugin timeout delay
+    }, 400); // workaround for used History plugin timeout delay
   }
 
 // ------------ ajax staff ----------------
