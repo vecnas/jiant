@@ -31,6 +31,7 @@
 // 0.30: cross domain settings for submitForm
 // 0.31: addAll() method added to model with auto-wrap for all source object properties
 // 0.32: propagate() fixed for templates, propagate(model) with auto data binding added, customRenderer(elem, value, isUpdate) for view/template controls
+// 0.33: refreshTabs added to jiant.tabs, logInfo prints any amount of arguments
 
 var jiant = jiant || (function($) {
 
@@ -162,9 +163,6 @@ var jiant = jiant || (function($) {
 
   function parseTemplate(that, data) {
     data = data || {};
-//    if (! that.html) {
-//      that = $(that);
-//    }
     var str = $.trim($(that).html()),
         _tmplCache = {},
         err = "";
@@ -261,7 +259,11 @@ var jiant = jiant || (function($) {
   }
 
   function logInfo(s) {
-    jiant.DEV_MODE && window.console && window.console.info && window.console.info(s);
+    if (jiant.DEV_MODE && window.console && window.console.info) {
+      $.each(arguments, function(idx, arg) {
+        window.console.info(arg);
+      });
+    }
   }
 
 
@@ -381,6 +383,7 @@ var jiant = jiant || (function($) {
   function setupExtras(appRoot, uiElem, elemContent, key, elem) {
     if ((elemContent == tabs || elemContent.tabsTmInner) && uiElem.tabs) {
       uiElem.tabs();
+      uiElem.refreshTabs = function() {uiElem.tabs("refresh");};
     } else if (elemContent == inputInt || elemContent.inputIntTmInner) {
       setupInputInt(uiElem);
     } else if ((elemContent == inputDate || elemContent.inputDateTmInner) && uiElem.datepicker) {
@@ -408,7 +411,7 @@ var jiant = jiant || (function($) {
 //      window.console && window.console.logInfo(elem + "    : " + subRoot[elem]);
       if (subRoot[elem] == lookup) {
         logInfo("    loookup element, no checks/bindings: " + elem);
-        subRoot[elem] = function() {return $("." + prefix + elem);};
+        subRoot[elem] = function() {return view.find("." + prefix + elem);};
       } else {
         var uiElem = view.find("." + prefix + elem);
         ensureExists(uiElem, prefix + key, prefix + elem);
