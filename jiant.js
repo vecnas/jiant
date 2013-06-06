@@ -32,6 +32,8 @@
 // 0.31: addAll() method added to model with auto-wrap for all source object properties
 // 0.32: propagate() fixed for templates, propagate(model) with auto data binding added, customRenderer(elem, value, isUpdate) for view/template controls
 // 0.33: refreshTabs added to jiant.tabs, logInfo prints any amount of arguments
+// 0.34: override unsafe extended properties with user jiant specified
+// 0.35: customRenderer accepts 4 parameters: bound object, bound view, new field value, is update
 
 var jiant = jiant || (function($) {
 
@@ -425,7 +427,8 @@ var jiant = jiant || (function($) {
   function ensureSafeExtend(spec, jqObject) {
     $.each(spec, function(key, content) {
       if (jqObject[key]) {
-        logError("unsafe extension: " + key + " already defined in base jQuery, shouldn't be used");
+        logError("unsafe extension: " + key + " already defined in base jQuery, shouldn't be used, now overriding!");
+        jqObject[key] = undefined;
       }
     });
   }
@@ -442,14 +445,14 @@ var jiant = jiant || (function($) {
           var val = data[key];
           elem = obj[key];
           if ($.isFunction(val)) {
-            getRenderer(spec, key)(elem, val());
+            getRenderer(spec, key)(data, elem, val());
             if (subscribe4updates && $.isFunction(val.on)) {
               val.on(function(obj, newVal) {
-                getRenderer(spec, key)(elem, newVal, true);
+                getRenderer(spec, key)(data, elem, newVal, true);
               });
             }
           } else {
-            getRenderer(spec, key)(elem, val);
+            getRenderer(spec, key)(data, elem, val);
           }
         }
       });
@@ -464,7 +467,7 @@ var jiant = jiant || (function($) {
     }
   }
 
-  function updateViewElement(elem, val) {
+  function updateViewElement(obj, elem, val) {
     var types = ["text", "hidden", undefined];
     var tagName = elem[0].tagName.toLowerCase();
     if (tagName == "input" || tagName == "textarea") {
