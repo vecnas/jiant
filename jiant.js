@@ -34,6 +34,7 @@
 // 0.33: refreshTabs added to jiant.tabs, logInfo prints any amount of arguments
 // 0.34: override unsafe extended properties with user jiant specified
 // 0.35: customRenderer accepts 4 parameters: bound object, bound view, new field value, is update
+// 0.36: models.on fixed - fired for target object only, models.update() added
 
 var jiant = jiant || (function($) {
 
@@ -570,7 +571,7 @@ var jiant = jiant || (function($) {
       } else {
         obj.listenersCount++;
       }
-      eventBus.on(eventName, function () {
+      obj.innerEventBus.on(eventName, function () {
         jiant.DEBUG_MODE.events && debug("called event handler: " + eventName + ", registered at " + trace);
         var args = $.makeArray(arguments);
         args.splice(0, 1);
@@ -597,16 +598,26 @@ var jiant = jiant || (function($) {
 //        jiant.logInfo("  !Adding not declared function to model: " + fn);
 //      }
 //    });
+    obj.innerEventBus = $({});
     $.each(spec, function(fname, funcSpec) {
       var eventName = name + "_" + fname + "_event",
           globalChangeEventName = name + "_globalevent";
 //      jiant.logInfo("  implementing model function " + fname);
-      if (fname == "all") {
+      if (fname == "innerEventBus") {
+      } else if (fname == "all") {
         obj[fname] = function() {
           return storage;
         };
       } else if (fname == "on") {
         assignOnHandler(obj, globalChangeEventName);
+      } else if (fname == "update") {
+        obj[fname] = function(objFrom) {
+          $.each(objFrom, function(key, val) {
+            if (obj[key] && $.isFunction(obj[key]) && obj[key]() != val) {
+              obj[key](val);
+            }
+          });
+        };
       } else if (fname == "add") {
         var params = getParamNames(funcSpec);
         obj[fname] = function() {
@@ -618,7 +629,7 @@ var jiant = jiant || (function($) {
           bindFunctions(name, spec, newObj);
           jiant.DEBUG_MODE.events && debug("fire event: " + eventName);
           jiant.DEBUG_MODE.events && (! eventsUsed[eventName]) && (eventsUsed[eventName] = name);
-          eventBus.trigger(eventName, newObj);
+          obj.innerEventBus.trigger(eventName, newObj);
           jiant.DEBUG_MODE.events && debug("fire event: " + globalChangeEventName);
           jiant.DEBUG_MODE.events && (! eventsUsed[globalChangeEventName]) && (eventsUsed[globalChangeEventName] = name);
           eventBus.trigger(globalChangeEventName, [newObj, fname]);
@@ -629,19 +640,25 @@ var jiant = jiant || (function($) {
 //        eventName = name + "_add_event";
         obj[fname] = function(arr) {
           var newArr = [];
-          $.each(arr, function(idx, item) {
+          function fn(item) {
             var newObj = {};
             $.each(item, function(name, param) {
-//              jiant.logInfo(name + ": " + param);
               newObj[fldPrefix + name] = param;
             });
             storage.push(newObj);
             newArr.push(newObj);
             bindFunctions(name, spec, newObj);
-          });
+          }
+          if ($.isArray(arr)) {
+            $.each(arr, function(idx, item) {
+              fn(item);
+            });
+          } else {
+            fn(arr);
+          }
           jiant.DEBUG_MODE.events && debug("fire event: " + eventName);
           jiant.DEBUG_MODE.events && (! eventsUsed[eventName]) && (eventsUsed[eventName] = name);
-          eventBus.trigger(eventName, [newArr]);
+          obj.innerEventBus.trigger(eventName, [newArr]);
           jiant.DEBUG_MODE.events && debug("fire event: " + globalChangeEventName);
           jiant.DEBUG_MODE.events && (! eventsUsed[globalChangeEventName]) && (eventsUsed[globalChangeEventName] = name);
           eventBus.trigger(globalChangeEventName, [newArr, fname]);
@@ -655,7 +672,7 @@ var jiant = jiant || (function($) {
           if (storage.length != prevLen) {
             jiant.DEBUG_MODE.events && debug("fire event: " + eventName);
             jiant.DEBUG_MODE.events && (! eventsUsed[eventName]) && (eventsUsed[eventName] = name);
-            eventBus.trigger(eventName, elem);
+            obj.innerEventBus.trigger(eventName, elem);
             jiant.DEBUG_MODE.events && debug("fire event: " + globalChangeEventName);
             jiant.DEBUG_MODE.events && (! eventsUsed[globalChangeEventName]) && (eventsUsed[globalChangeEventName] = name);
             eventBus.trigger(globalChangeEventName, [elem, fname]);
@@ -678,7 +695,7 @@ var jiant = jiant || (function($) {
               obj[fieldName] = val;
               jiant.DEBUG_MODE.events && debug("fire event: " + eventName);
               jiant.DEBUG_MODE.events && (! eventsUsed[eventName]) && (eventsUsed[eventName] = name);
-              eventBus.trigger(eventName, [obj, val]);
+              obj.innerEventBus.trigger(eventName, [obj, val]);
               jiant.DEBUG_MODE.events && debug("fire event: " + globalChangeEventName);
               jiant.DEBUG_MODE.events && (! eventsUsed[globalChangeEventName]) && (eventsUsed[globalChangeEventName] = name);
               eventBus.trigger(globalChangeEventName, [obj, fname, val]);
