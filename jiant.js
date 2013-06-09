@@ -35,6 +35,8 @@
 // 0.34: override unsafe extended properties with user jiant specified
 // 0.35: customRenderer accepts 4 parameters: bound object, bound view, new field value, is update
 // 0.36: models.on fixed - fired for target object only, models.update() added
+// 0.37: provided implementation for model functions support
+// 0.38: models.updateAll, models.update.on triggered on addAll, AI on .update.on subscription to spec
 
 var jiant = jiant || (function($) {
 
@@ -571,7 +573,7 @@ var jiant = jiant || (function($) {
       } else {
         obj.listenersCount++;
       }
-      obj.innerEventBus.on(eventName, function () {
+      obj._innerData.on(eventName, function () {
         jiant.DEBUG_MODE.events && debug("called event handler: " + eventName + ", registered at " + trace);
         var args = $.makeArray(arguments);
         args.splice(0, 1);
@@ -598,12 +600,17 @@ var jiant = jiant || (function($) {
 //        jiant.logInfo("  !Adding not declared function to model: " + fn);
 //      }
 //    });
-    obj.innerEventBus = $({});
+    if (spec.updateAll && spec.id) {
+      if (! spec.addAll) spec.addAll = function(val) {};
+      if (! spec.update) spec.update = function(val) {};
+      if (! spec.findById) spec.findById = function(val) {};
+    }
+    obj._innerData = $({});
     $.each(spec, function(fname, funcSpec) {
       var eventName = name + "_" + fname + "_event",
           globalChangeEventName = name + "_globalevent";
 //      jiant.logInfo("  implementing model function " + fname);
-      if (fname == "innerEventBus") {
+      if (fname == "_innerData") {
       } else if (fname == "all") {
         obj[fname] = function() {
           return storage;
@@ -617,7 +624,34 @@ var jiant = jiant || (function($) {
               obj[key](val);
             }
           });
+          jiant.DEBUG_MODE.events && debug("fire event: " + eventName);
+          jiant.DEBUG_MODE.events && (! eventsUsed[eventName]) && (eventsUsed[eventName] = name);
+          obj._innerData.trigger(eventName, obj);
+          obj != spec && spec._innerData.trigger(eventName, obj);
+          jiant.DEBUG_MODE.events && debug("fire event: " + globalChangeEventName);
+          jiant.DEBUG_MODE.events && (! eventsUsed[globalChangeEventName]) && (eventsUsed[globalChangeEventName] = name);
+          eventBus.trigger(globalChangeEventName, [obj, fname]);
         };
+        assignOnHandler(obj, eventName, fname);
+      } else if (fname == "updateAll") {
+        obj[fname] = function(arr) {
+          function up(item) {
+            if (spec.id) {
+              var src = obj.findById(item.id);
+              src.length == 0 ? obj.addAll(item) : src[0].update(item);
+            } else {
+              obj.update(item);
+            }
+          }
+          if ($.isArray(arr)) {
+            $.each(arr, function(idx, item) {
+              up(item);
+            });
+          } else {
+            up(arr);
+          }
+        };
+        assignOnHandler(obj, eventName, fname);
       } else if (fname == "add") {
         var params = getParamNames(funcSpec);
         obj[fname] = function() {
@@ -629,7 +663,7 @@ var jiant = jiant || (function($) {
           bindFunctions(name, spec, newObj);
           jiant.DEBUG_MODE.events && debug("fire event: " + eventName);
           jiant.DEBUG_MODE.events && (! eventsUsed[eventName]) && (eventsUsed[eventName] = name);
-          obj.innerEventBus.trigger(eventName, newObj);
+          obj._innerData.trigger(eventName, newObj);
           jiant.DEBUG_MODE.events && debug("fire event: " + globalChangeEventName);
           jiant.DEBUG_MODE.events && (! eventsUsed[globalChangeEventName]) && (eventsUsed[globalChangeEventName] = name);
           eventBus.trigger(globalChangeEventName, [newObj, fname]);
@@ -658,10 +692,17 @@ var jiant = jiant || (function($) {
           }
           jiant.DEBUG_MODE.events && debug("fire event: " + eventName);
           jiant.DEBUG_MODE.events && (! eventsUsed[eventName]) && (eventsUsed[eventName] = name);
-          obj.innerEventBus.trigger(eventName, [newArr]);
+          obj._innerData.trigger(eventName, [newArr]);
           jiant.DEBUG_MODE.events && debug("fire event: " + globalChangeEventName);
           jiant.DEBUG_MODE.events && (! eventsUsed[globalChangeEventName]) && (eventsUsed[globalChangeEventName] = name);
           eventBus.trigger(globalChangeEventName, [newArr, fname]);
+          if ($.isArray(arr)) {
+            $.each(arr, function(idx, item) {
+              newArr[idx].update && newArr[idx].update(item); // todo: replace by just trigger update event
+            });
+          } else {
+            newArr.update && newArr.update(arr); // todo: replace by just trigger update event
+          }
           return newArr;
         };
         assignOnHandler(obj, eventName, fname);
@@ -672,7 +713,7 @@ var jiant = jiant || (function($) {
           if (storage.length != prevLen) {
             jiant.DEBUG_MODE.events && debug("fire event: " + eventName);
             jiant.DEBUG_MODE.events && (! eventsUsed[eventName]) && (eventsUsed[eventName] = name);
-            obj.innerEventBus.trigger(eventName, elem);
+            obj._innerData.trigger(eventName, elem);
             jiant.DEBUG_MODE.events && debug("fire event: " + globalChangeEventName);
             jiant.DEBUG_MODE.events && (! eventsUsed[globalChangeEventName]) && (eventsUsed[globalChangeEventName] = name);
             eventBus.trigger(globalChangeEventName, [elem, fname]);
@@ -685,7 +726,8 @@ var jiant = jiant || (function($) {
         obj[fname] = function(val) {
           return $.grep(storage, function(value) {return value[fieldName] == val});
         };
-      } else {
+      } else if (("" + funcSpec).indexOf("{}") == ("" + funcSpec).length - 2 || spec._innerData[fname]) {
+        spec._innerData[fname] = true;
         obj[fname] = function(val) {
           var fieldName = fldPrefix + fname;
           if (arguments.length == 0) {
@@ -695,7 +737,7 @@ var jiant = jiant || (function($) {
               obj[fieldName] = val;
               jiant.DEBUG_MODE.events && debug("fire event: " + eventName);
               jiant.DEBUG_MODE.events && (! eventsUsed[eventName]) && (eventsUsed[eventName] = name);
-              obj.innerEventBus.trigger(eventName, [obj, val]);
+              obj._innerData.trigger(eventName, [obj, val]);
               jiant.DEBUG_MODE.events && debug("fire event: " + globalChangeEventName);
               jiant.DEBUG_MODE.events && (! eventsUsed[globalChangeEventName]) && (eventsUsed[globalChangeEventName] = name);
               eventBus.trigger(globalChangeEventName, [obj, fname, val]);
@@ -705,6 +747,8 @@ var jiant = jiant || (function($) {
         };
         assignOnHandler(obj, eventName, fname);
 //        jiant.logError("Unsupported model functionality declaration, can't implement: " + fname);
+//      } else {
+//        logInfo("Provided implementation used for function " + fname);
       }
     });
   }
