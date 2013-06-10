@@ -37,6 +37,7 @@
 // 0.36: models.on fixed - fired for target object only, models.update() added
 // 0.37: provided implementation for model functions support
 // 0.38: models.updateAll, models.update.on triggered on addAll, AI on .update.on subscription to spec
+// 0.39: $.History replaced by $.hashchange usage
 
 var jiant = jiant || (function($) {
 
@@ -792,8 +793,8 @@ var jiant = jiant || (function($) {
 // ------------ states staff ----------------
 
   function _bindStates(states, stateExternalBase) {
-    if (! $.History) {
-      var err = "No history plugin and states configured. Don't use states or add $.History plugin";
+    if (! $(window).hashchange) {
+      var err = "No hashchange plugin and states configured. Don't use states or add hashchange plugin (supplied with jiant)";
       jiant.logError(err);
       if (jiant.DEV_MODE) {
         alert(err);
@@ -832,11 +833,13 @@ var jiant = jiant || (function($) {
         });
       };
     });
-    $.History.bind(function (state) {
-      var parsed = parseState(),
+    $(window).hashchange(function () {
+      var state = location.hash.substring(1),
+          parsed = parseState(),
           stateId = parsed.now[0],
           handler = states[stateId],
           params = parsed.now;
+      jiant.logInfo(state);
       params.splice(0, 1);
       $.each(params, function(idx, p) {
         if (p == "undefined") {
@@ -899,12 +902,12 @@ var jiant = jiant || (function($) {
     if (extBase) {
       window.location.assign(extBase + "#" + s);
     } else {
-      $.History.go(s);
+      location.hash = "#" + s;
     }
   }
 
   function parseState() {
-    var state = $.History.getState();
+    var state = location.hash.substring(1);
     var arr = state.split("|");
     var parsed = {};
     $.each(arr, function(idx, item) {
@@ -932,9 +935,7 @@ var jiant = jiant || (function($) {
   }
 
   function refreshState() {
-    window.setTimeout(function() {
-      $.History.trigger($.History.getState());
-    }, 400); // workaround for used History plugin timeout delay
+    $(window).hashchange();
   }
 
 // ------------ ajax staff ----------------
@@ -1091,6 +1092,7 @@ var jiant = jiant || (function($) {
     uiBoundRoot[appId] = root;
     var eventId = "jiant_uiBound_" + appId;
     eventBus.trigger(eventId);
+    refreshState();
   }
 
   function bindUi(prefix, root, devMode, viewsUrl, injectId) {
