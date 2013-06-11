@@ -38,6 +38,7 @@
 // 0.37: provided implementation for model functions support
 // 0.38: models.updateAll, models.update.on triggered on addAll, AI on .update.on subscription to spec
 // 0.39: $.History replaced by $.hashchange usage
+// 0.40: triggering current state for later registered state handlers, logError accepts any amount of arguments, model events manipulations
 
 var jiant = jiant || (function($) {
 
@@ -261,7 +262,9 @@ var jiant = jiant || (function($) {
   }
 
   function logError(error) {
-    window.console && window.console.error && window.console.error(error);
+    $.each(arguments, function(idx, arg) {
+      window.console && window.console.error && window.console.error(arg);
+    });
   }
 
   function logInfo(s) {
@@ -620,18 +623,22 @@ var jiant = jiant || (function($) {
         assignOnHandler(obj, globalChangeEventName);
       } else if (fname == "update") {
         obj[fname] = function(objFrom) {
+          var smthChanged = false;
           $.each(objFrom, function(key, val) {
             if (obj[key] && $.isFunction(obj[key]) && obj[key]() != val) {
               obj[key](val);
+              smthChanged = true;
             }
           });
-          jiant.DEBUG_MODE.events && debug("fire event: " + eventName);
-          jiant.DEBUG_MODE.events && (! eventsUsed[eventName]) && (eventsUsed[eventName] = name);
-          obj._innerData.trigger(eventName, obj);
-          obj != spec && spec._innerData.trigger(eventName, obj);
-          jiant.DEBUG_MODE.events && debug("fire event: " + globalChangeEventName);
-          jiant.DEBUG_MODE.events && (! eventsUsed[globalChangeEventName]) && (eventsUsed[globalChangeEventName] = name);
-          eventBus.trigger(globalChangeEventName, [obj, fname]);
+          if (smthChanged) {
+            jiant.DEBUG_MODE.events && debug("fire event: " + eventName);
+            jiant.DEBUG_MODE.events && (! eventsUsed[eventName]) && (eventsUsed[eventName] = 1);
+            obj._innerData.trigger(eventName, obj);
+            obj != spec && spec._innerData.trigger(eventName, obj);
+            jiant.DEBUG_MODE.events && debug("fire event: " + globalChangeEventName);
+            jiant.DEBUG_MODE.events && (! eventsUsed[globalChangeEventName]) && (eventsUsed[globalChangeEventName] = 1);
+            eventBus.trigger(globalChangeEventName, [obj, fname]);
+          }
         };
         assignOnHandler(obj, eventName, fname);
       } else if (fname == "updateAll") {
@@ -663,10 +670,10 @@ var jiant = jiant || (function($) {
           storage.push(newObj);
           bindFunctions(name, spec, newObj);
           jiant.DEBUG_MODE.events && debug("fire event: " + eventName);
-          jiant.DEBUG_MODE.events && (! eventsUsed[eventName]) && (eventsUsed[eventName] = name);
+          jiant.DEBUG_MODE.events && (! eventsUsed[eventName]) && (eventsUsed[eventName] = 1);
           obj._innerData.trigger(eventName, newObj);
           jiant.DEBUG_MODE.events && debug("fire event: " + globalChangeEventName);
-          jiant.DEBUG_MODE.events && (! eventsUsed[globalChangeEventName]) && (eventsUsed[globalChangeEventName] = name);
+          jiant.DEBUG_MODE.events && (! eventsUsed[globalChangeEventName]) && (eventsUsed[globalChangeEventName] = 1);
           eventBus.trigger(globalChangeEventName, [newObj, fname]);
           return newObj;
         };
@@ -677,12 +684,13 @@ var jiant = jiant || (function($) {
           var newArr = [];
           function fn(item) {
             var newObj = {};
-            $.each(item, function(name, param) {
-              newObj[fldPrefix + name] = param;
-            });
             storage.push(newObj);
             newArr.push(newObj);
             bindFunctions(name, spec, newObj);
+            $.each(item, function(name, param) {
+              newObj[name] && newObj[name](param);
+//              newObj[fldPrefix + name] = param;
+            });
           }
           if ($.isArray(arr)) {
             $.each(arr, function(idx, item) {
@@ -692,10 +700,10 @@ var jiant = jiant || (function($) {
             fn(arr);
           }
           jiant.DEBUG_MODE.events && debug("fire event: " + eventName);
-          jiant.DEBUG_MODE.events && (! eventsUsed[eventName]) && (eventsUsed[eventName] = name);
+          jiant.DEBUG_MODE.events && (! eventsUsed[eventName]) && (eventsUsed[eventName] = 1);
           obj._innerData.trigger(eventName, [newArr]);
           jiant.DEBUG_MODE.events && debug("fire event: " + globalChangeEventName);
-          jiant.DEBUG_MODE.events && (! eventsUsed[globalChangeEventName]) && (eventsUsed[globalChangeEventName] = name);
+          jiant.DEBUG_MODE.events && (! eventsUsed[globalChangeEventName]) && (eventsUsed[globalChangeEventName] = 1);
           eventBus.trigger(globalChangeEventName, [newArr, fname]);
           if ($.isArray(arr)) {
             $.each(arr, function(idx, item) {
@@ -713,10 +721,10 @@ var jiant = jiant || (function($) {
           storage = $.grep(storage, function(value) {return value != elem;});
           if (storage.length != prevLen) {
             jiant.DEBUG_MODE.events && debug("fire event: " + eventName);
-            jiant.DEBUG_MODE.events && (! eventsUsed[eventName]) && (eventsUsed[eventName] = name);
+            jiant.DEBUG_MODE.events && (! eventsUsed[eventName]) && (eventsUsed[eventName] = 1);
             obj._innerData.trigger(eventName, elem);
             jiant.DEBUG_MODE.events && debug("fire event: " + globalChangeEventName);
-            jiant.DEBUG_MODE.events && (! eventsUsed[globalChangeEventName]) && (eventsUsed[globalChangeEventName] = name);
+            jiant.DEBUG_MODE.events && (! eventsUsed[globalChangeEventName]) && (eventsUsed[globalChangeEventName] = 1);
             eventBus.trigger(globalChangeEventName, [elem, fname]);
           }
           return elem;
@@ -737,10 +745,12 @@ var jiant = jiant || (function($) {
             if (obj[fieldName] !== val) {
               obj[fieldName] = val;
               jiant.DEBUG_MODE.events && debug("fire event: " + eventName);
-              jiant.DEBUG_MODE.events && (! eventsUsed[eventName]) && (eventsUsed[eventName] = name);
+              jiant.DEBUG_MODE.events && (! eventsUsed[eventName]) && (eventsUsed[eventName] = 1);
               obj._innerData.trigger(eventName, [obj, val]);
+              obj != spec && spec._innerData.trigger(eventName, obj);
+//              jiant.logInfo(fieldName, obj[fieldName], val, obj != spec);
               jiant.DEBUG_MODE.events && debug("fire event: " + globalChangeEventName);
-              jiant.DEBUG_MODE.events && (! eventsUsed[globalChangeEventName]) && (eventsUsed[globalChangeEventName] = name);
+              jiant.DEBUG_MODE.events && (! eventsUsed[globalChangeEventName]) && (eventsUsed[globalChangeEventName] = 1);
               eventBus.trigger(globalChangeEventName, [obj, fname, val]);
             }
             return obj[fieldName];
@@ -769,7 +779,7 @@ var jiant = jiant || (function($) {
       events[name].listenersCount = 0;
       events[name].fire = function() {
         jiant.DEBUG_MODE.events && debug("fire event: " + name);
-        jiant.DEBUG_MODE.events && (! eventsUsed[name]) && (eventsUsed[name] = name);
+        jiant.DEBUG_MODE.events && (! eventsUsed[name]) && (eventsUsed[name] = 1);
         eventBus.trigger(name + ".event", arguments);
       };
       events[name].on = function (cb) {
@@ -792,7 +802,7 @@ var jiant = jiant || (function($) {
 
 // ------------ states staff ----------------
 
-  function _bindStates(states, stateExternalBase) {
+  function _bindStates(states, stateExternalBase, appId) {
     if (! $(window).hashchange) {
       var err = "No hashchange plugin and states configured. Don't use states or add hashchange plugin (supplied with jiant)";
       jiant.logError(err);
@@ -817,6 +827,15 @@ var jiant = jiant || (function($) {
           args.splice(0, 1);
           cb && cb.apply(cb, args);
         });
+        var current = parseState();
+//        jiant.logInfo(current, appId);
+        if (uiBoundRoot[appId] && ((name == "" && current.now.length == 0) || (current.now[0] == name))) {
+//          jiant.logInfo(current.now);
+          var params = current.now;
+          params.splice(0, 1);
+//          jiant.logInfo(params);
+          cb && cb.apply(cb, params);
+        }
       };
       stateSpec.end = function(cb) {
         var trace;
@@ -853,7 +872,7 @@ var jiant = jiant || (function($) {
       lastState = stateId;
       stateId = (stateId ? stateId : "");
       jiant.DEBUG_MODE.states && debug("trigger state start: " + stateId);
-      jiant.DEBUG_MODE.states && (! statesUsed[stateId]) && (statesUsed[stateId] = stateId);
+      jiant.DEBUG_MODE.states && (! statesUsed[stateId]) && (statesUsed[stateId] = 1);
       eventBus.trigger("state_" + stateId + "_start", params);
     });
   }
@@ -935,7 +954,7 @@ var jiant = jiant || (function($) {
   }
 
   function refreshState() {
-    $(window).hashchange();
+    $(window).hashchange && $(window).hashchange();
   }
 
 // ------------ ajax staff ----------------
@@ -1050,6 +1069,7 @@ var jiant = jiant || (function($) {
     maybeSetDebugModeFromQueryString();
     errString = "";
     bindingsResult = true;
+    var appId = (root.id ? root.id : "no_app_id");
     if (! root.id) {
       jiant.logError("!!! Application id not specified. Not recommended since 0.20. Use 'id' property of application root to specify application id");
     } else {
@@ -1076,7 +1096,7 @@ var jiant = jiant || (function($) {
       root.events = {};
     }
     if (root.states) {
-      _bindStates(root.states, root.stateExternalBase);
+      _bindStates(root.states, root.stateExternalBase, appId);
     } else {
       root.states = {};
     }
@@ -1088,11 +1108,10 @@ var jiant = jiant || (function($) {
     if (jiant.DEV_MODE && !bindingsResult) {
       alert("Some elements not bound to HTML properly, check console" + errString);
     }
-    var appId = (root.id ? root.id : "no_app_id");
     uiBoundRoot[appId] = root;
     var eventId = "jiant_uiBound_" + appId;
     eventBus.trigger(eventId);
-    refreshState();
+//    refreshState();
   }
 
   function bindUi(prefix, root, devMode, viewsUrl, injectId) {
