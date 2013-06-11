@@ -39,6 +39,7 @@
 // 0.38: models.updateAll, models.update.on triggered on addAll, AI on .update.on subscription to spec
 // 0.39: $.History replaced by $.hashchange usage
 // 0.40: triggering current state for later registered state handlers, logError accepts any amount of arguments, model events manipulations
+// 0.41: transact update() of models
 
 var jiant = jiant || (function($) {
 
@@ -597,13 +598,6 @@ var jiant = jiant || (function($) {
   function bindFunctions(name, spec, obj) {
     var storage = [],
         fldPrefix = "fld_prefix_";
-//        predefined = ["add", "addAll, "all", "on", "remove"];
-//    $.each(predefined, function(idx, fn) {
-//      if (! spec[fn]) {
-//        spec[fn] = fn;
-//        jiant.logInfo("  !Adding not declared function to model: " + fn);
-//      }
-//    });
     if (spec.updateAll && spec.id) {
       if (! spec.addAll) spec.addAll = function(val) {};
       if (! spec.update) spec.update = function(val) {};
@@ -624,11 +618,16 @@ var jiant = jiant || (function($) {
       } else if (fname == "update") {
         obj[fname] = function(objFrom) {
           var smthChanged = false;
+          var toTrigger = {};
           $.each(objFrom, function(key, val) {
             if (obj[key] && $.isFunction(obj[key]) && obj[key]() != val) {
-              obj[key](val);
+              obj[key](val, false);
+              toTrigger[key] = true;
               smthChanged = true;
             }
+          });
+          $.each(toTrigger, function(key, val) {
+            obj[key](obj[key](), true);
           });
           if (smthChanged) {
             jiant.DEBUG_MODE.events && debug("fire event: " + eventName);
@@ -679,7 +678,6 @@ var jiant = jiant || (function($) {
         };
         assignOnHandler(obj, eventName, fname);
       } else if (fname == "addAll") {
-//        eventName = name + "_add_event";
         obj[fname] = function(arr) {
           var newArr = [];
           function fn(item) {
@@ -737,12 +735,12 @@ var jiant = jiant || (function($) {
         };
       } else if (("" + funcSpec).indexOf("{}") == ("" + funcSpec).length - 2 || spec._innerData[fname]) {
         spec._innerData[fname] = true;
-        obj[fname] = function(val) {
+        obj[fname] = function(val, forceEvent) {
           var fieldName = fldPrefix + fname;
           if (arguments.length == 0) {
             return obj[fieldName];
           } else {
-            if (obj[fieldName] !== val) {
+            if (forceEvent || (obj[fieldName] !== val && forceEvent !== false)) {
               obj[fieldName] = val;
               jiant.DEBUG_MODE.events && debug("fire event: " + eventName);
               jiant.DEBUG_MODE.events && (! eventsUsed[eventName]) && (eventsUsed[eventName] = 1);
@@ -752,14 +750,13 @@ var jiant = jiant || (function($) {
               jiant.DEBUG_MODE.events && debug("fire event: " + globalChangeEventName);
               jiant.DEBUG_MODE.events && (! eventsUsed[globalChangeEventName]) && (eventsUsed[globalChangeEventName] = 1);
               eventBus.trigger(globalChangeEventName, [obj, fname, val]);
+            } else {
+              obj[fieldName] = val;
             }
             return obj[fieldName];
           }
         };
         assignOnHandler(obj, eventName, fname);
-//        jiant.logError("Unsupported model functionality declaration, can't implement: " + fname);
-//      } else {
-//        logInfo("Provided implementation used for function " + fname);
       }
     });
   }
