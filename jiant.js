@@ -40,6 +40,7 @@
 // 0.39: $.History replaced by $.hashchange usage
 // 0.40: triggering current state for later registered state handlers, logError accepts any amount of arguments, model events manipulations
 // 0.41: transact update() of models
+// 0.42: mixed case field name support by findByXXX, minor fixes
 
 var jiant = jiant || (function($) {
 
@@ -729,7 +730,7 @@ var jiant = jiant || (function($) {
         };
         assignOnHandler(obj, eventName, fname);
       } else if (fname.indexOf("findBy") == 0 && fname.length > 6) {
-        var fieldName = fldPrefix + fname.substring(6).toLowerCase();
+        var fieldName = fldPrefix + fname.substring(6, 7).toLowerCase() + fname.substring(7);
         obj[fname] = function(val) {
           return $.grep(storage, function(value) {return value[fieldName] == val});
         };
@@ -745,7 +746,7 @@ var jiant = jiant || (function($) {
               jiant.DEBUG_MODE.events && debug("fire event: " + eventName);
               jiant.DEBUG_MODE.events && (! eventsUsed[eventName]) && (eventsUsed[eventName] = 1);
               obj._innerData.trigger(eventName, [obj, val]);
-              obj != spec && spec._innerData.trigger(eventName, obj);
+              obj != spec && spec._innerData.trigger(eventName, [obj, val]);
 //              jiant.logInfo(fieldName, obj[fieldName], val, obj != spec);
               jiant.DEBUG_MODE.events && debug("fire event: " + globalChangeEventName);
               jiant.DEBUG_MODE.events && (! eventsUsed[globalChangeEventName]) && (eventsUsed[globalChangeEventName] = 1);
