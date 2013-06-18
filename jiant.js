@@ -478,7 +478,7 @@ var jiant = jiant || (function($) {
   }
 
   function updateViewElement(obj, elem, val) {
-    if (! elem) {
+    if (! elem || ! elem[0]) {
       return;
     }
     var types = ["text", "hidden", undefined];
