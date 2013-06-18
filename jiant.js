@@ -41,6 +41,7 @@
 // 0.40: triggering current state for later registered state handlers, logError accepts any amount of arguments, model events manipulations
 // 0.41: transact update() of models
 // 0.42: mixed case field name support by findByXXX, minor fixes
+// 0.43: default renderer handles missing view elements
 
 var jiant = jiant || (function($) {
 
@@ -477,6 +478,9 @@ var jiant = jiant || (function($) {
   }
 
   function updateViewElement(obj, elem, val) {
+    if (! elem) {
+      return;
+    }
     var types = ["text", "hidden", undefined];
     var tagName = elem[0].tagName.toLowerCase();
     if (tagName == "input" || tagName == "textarea") {
