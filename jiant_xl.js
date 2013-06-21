@@ -1,5 +1,6 @@
 // 0.33 based, added bindList
 // 0.42 based, minor fix in bindList
+// 0.44 based, nav, stateful views
 jiant.xl = {
 
   ctl2state: function(ctl, state, selectedCssClass) {
@@ -12,6 +13,58 @@ jiant.xl = {
       });
       selectedCssClass && state.end(function() {
         ctl.removeClass(selectedCssClass);
+      });
+    };
+  },
+
+  nav: function(app, view, suffix, selectedCssClass) {
+    return function() {
+      suffix = suffix ? suffix : "";
+      $.each(app.states, function(stateName, stateSpec) {
+        var ctl = view[stateName + suffix];
+        ctl && jiant.xl.ctl2state(ctl, stateSpec, selectedCssClass)();
+      });
+    };
+  },
+
+  statefulViews: function(states, views) {
+    return function() {
+      function bind2state(state) {
+        state.start(function() {
+          if ($.isArray(views)) {
+            $.each(views, function(idx, view) {
+              view.show();
+            });
+          } else {
+            views.show();
+          }
+        });
+        state.end(function() {
+          if ($.isArray(views)) {
+            $.each(views, function(idx, view) {
+              view.hide();
+            });
+          } else {
+            views.hide();
+          }
+        });
+      }
+      if ($.isArray(states)) {
+        $.each(states, function(idx, state) {
+          bind2state(state);
+        })
+      } else {
+        bind2state(states);
+      }
+    };
+  },
+
+  statefulApp: function(app, viewNameSuffix) {
+    return function() {
+      viewNameSuffix = viewNameSuffix ? viewNameSuffix : "";
+      $.each(app.states, function(name, state) {
+        var view = app.views[name + viewNameSuffix];
+        view && jiant.xl.statefulViews(state, view)();
       });
     };
   },
