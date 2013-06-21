@@ -42,6 +42,7 @@
 // 0.41: transact update() of models
 // 0.42: mixed case field name support by findByXXX, minor fixes
 // 0.43: default renderer handles missing view elements
+// 0.44: initial state switch fixed
 
 var jiant = jiant || (function($) {
 
@@ -830,12 +831,9 @@ var jiant = jiant || (function($) {
           cb && cb.apply(cb, args);
         });
         var current = parseState();
-//        jiant.logInfo(current, appId);
         if (uiBoundRoot[appId] && ((name == "" && current.now.length == 0) || (current.now[0] == name))) {
-//          jiant.logInfo(current.now);
           var params = current.now;
           params.splice(0, 1);
-//          jiant.logInfo(params);
           cb && cb.apply(cb, params);
         }
       };
@@ -877,6 +875,7 @@ var jiant = jiant || (function($) {
       jiant.DEBUG_MODE.states && (! statesUsed[stateId]) && (statesUsed[stateId] = 1);
       eventBus.trigger("state_" + stateId + "_start", params);
     });
+    lastState = parseState().now[0];
   }
 
   function go(stateId, root, stateExternalBase) {
