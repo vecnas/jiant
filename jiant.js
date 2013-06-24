@@ -43,6 +43,7 @@
 // 0.42: mixed case field name support by findByXXX, minor fixes
 // 0.43: default renderer handles missing view elements
 // 0.44: initial state switch fixed
+// 0.45: app.dirtyList added, app.appPrefix with new bindUi syntax added
 
 var jiant = jiant || (function($) {
 
@@ -80,7 +81,11 @@ var jiant = jiant || (function($) {
       statesUsed = {},
       eventsUsed = {};
 
-  function ensureExists(obj, idName, className) {
+  function ensureExists(appRoot, obj, idName, className) {
+    if (idName && appRoot.dirtyList && ($.inArray(idName, appRoot.dirtyList) >= 0
+        || (appRoot.appPrefix && $.inArray(idName.substring(appRoot.appPrefix.length), appRoot.dirtyList) >= 0))) {
+      return;
+    }
     if (!obj || !obj.length) {
       window.console && window.console.error
       && (className ? logError("non existing object referred by class under object id '" + idName
@@ -427,7 +432,7 @@ var jiant = jiant || (function($) {
         subRoot[elem] = function() {return view.find("." + prefix + elem);};
       } else {
         var uiElem = view.find("." + prefix + elem);
-        ensureExists(uiElem, prefix + key, prefix + elem);
+        ensureExists(appRoot, uiElem, prefix + key, prefix + elem);
         subRoot[elem] = uiElem;
         setupExtras(appRoot, uiElem, elemContent, key, elem);
 //        logInfo("    bound UI for: " + elem);
@@ -506,7 +511,7 @@ var jiant = jiant || (function($) {
     $.each(root, function (key, content) {
       logInfo("binding UI for view: " + key);
       var view = $("#" + prefix + key);
-      ensureExists(view, prefix + key);
+      ensureExists(appRoot, view, prefix + key);
       _bindContent(appRoot, root[key], key, content, view, prefix);
       ensureSafeExtend(root[key], view);
       root[key].propagate = makePropagationFunction(content, content);
@@ -539,9 +544,9 @@ var jiant = jiant || (function($) {
     $.each(root, function(key, content) {
       logInfo("binding UI for template: " + key);
       var tm = $("#" + prefix + key);
-      ensureExists(tm, prefix + key);
+      ensureExists(appRoot, tm, prefix + key);
       $.each(content, function (elem, elemType) {
-        ensureExists(tm.find("." + prefix + elem), prefix + key, prefix + elem);
+        ensureExists(appRoot, tm.find("." + prefix + elem), prefix + key, prefix + elem);
         var innerTmKey = calcInnerTmKey(content[elem]);
         content[elem] = {};
         content[elem][innerTmKey] = true;
@@ -1117,6 +1122,13 @@ var jiant = jiant || (function($) {
 
   function bindUi(prefix, root, devMode, viewsUrl, injectId) {
     var startedAt = new Date().getMilliseconds();
+    if ($.isPlainObject(prefix)) { // no prefix syntax
+      injectId = viewsUrl;
+      viewsUrl = devMode;
+      devMode = root;
+      root = prefix;
+      prefix = root.appPrefix;
+    }
     if (viewsUrl) {
       var injectionPoint = injectId ? $("#" + injectId) : $("body");
       injectionPoint.load(viewsUrl, {}, function() {
