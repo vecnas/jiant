@@ -10,7 +10,6 @@
  * @info http://james.padolsey.com/javascript/cross-domain-requests-with-jquery/
  */
 
-if (false)
 jQuery.ajax = (function(_ajax){
 
     var protocol = location.protocol,
@@ -77,7 +76,7 @@ jQuery.ajax = (function(_ajax){
 })(jQuery.ajax);
 
 if (window.XDomainRequest ) {
-    jQuery.ajaxTransport(function( s ) {
+	jQuery.ajaxTransport(function( s ) {
 		if ( s.crossDomain && s.async ) {
 			if ( s.timeout ) {
 				s.xdrTimeout = s.timeout;
