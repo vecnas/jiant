@@ -20,6 +20,9 @@ Website updated to Jiant version 0.30
 CDN via github pages:
 
 http://vecnas.github.io/jiant/javascripts/jiant.min.js
+
 http://vecnas.github.io/jiant/javascripts/jiant_xl.min.js
+
 http://vecnas.github.io/jiant/javascripts/jquery.hashchange.min.js
+
 http://vecnas.github.io/jiant/javascripts/jquery.xdomainajax.min.js
