@@ -44,6 +44,7 @@
 // 0.43: default renderer handles missing view elements
 // 0.44: initial state switch fixed
 // 0.45: app.dirtyList added, app.appPrefix with new bindUi syntax added
+// 0.46: lfill made public
 
 var jiant = jiant || (function($) {
 
@@ -1205,6 +1206,7 @@ var jiant = jiant || (function($) {
     inputDate: inputDate,
     inputInt: inputInt,
     label: label,
+    lfill: lfill,
     lookup: lookup,
     on: on,
     pager: pager,
