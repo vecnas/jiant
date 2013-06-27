@@ -53,7 +53,6 @@ jQuery.ajax = (function(_ajax){
             o.success = (function(_success){
                 return function(data) {
 
-                  jiant.logError("succ", _success, "data", data);
                     if (_success) {
                         // Fake XHR callback.
                         _success.call(this, {
