@@ -1,6 +1,8 @@
 // 0.33 based, added bindList
 // 0.42 based, minor fix in bindList
 // 0.44 based, nav, stateful views
+// 0.46 based, pagedContent
+
 jiant.xl = {
 
   ctl2state: function(ctl, state, selectedCssClass) {
@@ -87,11 +89,26 @@ jiant.xl = {
     };
   },
 
-  pagedContent: function(ajax, container, pager, template, renderingCb) {
+  pagedContent: function(state, ajax, container, pager, template, perItemCb) {
     return function() {
-      ajax(function() {
-        pager.updatePager(currentPage);
+
+      pager.onValueChange(function(event, pageNum) {
+        state.go(pageNum);
       });
+
+      state.start(function(pageNum) {
+        pageNum = pageNum ? pageNum : 0;
+        ajax({"page.page": pageNum}, function(data) {
+          container.empty();
+          $.each(data.content, function(idx, item) {
+            var row = template.parseTemplate(item);
+            container.append(row);
+            perItemCb && perItemCb(item, row);
+          });
+          pager.updatePager(data);
+        });
+      });
+
     };
   },
 
