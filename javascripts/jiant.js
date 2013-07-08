@@ -45,6 +45,8 @@
 // 0.44: initial state switch fixed
 // 0.45: app.dirtyList added, app.appPrefix with new bindUi syntax added
 // 0.46: lfill made public
+// 0.47: added asaa/asap synonim functions to models for synchronization by value availability, added jiant.getCurrentState()
+// 0.48 global model .on() fixed, now works
 
 var jiant = jiant || (function($) {
 
@@ -577,7 +579,33 @@ var jiant = jiant || (function($) {
 
 // ------------ model staff ----------------
 
-  function assignOnHandler(obj, eventName, fname) {
+  function assignAsapHandler(obj, eventName, fname) {
+    var fn = function(cb) {
+      var trace;
+      if (jiant.DEBUG_MODE.events) {
+        debug("assigning event handler to " + eventName);
+        eventsUsed[eventName] && debug(" !!! Event handler assigned after fire occured, possible error, for event " + eventName);
+        trace = getStackTrace();
+      }
+      if (obj[fname]() != undefined) {
+        var args = $.makeArray(arguments);
+        args.splice(0, 1);
+        cb && cb.apply(cb, args);
+      } else {
+        obj._innerData.one(eventName, function () {
+          jiant.DEBUG_MODE.events && debug("called event handler: " + eventName + ", registered at " + trace);
+          var args = $.makeArray(arguments);
+          args.splice(0, 1);
+          cb && cb.apply(cb, args);
+        })
+      }
+    };
+    obj[fname].asap = fn;
+    obj[fname].asaa = fn;
+  }
+
+  function assignOnHandler(obj, eventName, fname, eventObject) {
+    eventObject = eventObject ? eventObject : obj._innerData;
     var fn = function(cb) {
       var trace;
       if (jiant.DEBUG_MODE.events) {
@@ -590,7 +618,7 @@ var jiant = jiant || (function($) {
       } else {
         obj.listenersCount++;
       }
-      obj._innerData.on(eventName, function () {
+      eventObject.on(eventName, function () {
         jiant.DEBUG_MODE.events && debug("called event handler: " + eventName + ", registered at " + trace);
         var args = $.makeArray(arguments);
         args.splice(0, 1);
@@ -601,6 +629,7 @@ var jiant = jiant || (function($) {
     if (fname) {
       obj[fname].on = fn;
       obj[fname].listenersCount = 0;
+      assignAsapHandler(obj, eventName, fname);
     } else {
       obj.on = fn;
       obj.listenersCount = 0;
@@ -626,7 +655,7 @@ var jiant = jiant || (function($) {
           return storage;
         };
       } else if (fname == "on") {
-        assignOnHandler(obj, globalChangeEventName);
+        assignOnHandler(obj, globalChangeEventName, undefined, eventBus);
       } else if (fname == "update") {
         obj[fname] = function(objFrom) {
           var smthChanged = false;
@@ -960,6 +989,11 @@ var jiant = jiant || (function($) {
     return s ? s.replace(/;3/g, "|").replace(/;2/g, "=").replace(/;1/g, ",").replace(/;;/g, ";") : "";
   }
 
+  function getCurrentState() {
+    var parsed = parseState();
+    return parsed.now[0] ? parsed.now[0] : "";
+  }
+
   function refreshState() {
     $(window).hashchange && $(window).hashchange();
   }
@@ -1184,6 +1218,7 @@ var jiant = jiant || (function($) {
     goState: goState,
     onUiBound: onUiBound,
     refreshState: refreshState,
+    getCurrentState: getCurrentState,
 
     handleErrorFn: defaultAjaxErrorsHandle,
     logInfo: logInfo,
