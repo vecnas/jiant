@@ -46,6 +46,7 @@
 // 0.45: app.dirtyList added, app.appPrefix with new bindUi syntax added
 // 0.46: lfill made public
 // 0.47: added asaa/asap synonim functions to models for synchronization by value availability, added jiant.getCurrentState()
+// 0.48 global model .on() fixed, now works
 
 var jiant = jiant || (function($) {
 
@@ -603,7 +604,8 @@ var jiant = jiant || (function($) {
     obj[fname].asaa = fn;
   }
 
-  function assignOnHandler(obj, eventName, fname) {
+  function assignOnHandler(obj, eventName, fname, eventObject) {
+    eventObject = eventObject ? eventObject : obj._innerData;
     var fn = function(cb) {
       var trace;
       if (jiant.DEBUG_MODE.events) {
@@ -616,7 +618,7 @@ var jiant = jiant || (function($) {
       } else {
         obj.listenersCount++;
       }
-      obj._innerData.on(eventName, function () {
+      eventObject.on(eventName, function () {
         jiant.DEBUG_MODE.events && debug("called event handler: " + eventName + ", registered at " + trace);
         var args = $.makeArray(arguments);
         args.splice(0, 1);
@@ -653,7 +655,7 @@ var jiant = jiant || (function($) {
           return storage;
         };
       } else if (fname == "on") {
-        assignOnHandler(obj, globalChangeEventName);
+        assignOnHandler(obj, globalChangeEventName, undefined, eventBus);
       } else if (fname == "update") {
         obj[fname] = function(objFrom) {
           var smthChanged = false;
