@@ -2,6 +2,7 @@
 // 0.42 based, minor fix in bindList
 // 0.44 based, nav, stateful views
 // 0.46 based, pagedContent
+// xl.01 renderList(list, container, tm, perItemCb) added, perItemCb(item, elem)
 
 jiant.xl = {
 
@@ -110,6 +111,17 @@ jiant.xl = {
       });
 
     };
+  },
+
+  renderList: function(list, container, tm, perItemCb) {
+    return function() {
+      $.each(list, function(idx, item) {
+        var elem = tm.parseTemplate(item);
+        elem.propagate(item, false);
+        container.append(elem);
+        perItemCb && perItemCb(item, elem);
+      });
+    }
   },
 
   elementVisibilityByEvent: function(elem, eventsList) {},
