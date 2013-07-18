@@ -3,6 +3,7 @@
 // 0.44 based, nav, stateful views
 // 0.46 based, pagedContent
 // xl.01 renderList(list, container, tm, perItemCb) added, perItemCb(item, elem)
+// xl0.02 propagate call added to pagedContent
 
 jiant.xl = {
 
@@ -103,6 +104,7 @@ jiant.xl = {
           container.empty();
           $.each(data.content, function(idx, item) {
             var row = template.parseTemplate(item);
+            row.propagate(item, false);
             container.append(row);
             perItemCb && perItemCb(item, row);
           });
