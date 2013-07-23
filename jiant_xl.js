@@ -4,8 +4,13 @@
 // 0.46 based, pagedContent
 // xl.01 renderList(list, container, tm, perItemCb) added, perItemCb(item, elem)
 // xl0.02 propagate call added to pagedContent
+// xl0.03 noItems optional parameter added to pagedContent, renderList; version() added
 
-jiant.xl = {
+var tmpJiantXl = {
+
+  version: function() {
+    return 3;
+  },
 
   ctl2state: function(ctl, state, selectedCssClass) {
     return function() {
@@ -91,7 +96,7 @@ jiant.xl = {
     };
   },
 
-  pagedContent: function(state, ajax, container, pager, template, perItemCb) {
+  pagedContent: function(state, ajax, container, pager, template, perItemCb, noItemsLabel) {
     return function() {
 
       pager.onValueChange(function(event, pageNum) {
@@ -102,6 +107,7 @@ jiant.xl = {
         pageNum = pageNum ? pageNum : 0;
         ajax({"page.page": pageNum}, function(data) {
           container.empty();
+          noItemsLabel && (data.content.length ? noItemsLabel.hide() : noItemsLabel.show());
           $.each(data.content, function(idx, item) {
             var row = template.parseTemplate(item);
             row.propagate(item, false);
@@ -115,8 +121,9 @@ jiant.xl = {
     };
   },
 
-  renderList: function(list, container, tm, perItemCb) {
+  renderList: function(list, container, tm, perItemCb, noItemsLabel) {
     return function() {
+      noItemsLabel && (list.length ? noItemsLabel.hide() : noItemsLabel.show());
       $.each(list, function(idx, item) {
         var elem = tm.parseTemplate(item);
         elem.propagate(item, false);
@@ -131,3 +138,7 @@ jiant.xl = {
   removeCtl: function(ctl, model) {}
 
 };
+
+if (! (window.jiant && window.jiant.xl && window.jiant.xl.version && window.jiant.xl.version() >= tmpJiantXl.version())) {
+  window.jiant.xl = tmpJiantXl;
+}
