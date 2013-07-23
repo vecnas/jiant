@@ -47,8 +47,9 @@
 // 0.46: lfill made public
 // 0.47: added asaa/asap synonim functions to models for synchronization by value availability, added jiant.getCurrentState()
 // 0.48 global model .on() fixed, now works
+// 0.49 per view/template appPrefix support, for better cross-application integration, added version() function and override by latest version
 
-var jiant = jiant || (function($) {
+var tmpJiant = (function($) {
 
   var collection = {},
       container = {},
@@ -84,9 +85,9 @@ var jiant = jiant || (function($) {
       statesUsed = {},
       eventsUsed = {};
 
-  function ensureExists(appRoot, obj, idName, className) {
-    if (idName && appRoot.dirtyList && ($.inArray(idName, appRoot.dirtyList) >= 0
-        || (appRoot.appPrefix && $.inArray(idName.substring(appRoot.appPrefix.length), appRoot.dirtyList) >= 0))) {
+  function ensureExists(appPrefix, dirtyList, obj, idName, className) {
+    if (idName && dirtyList && ($.inArray(idName, dirtyList) >= 0
+        || (appPrefix && $.inArray(idName.substring(appPrefix.length), dirtyList) >= 0))) {
       return;
     }
     if (!obj || !obj.length) {
@@ -430,15 +431,17 @@ var jiant = jiant || (function($) {
   function _bindContent(appRoot, subRoot, key, content, view, prefix) {
     $.each(content, function (elem, elemContent) {
 //      window.console && window.console.logInfo(elem + "    : " + subRoot[elem]);
-      if (subRoot[elem] == lookup) {
-        logInfo("    loookup element, no checks/bindings: " + elem);
-        subRoot[elem] = function() {return view.find("." + prefix + elem);};
-      } else {
-        var uiElem = view.find("." + prefix + elem);
-        ensureExists(appRoot, uiElem, prefix + key, prefix + elem);
-        subRoot[elem] = uiElem;
-        setupExtras(appRoot, uiElem, elemContent, key, elem);
-//        logInfo("    bound UI for: " + elem);
+      if (elem != "appPrefix") {
+        if (subRoot[elem] == lookup) {
+          logInfo("    loookup element, no checks/bindings: " + elem);
+          subRoot[elem] = function() {return view.find("." + prefix + elem);};
+        } else {
+          var uiElem = view.find("." + prefix + elem);
+          ensureExists(prefix, appRoot.dirtyList, uiElem, prefix + key, prefix + elem);
+          subRoot[elem] = uiElem;
+          setupExtras(appRoot, uiElem, elemContent, key, elem);
+  //        logInfo("    bound UI for: " + elem);
+        }
       }
     });
   }
@@ -509,12 +512,12 @@ var jiant = jiant || (function($) {
     }
   }
 
-  function _bindViews(prefix, root, appRoot) {
-    prefix = prefix || "";
+  function _bindViews(pfx, root, appRoot) {
     $.each(root, function (key, content) {
-      logInfo("binding UI for view: " + key);
+      var prefix = content.appPrefix ? content.appPrefix : (pfx ? pfx : "");
+      logInfo("binding UI for view: " + key + " using prefix " + prefix);
       var view = $("#" + prefix + key);
-      ensureExists(appRoot, view, prefix + key);
+      ensureExists(prefix, appRoot.dirtyList, view, prefix + key);
       _bindContent(appRoot, root[key], key, content, view, prefix);
       ensureSafeExtend(root[key], view);
       root[key].propagate = makePropagationFunction(content, content);
@@ -542,22 +545,24 @@ var jiant = jiant || (function($) {
     }
   }
 
-  function _bindTemplates(prefix, root, appRoot) {
-    prefix = prefix || "";
+  function _bindTemplates(pfx, root, appRoot) {
     $.each(root, function(key, content) {
-      logInfo("binding UI for template: " + key);
+      var prefix = content.appPrefix ? content.appPrefix : (pfx ? pfx : "");
+      logInfo("binding UI for template: " + key + " using prefix " + prefix);
       var tm = $("#" + prefix + key);
-      ensureExists(appRoot, tm, prefix + key);
+      ensureExists(prefix, appRoot.dirtyList, tm, prefix + key);
       $.each(content, function (elem, elemType) {
-        ensureExists(appRoot, tm.find("." + prefix + elem), prefix + key, prefix + elem);
-        var innerTmKey = calcInnerTmKey(content[elem]);
-        content[elem] = {};
-        content[elem][innerTmKey] = true;
+        if (elem != "appPrefix") {
+          ensureExists(prefix, appRoot.dirtyList, tm.find("." + prefix + elem), prefix + key, prefix + elem);
+          var innerTmKey = calcInnerTmKey(content[elem]);
+          content[elem] = {};
+          content[elem][innerTmKey] = true;
+        }
       });
       root[key].parseTemplate = function(data) {
         var retVal = $("<!-- -->" + parseTemplate(tm, data)); // add comment to force jQuery to read it as HTML fragment
         $.each(content, function (elem, elemType) {
-          if (elem != "parseTemplate" && elem != "parseTemplate2Text") {
+          if (elem != "parseTemplate" && elem != "parseTemplate2Text" && elem != "appPrefix") {
             retVal[elem] = $.merge(retVal.filter("." + prefix + elem), retVal.find("." + prefix + elem));
             setupExtras(appRoot, retVal[elem], root[key][elem], key, elem);
             maybeAddDevHook(retVal[elem], key, elem);
@@ -1199,6 +1204,10 @@ var jiant = jiant || (function($) {
     }
   }
 
+  function version() {
+    return 49;
+  }
+
   return {
     AJAX_PREFIX: "",
     AJAX_SUFFIX: "",
@@ -1225,6 +1234,7 @@ var jiant = jiant || (function($) {
     logError: logError,
     parseTemplate: function(text, data) {return $(parseTemplate(text, data));},
     parseTemplate2Text: parseTemplate2Text,
+    version: version,
 
     collection: collection,
     container: container,
@@ -1256,3 +1266,7 @@ var jiant = jiant || (function($) {
   };
 
 })(jQuery);
+
+if (! (jiant && jiant.version && jiant.version() >= tmpJiant.version())) {
+  jiant = tmpJiant;
+}
