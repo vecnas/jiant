@@ -1267,6 +1267,6 @@ var tmpJiant = (function($) {
 
 })(jQuery);
 
-if (! (jiant && jiant.version && jiant.version() >= tmpJiant.version())) {
-  jiant = tmpJiant;
+if (! (window.jiant && window.jiant.version && window.jiant.version() >= tmpJiant.version())) {
+  window.jiant = tmpJiant;
 }
