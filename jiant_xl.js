@@ -2,14 +2,15 @@
 // 0.42 based, minor fix in bindList
 // 0.44 based, nav, stateful views
 // 0.46 based, pagedContent
-// xl.01 renderList(list, container, tm, perItemCb) added, perItemCb(item, elem)
-// xl0.02 propagate call added to pagedContent
-// xl0.03 noItems optional parameter added to pagedContent, renderList; version() added
+// xl.0.01 renderList(list, container, tm, perItemCb) added, perItemCb(item, elem)
+// xl.0.02 propagate call added to pagedContent
+// xl.0.03 noItems optional parameter added to pagedContent, renderList; version() added
+// xl.0.04 onCompleteCb optional parameters added to pagedContent
 
 var tmpJiantXl = {
 
   version: function() {
-    return 3;
+    return 4;
   },
 
   ctl2state: function(ctl, state, selectedCssClass) {
@@ -96,7 +97,7 @@ var tmpJiantXl = {
     };
   },
 
-  pagedContent: function(state, ajax, container, pager, template, perItemCb, noItemsLabel) {
+  pagedContent: function(state, ajax, container, pager, template, perItemCb, noItemsLabel, onCompleteCb) {
     return function() {
 
       pager.onValueChange(function(event, pageNum) {
@@ -115,6 +116,7 @@ var tmpJiantXl = {
             perItemCb && perItemCb(item, row);
           });
           pager.updatePager(data);
+          onCompleteCb && onCompleteCb(data);
         });
       });
 
