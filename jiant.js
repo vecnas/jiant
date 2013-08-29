@@ -49,6 +49,7 @@
 // 0.48 global model .on() fixed, now works
 // 0.49 per view/template appPrefix support, for better cross-application integration, added version() function and override by latest version
 // 0.50 fixed multiple apps events/states intersection, still exists tracking bug with events/statesUsed for multiple apps
+// 0.51 fix for minor bug in 0.50 - no notification on state end for 2nd application on a page
 
 var tmpJiant = (function($) {
 
@@ -78,7 +79,7 @@ var tmpJiant = (function($) {
       },
       tabs = {},
 
-      lastState = undefined,
+      lastStates = {},
       eventBus = $({}),
       bindingsResult = true,
       uiBoundRoot = {},
@@ -856,17 +857,17 @@ var tmpJiant = (function($) {
       return;
     }
     $.each(states, function(name, stateSpec) {
-      logInfo("binding state: " + name);
+      logInfo("binding state: " + appId + name);
       stateSpec.go = go(name, stateSpec.root, stateExternalBase);
       stateSpec.start = function(cb) {
         var trace;
         if (jiant.DEBUG_MODE.states) {
           debug("register state start handler: " + name);
-          statesUsed[appId + name] && debug(" !!! State start handler registered after state triggered, possible error, for state " + name);
+          statesUsed[appId + name] && debug(" !!! State start handler registered after state triggered, possible error, for state " + appId + name);
           trace = getStackTrace();
         }
         eventBus.on(appId + "state_" + name + "_start", function() {
-          jiant.DEBUG_MODE.states && debug("called state start handler: " + name + ", registered at " + trace);
+          jiant.DEBUG_MODE.states && debug("called state start handler: " + appId + name + ", registered at " + trace);
           var args = $.makeArray(arguments);
           args.splice(0, 1);
           cb && cb.apply(cb, args);
@@ -881,12 +882,12 @@ var tmpJiant = (function($) {
       stateSpec.end = function(cb) {
         var trace;
         if (jiant.DEBUG_MODE.states) {
-          debug("register state end handler: " + name);
+          debug("register state end handler: " + appId + name);
           statesUsed[appId + name] && debug(" !!! State end handler registered after state triggered, possible error, for state " + name);
           trace = getStackTrace();
         }
         eventBus.on(appId + "state_" + name + "_end", function() {
-          jiant.DEBUG_MODE.states && debug("called state end handler: " + name + ", registered at " + trace);
+          jiant.DEBUG_MODE.states && debug("called state end handler: " + appId + name + ", registered at " + trace);
           var args = $.makeArray(arguments);
           args.splice(0, 1);
           cb && cb.apply(cb, args);
@@ -906,17 +907,17 @@ var tmpJiant = (function($) {
           params[idx] = undefined;
         }
       });
-      if (lastState != undefined && lastState != stateId) {
-        jiant.DEBUG_MODE.states && debug("trigger state end: " + (lastState ? lastState : ""));
-        eventBus.trigger(appId + "state_" + lastState + "_end");
+      if (lastStates[appId] != undefined && lastStates[appId] != stateId) {
+        jiant.DEBUG_MODE.states && debug("trigger state end: " + appId + (lastStates[appId] ? lastStates[appId] : ""));
+        eventBus.trigger(appId + "state_" + lastStates[appId] + "_end");
       }
-      lastState = stateId;
+      lastStates[appId] = stateId;
       stateId = (stateId ? stateId : "");
-      jiant.DEBUG_MODE.states && debug("trigger state start: " + stateId);
+      jiant.DEBUG_MODE.states && debug("trigger state start: " + appId + stateId);
       jiant.DEBUG_MODE.states && (! statesUsed[appId + stateId]) && (statesUsed[appId + stateId] = 1);
       eventBus.trigger(appId + "state_" + stateId + "_start", params);
     });
-    lastState = parseState().now[0];
+    lastStates[appId] = parseState().now[0];
   }
 
   function go(stateId, root, stateExternalBase) {
