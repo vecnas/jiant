@@ -48,6 +48,7 @@
 // 0.47: added asaa/asap synonim functions to models for synchronization by value availability, added jiant.getCurrentState()
 // 0.48 global model .on() fixed, now works
 // 0.49 per view/template appPrefix support, for better cross-application integration, added version() function and override by latest version
+// 0.50 fixed multiple apps events/states intersection, still exists tracking bug with events/statesUsed for multiple apps
 
 var tmpJiant = (function($) {
 
@@ -641,7 +642,7 @@ var tmpJiant = (function($) {
     }
   }
 
-  function bindFunctions(name, spec, obj) {
+  function bindFunctions(name, spec, obj, appId) {
     var storage = [],
         fldPrefix = "fld_prefix_";
     if (spec.updateAll && spec.id) {
@@ -652,7 +653,7 @@ var tmpJiant = (function($) {
     obj._innerData = $({});
     $.each(spec, function(fname, funcSpec) {
       var eventName = name + "_" + fname + "_event",
-          globalChangeEventName = name + "_globalevent";
+          globalChangeEventName = appId + name + "_globalevent";
 //      jiant.logInfo("  implementing model function " + fname);
       if (fname == "_innerData") {
       } else if (fname == "all") {
@@ -713,7 +714,7 @@ var tmpJiant = (function($) {
             params[idx] && (newObj[fldPrefix + params[idx]] = arg);
           });
           storage.push(newObj);
-          bindFunctions(name, spec, newObj);
+          bindFunctions(name, spec, newObj, appId);
           jiant.DEBUG_MODE.events && debug("fire event: " + eventName);
           jiant.DEBUG_MODE.events && (! eventsUsed[eventName]) && (eventsUsed[eventName] = 1);
           obj._innerData.trigger(eventName, newObj);
@@ -730,7 +731,7 @@ var tmpJiant = (function($) {
             var newObj = {};
             storage.push(newObj);
             newArr.push(newObj);
-            bindFunctions(name, spec, newObj);
+            bindFunctions(name, spec, newObj, appId);
             $.each(item, function(name, param) {
               newObj[name] && newObj[name](param);
 //              newObj[fldPrefix + name] = param;
@@ -807,23 +808,23 @@ var tmpJiant = (function($) {
     });
   }
 
-  function _bindModels(models) {
+  function _bindModels(models, appId) {
     $.each(models, function(name, spec) {
       jiant.logInfo("implementing model " + name);
-      bindFunctions(name, spec, spec);
+      bindFunctions(name, spec, spec, appId);
     });
   }
 
 // ------------ events staff ----------------
 
-  function _bindEvents(events) {
+  function _bindEvents(events, appId) {
     $.each(events, function(name, spec) {
       logInfo("binding event: " + name);
       events[name].listenersCount = 0;
       events[name].fire = function() {
         jiant.DEBUG_MODE.events && debug("fire event: " + name);
         jiant.DEBUG_MODE.events && (! eventsUsed[name]) && (eventsUsed[name] = 1);
-        eventBus.trigger(name + ".event", arguments);
+        eventBus.trigger(appId + name + ".event", arguments);
       };
       events[name].on = function (cb) {
         var trace;
@@ -833,7 +834,7 @@ var tmpJiant = (function($) {
           trace = getStackTrace();
         }
         events[name].listenersCount++;
-        eventBus.on(name + ".event", function () {
+        eventBus.on(appId + name + ".event", function () {
           jiant.DEBUG_MODE.events && debug("called event handler: " + name + ", registered at " + trace);
           var args = $.makeArray(arguments);
           args.splice(0, 1);
@@ -861,10 +862,10 @@ var tmpJiant = (function($) {
         var trace;
         if (jiant.DEBUG_MODE.states) {
           debug("register state start handler: " + name);
-          statesUsed[name] && debug(" !!! State start handler registered after state triggered, possible error, for state " + name);
+          statesUsed[appId + name] && debug(" !!! State start handler registered after state triggered, possible error, for state " + name);
           trace = getStackTrace();
         }
-        eventBus.on("state_" + name + "_start", function() {
+        eventBus.on(appId + "state_" + name + "_start", function() {
           jiant.DEBUG_MODE.states && debug("called state start handler: " + name + ", registered at " + trace);
           var args = $.makeArray(arguments);
           args.splice(0, 1);
@@ -881,10 +882,10 @@ var tmpJiant = (function($) {
         var trace;
         if (jiant.DEBUG_MODE.states) {
           debug("register state end handler: " + name);
-          statesUsed[name] && debug(" !!! State end handler registered after state triggered, possible error, for state " + name);
+          statesUsed[appId + name] && debug(" !!! State end handler registered after state triggered, possible error, for state " + name);
           trace = getStackTrace();
         }
-        eventBus.on("state_" + name + "_end", function() {
+        eventBus.on(appId + "state_" + name + "_end", function() {
           jiant.DEBUG_MODE.states && debug("called state end handler: " + name + ", registered at " + trace);
           var args = $.makeArray(arguments);
           args.splice(0, 1);
@@ -898,7 +899,7 @@ var tmpJiant = (function($) {
           stateId = parsed.now[0],
           handler = states[stateId],
           params = parsed.now;
-      jiant.logInfo(state);
+      jiant.logInfo(appId + ": " + state);
       params.splice(0, 1);
       $.each(params, function(idx, p) {
         if (p == "undefined") {
@@ -907,13 +908,13 @@ var tmpJiant = (function($) {
       });
       if (lastState != undefined && lastState != stateId) {
         jiant.DEBUG_MODE.states && debug("trigger state end: " + (lastState ? lastState : ""));
-        eventBus.trigger("state_" + lastState + "_end");
+        eventBus.trigger(appId + "state_" + lastState + "_end");
       }
       lastState = stateId;
       stateId = (stateId ? stateId : "");
       jiant.DEBUG_MODE.states && debug("trigger state start: " + stateId);
-      jiant.DEBUG_MODE.states && (! statesUsed[stateId]) && (statesUsed[stateId] = 1);
-      eventBus.trigger("state_" + stateId + "_start", params);
+      jiant.DEBUG_MODE.states && (! statesUsed[appId + stateId]) && (statesUsed[appId + stateId] = 1);
+      eventBus.trigger(appId + "state_" + stateId + "_start", params);
     });
     lastState = parseState().now[0];
   }
@@ -1137,7 +1138,7 @@ var tmpJiant = (function($) {
       root.ajax = {};
     }
     if (root.events) {
-      _bindEvents(root.events);
+      _bindEvents(root.events, appId);
     } else {
       root.events = {};
     }
@@ -1147,7 +1148,7 @@ var tmpJiant = (function($) {
       root.states = {};
     }
     if (root.models) {
-      _bindModels(root.models);
+      _bindModels(root.models, appId);
     } else {
       root.models = {};
     }
@@ -1155,7 +1156,7 @@ var tmpJiant = (function($) {
       alert("Some elements not bound to HTML properly, check console" + errString);
     }
     uiBoundRoot[appId] = root;
-    var eventId = "jiant_uiBound_" + appId;
+    var eventId = appId + "jiant_uiBound_" + appId;
     eventBus.trigger(eventId);
 //    refreshState();
   }
@@ -1197,7 +1198,7 @@ var tmpJiant = (function($) {
     if (uiBoundRoot[appId]) {
       cb && cb($, uiBoundRoot[appId]);
     } else {
-      var eventId = "jiant_uiBound_" + appId;
+      var eventId = appId + "jiant_uiBound_" + appId;
       eventBus.on(eventId, function() {
         cb && cb($, uiBoundRoot[appId]);
       });
