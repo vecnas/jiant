@@ -50,7 +50,9 @@
 // 0.49 per view/template appPrefix support, for better cross-application integration, added version() function and override by latest version
 // 0.50 fixed multiple apps events/states intersection, still exists tracking bug with events/statesUsed for multiple apps
 // 0.51 fix for minor bug in 0.50 - no notification on state end for 2nd application on a page
+// 0.52 findByXXXAndYYYAndZZZ() support for models, find by several parameters, separated by And
 
+(function() {
 var tmpJiant = (function($) {
 
   var collection = {},
@@ -777,9 +779,19 @@ var tmpJiant = (function($) {
         };
         assignOnHandler(obj, eventName, fname);
       } else if (fname.indexOf("findBy") == 0 && fname.length > 6) {
-        var fieldName = fldPrefix + fname.substring(6, 7).toLowerCase() + fname.substring(7);
-        obj[fname] = function(val) {
-          return $.grep(storage, function(value) {return value[fieldName] == val});
+        var cut = fname.substring(6),
+            arr = cut.split("And");
+        obj[fname] = function() {
+          function filter(arr, fieldName, val) {
+            return $.grep(arr, function(item) {return val == undefined || item[fieldName]() == val});
+          }
+          var retVal = storage,
+              outerArgs = arguments;
+          $.each(arr, function(idx, name) {
+            var fieldName = name.substring(0, 1).toLowerCase() + name.substring(1);
+            retVal = filter(retVal, fieldName, outerArgs[idx]);
+          });
+          return retVal;
         };
       } else if (("" + funcSpec).indexOf("{}") == ("" + funcSpec).length - 2 || spec._innerData[fname]) {
         spec._innerData[fname] = true;
@@ -862,7 +874,7 @@ var tmpJiant = (function($) {
       stateSpec.start = function(cb) {
         var trace;
         if (jiant.DEBUG_MODE.states) {
-          debug("register state start handler: " + name);
+          debug("register state start handler: " + appId + name);
           statesUsed[appId + name] && debug(" !!! State start handler registered after state triggered, possible error, for state " + appId + name);
           trace = getStackTrace();
         }
@@ -1272,3 +1284,4 @@ var tmpJiant = (function($) {
 if (! (window.jiant && window.jiant.version && window.jiant.version() >= tmpJiant.version())) {
   window.jiant = tmpJiant;
 }
+})();
