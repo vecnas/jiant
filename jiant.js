@@ -51,6 +51,7 @@
 // 0.50 fixed multiple apps events/states intersection, still exists tracking bug with events/statesUsed for multiple apps
 // 0.51 fix for minor bug in 0.50 - no notification on state end for 2nd application on a page
 // 0.52 findByXXXAndYYYAndZZZ() support for models, find by several parameters, separated by And
+// 0.53 setXXXAndYYYAndZZZ(xxx, yyy, zzz) support for models, set several fields
 
 (function() {
 var tmpJiant = (function($) {
@@ -653,6 +654,14 @@ var tmpJiant = (function($) {
       if (! spec.update) spec.update = function(val) {};
       if (! spec.findById) spec.findById = function(val) {};
     }
+    if (! spec.update) {
+      $.each(spec, function(fname, funcSpec) {
+        if (fname.indexOf("set") == 0 && fname.length > 3 && ("" + funcSpec).indexOf("{}") == ("" + funcSpec).length - 2) {
+          spec.update = function(val) {};
+          return false;
+        }
+      });
+    }
     obj._innerData = $({});
     $.each(spec, function(fname, funcSpec) {
       var eventName = name + "_" + fname + "_event",
@@ -782,17 +791,30 @@ var tmpJiant = (function($) {
         var cut = fname.substring(6),
             arr = cut.split("And");
         obj[fname] = function() {
+          var retVal = storage,
+              outerArgs = arguments;
           function filter(arr, fieldName, val) {
             return $.grep(arr, function(item) {return val == undefined || item[fieldName]() == val});
           }
-          var retVal = storage,
-              outerArgs = arguments;
           $.each(arr, function(idx, name) {
             var fieldName = name.substring(0, 1).toLowerCase() + name.substring(1);
             retVal = filter(retVal, fieldName, outerArgs[idx]);
           });
           return retVal;
         };
+      } else if (fname.indexOf("set") == 0 && fname.length > 3) {
+        var cut = fname.substring(3),
+            arr = cut.split("And");
+        obj[fname] = function() {
+          var outerArgs = arguments,
+              newVals = {};
+          $.each(arr, function(idx, name) {
+            var fieldName = name.substring(0, 1).toLowerCase() + name.substring(1);
+            newVals[fieldName] = outerArgs[idx];
+          });
+          obj.update(newVals);
+          return newVals;
+        }
       } else if (("" + funcSpec).indexOf("{}") == ("" + funcSpec).length - 2 || spec._innerData[fname]) {
         spec._innerData[fname] = true;
         obj[fname] = function(val, forceEvent) {
@@ -1219,7 +1241,7 @@ var tmpJiant = (function($) {
   }
 
   function version() {
-    return 49;
+    return 53;
   }
 
   return {
