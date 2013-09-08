@@ -52,1258 +52,1271 @@
 // 0.51 fix for minor bug in 0.50 - no notification on state end for 2nd application on a page
 // 0.52 findByXXXAndYYYAndZZZ() support for models, find by several parameters, separated by And
 // 0.53 setXXXAndYYYAndZZZ(xxx, yyy, zzz) support for models, set several fields
+// 0.54 custom behaviour injection into model via functions with more than 1 argument and empty body
 
 (function() {
-var tmpJiant = (function($) {
+  var tmpJiant = (function($) {
 
-  var collection = {},
-      container = {},
-      containerPaged = {},
-      ctl = {},
-      form = {},
-      fn = function(param) {},
-      grid = {},
-      image = {},
-      input = {},
-      inputInt = {},
-      inputDate = {},
-      label = {},
-      lookup = function(selector) {},
-      on = function(cb) {},
-      goState = function(params, preserveOmitted) {},
-      pager = {},
-      slider = {},
-      stub = function() {
-        var callerName = "not available";
-        if (arguments && arguments.callee && arguments.callee.caller) {
-          callerName = arguments.callee.caller.name;
-        }
-        alert("stub called from function: " + callerName);
-      },
-      tabs = {},
-
-      lastStates = {},
-      eventBus = $({}),
-      bindingsResult = true,
-      uiBoundRoot = {},
-      errString,
-      statesUsed = {},
-      eventsUsed = {};
-
-  function ensureExists(appPrefix, dirtyList, obj, idName, className) {
-    if (idName && dirtyList && ($.inArray(idName, dirtyList) >= 0
-        || (appPrefix && $.inArray(idName.substring(appPrefix.length), dirtyList) >= 0))) {
-      return;
-    }
-    if (!obj || !obj.length) {
-      window.console && window.console.error
-      && (className ? logError("non existing object referred by class under object id '" + idName
-          + "', check stack trace for details, expected obj class: " + className) :
-          logError("non existing object referred by id, check stack trace for details, expected obj id: " + idName));
-      if (className) {
-        errString += "   ,    #" + idName + " ." + className;
-      } else {
-        errString += ", #" + idName;
-      }
-      bindingsResult = false;
-    }
-  }
-
-  function maybeAddDevHook(uiElem, key, elem) {
-    if (jiant.DEV_MODE) {
-      uiElem.click(function(event) {
-        if (event.shiftKey && event.altKey) {
-          var message = key + (elem ? ("." + elem) : "");
-          if (event.ctrlKey) {
-            message += "\r\n------------\r\n";
-            message += pseudoserializeJSON(jQuery._data(uiElem[0], "events"));
+    var collection = {},
+        container = {},
+        containerPaged = {},
+        ctl = {},
+        form = {},
+        fn = function(param) {},
+        grid = {},
+        image = {},
+        input = {},
+        inputInt = {},
+        inputDate = {},
+        label = {},
+        lookup = function(selector) {},
+        on = function(cb) {},
+        goState = function(params, preserveOmitted) {},
+        pager = {},
+        slider = {},
+        stub = function() {
+          var callerName = "not available";
+          if (arguments && arguments.callee && arguments.callee.caller) {
+            callerName = arguments.callee.caller.name;
           }
-          logInfo(message);
-          alert(message);
-          event.preventDefault();
-          event.stopImmediatePropagation();
-        }
-      });
-    }
-  }
+          alert("stub called from function: " + callerName);
+        },
+        tabs = {},
 
-  // not serialization actually, for example when text contains " - generates invalid output. just for dev purposes
-  function pseudoserializeJSON(obj) {
-    var t = typeof(obj);
-    if (t != "object" || obj === null) {
-      // simple data type
-      if (t == "string") {
-        obj = '"' + obj + '"';
+        lastStates = {},
+        eventBus = $({}),
+        bindingsResult = true,
+        uiBoundRoot = {},
+        errString,
+        statesUsed = {},
+        eventsUsed = {};
+
+    function ensureExists(appPrefix, dirtyList, obj, idName, className) {
+      if (idName && dirtyList && ($.inArray(idName, dirtyList) >= 0
+          || (appPrefix && $.inArray(idName.substring(appPrefix.length), dirtyList) >= 0))) {
+        return;
       }
-      return String(obj);
-    } else {
-      // array or object
-      var json = [],
-          arr = (obj && obj.constructor == Array);
-
-      $.each(obj, function (k, v) {
-        t = typeof(v);
-        if (t == "string") {
-          v = '"' + v + '"';
+      if (!obj || !obj.length) {
+        window.console && window.console.error
+        && (className ? logError("non existing object referred by class under object id '" + idName
+            + "', check stack trace for details, expected obj class: " + className) :
+            logError("non existing object referred by id, check stack trace for details, expected obj id: " + idName));
+        if (className) {
+          errString += "   ,    #" + idName + " ." + className;
+        } else {
+          errString += ", #" + idName;
         }
-        else if (t == "object" && v !== null) {
-          v = pseudoserializeJSON(v);
-        }
-        json.push((arr ? "" : '"' + k + '":') + (v ? v : "\"\""));
-      });
-
-      return (arr ? "[" : "{") + String(json) + (arr ? "]" : "}");
-    }
-  }
-
-  function formatDate(millis) {
-    var dt = new Date(millis);
-    return $.datepicker.formatDate("yy-mm-dd", dt);
-  }
-
-  function formatTime(millis) {
-    var dt = new Date(millis);
-    return lfill(dt.getHours()) + ":" + lfill(dt.getMinutes());
-  }
-
-  function formatTimeSeconds(millis) {
-    var dt = new Date(millis);
-    return lfill(dt.getHours()) + ":" + lfill(dt.getMinutes()) + ":" + lfill(dt.getSeconds());
-  }
-
-  function lfill(val) {
-    return val < 10 ? "0" + val : val;
-  }
-
-  function msieDom2Html(elem) {
-    $.each(elem.find("*"), function(idx, child) {
-      $.each(child.attributes, function(i, attr) {
-        if (attr.value.indexOf(" ") < 0 && attr.value.indexOf("!!") >= 0) {
-          $(child).attr(attr.name, attr.value.replace(/!!/g, "e2013e03e11eee "));
-        }
-      });
-    });
-    return $.trim($(elem).html()).replace(/!!/g, "!! ").replace(/e2013e03e11eee /g, "!! ");
-  }
-
-  function parseTemplate(that, data) {
-    data = data || {};
-    var str = $.trim($(that).html()),
-        _tmplCache = {},
-        err = "";
-    if (!jiant.isMSIE) {
-      str = str.replace(/!!/g, "!! ");
-    } else {
-      str = msieDom2Html($(that));
-    }
-    try {
-      var func = _tmplCache[str];
-      if (!func) {
-        var strFunc =
-            "var p=[],print=function(){p.push.apply(p,arguments);};" +
-                "with(obj){p.push('" +
-                str.replace(/[\r\t\n]/g, " ")
-                    .replace(/'(?=[^#]*#>)/g, "\t")
-                    .split("'").join("\\'")
-                    .split("\t").join("'")
-                    .replace(/!! (.+?)!! /g, "',$1,'")
-                    .split("!?").join("');")
-                    .split("?!").join("p.push('")
-                + "');}return p.join('');";
-
-        //alert(strFunc);
-        func = new Function("obj", strFunc);
-        _tmplCache[str] = func;
+        bindingsResult = false;
       }
-      return $.trim(func(data));
-    } catch (e) {
-      err = e.message;
     }
-    return "!!! ERROR: " + err.toString() + " !!!";
-  }
 
-  function setupInputInt(input) {
-    input.keydown(function(event) {
-      if (event.keyCode == jiant.key.down && input.val() > 0) {
-        input.val(input.val() - 1);
-        return false;
-      } else if (event.keyCode == jiant.key.up) {
-        input.val(parseInt(input.val()) + 1);
-        return false;
-      } else if (event.keyCode == jiant.key.backspace || event.keyCode == jiant.key.del || event.keyCode == jiant.key.end
-          || event.keyCode == jiant.key.home || event.keyCode == jiant.key.tab || event.keyCode == jiant.key.enter) {
-      } else if (event.shiftKey || (event.keyCode < 48 || event.keyCode > 57) && (event.keyCode < 96 || event.keyCode > 105 )) {
-        event.preventDefault();
-        return false;
-      }
-      return true;
-    });
-  }
-
-  function setupForm(appRoot, elem, key, name) {
-    if (! elem[0]) {
-      return;
-    }
-    var tagName = elem[0].tagName.toLowerCase();
-    if (tagName != "form") {
-      jiant.logError(key + "." + name + " form element assigned to non-form: " + tagName);
+    function maybeAddDevHook(uiElem, key, elem) {
       if (jiant.DEV_MODE) {
-        alert(key + "." + name + " form element assigned to non-form: " + tagName);
+        uiElem.click(function(event) {
+          if (event.shiftKey && event.altKey) {
+            var message = key + (elem ? ("." + elem) : "");
+            if (event.ctrlKey) {
+              message += "\r\n------------\r\n";
+              message += pseudoserializeJSON(jQuery._data(uiElem[0], "events"));
+            }
+            logInfo(message);
+            alert(message);
+            event.preventDefault();
+            event.stopImmediatePropagation();
+          }
+        });
       }
     }
-    elem.submitForm = function(url, cb) {
-      url = url ? url : elem.attr("action");
-      if (appRoot.ajaxPrefix) {
-        url = appRoot.ajaxPrefix + url;
-      } else if (jiant.AJAX_PREFIX) {
-        url = jiant.AJAX_PREFIX = url;
-      }
-      if (appRoot.ajaxSuffix) {
-        url += appRoot.ajaxSuffix;
-      } else if (jiant.AJAX_SUFFIX) {
-        url += jiant.AJAX_SUFFIX;
-      }
-      var data = {
-        type: "POST",
-        url: url,
-        data: elem.serialize(),
-        success: cb
-      };
-      if (appRoot.crossDomain) {
-        data.contentType = "application/json";
-        data.dataType = 'jsonp';
-        data.xhrFields = {withCredentials: true};
-        data.crossDomain = true;
-      }
-      return $.ajax(data);
-    };
-  }
 
-  function logError(error) {
-    $.each(arguments, function(idx, arg) {
-      window.console && window.console.error && window.console.error(arg);
-    });
-  }
+    // not serialization actually, for example when text contains " - generates invalid output. just for dev purposes
+    function pseudoserializeJSON(obj) {
+      var t = typeof(obj);
+      if (t != "object" || obj === null) {
+        // simple data type
+        if (t == "string") {
+          obj = '"' + obj + '"';
+        }
+        return String(obj);
+      } else {
+        // array or object
+        var json = [],
+            arr = (obj && obj.constructor == Array);
 
-  function logInfo(s) {
-    if (jiant.DEV_MODE && window.console && window.console.info) {
-      $.each(arguments, function(idx, arg) {
-        window.console.info(arg);
+        $.each(obj, function (k, v) {
+          t = typeof(v);
+          if (t == "string") {
+            v = '"' + v + '"';
+          }
+          else if (t == "object" && v !== null) {
+            v = pseudoserializeJSON(v);
+          }
+          json.push((arr ? "" : '"' + k + '":') + (v ? v : "\"\""));
+        });
+
+        return (arr ? "[" : "{") + String(json) + (arr ? "]" : "}");
+      }
+    }
+
+    function formatDate(millis) {
+      var dt = new Date(millis);
+      return $.datepicker.formatDate("yy-mm-dd", dt);
+    }
+
+    function formatTime(millis) {
+      var dt = new Date(millis);
+      return lfill(dt.getHours()) + ":" + lfill(dt.getMinutes());
+    }
+
+    function formatTimeSeconds(millis) {
+      var dt = new Date(millis);
+      return lfill(dt.getHours()) + ":" + lfill(dt.getMinutes()) + ":" + lfill(dt.getSeconds());
+    }
+
+    function lfill(val) {
+      return val < 10 ? "0" + val : val;
+    }
+
+    function msieDom2Html(elem) {
+      $.each(elem.find("*"), function(idx, child) {
+        $.each(child.attributes, function(i, attr) {
+          if (attr.value.indexOf(" ") < 0 && attr.value.indexOf("!!") >= 0) {
+            $(child).attr(attr.name, attr.value.replace(/!!/g, "e2013e03e11eee "));
+          }
+        });
+      });
+      return $.trim($(elem).html()).replace(/!!/g, "!! ").replace(/e2013e03e11eee /g, "!! ");
+    }
+
+    function parseTemplate(that, data) {
+      data = data || {};
+      var str = $.trim($(that).html()),
+          _tmplCache = {},
+          err = "";
+      if (!jiant.isMSIE) {
+        str = str.replace(/!!/g, "!! ");
+      } else {
+        str = msieDom2Html($(that));
+      }
+      try {
+        var func = _tmplCache[str];
+        if (!func) {
+          var strFunc =
+              "var p=[],print=function(){p.push.apply(p,arguments);};" +
+                  "with(obj){p.push('" +
+                  str.replace(/[\r\t\n]/g, " ")
+                      .replace(/'(?=[^#]*#>)/g, "\t")
+                      .split("'").join("\\'")
+                      .split("\t").join("'")
+                      .replace(/!! (.+?)!! /g, "',$1,'")
+                      .split("!?").join("');")
+                      .split("?!").join("p.push('")
+                  + "');}return p.join('');";
+
+          //alert(strFunc);
+          func = new Function("obj", strFunc);
+          _tmplCache[str] = func;
+        }
+        return $.trim(func(data));
+      } catch (e) {
+        err = e.message;
+      }
+      return "!!! ERROR: " + err.toString() + " !!!";
+    }
+
+    function setupInputInt(input) {
+      input.keydown(function(event) {
+        if (event.keyCode == jiant.key.down && input.val() > 0) {
+          input.val(input.val() - 1);
+          return false;
+        } else if (event.keyCode == jiant.key.up) {
+          input.val(parseInt(input.val()) + 1);
+          return false;
+        } else if (event.keyCode == jiant.key.backspace || event.keyCode == jiant.key.del || event.keyCode == jiant.key.end
+            || event.keyCode == jiant.key.home || event.keyCode == jiant.key.tab || event.keyCode == jiant.key.enter) {
+        } else if (event.shiftKey || (event.keyCode < 48 || event.keyCode > 57) && (event.keyCode < 96 || event.keyCode > 105 )) {
+          event.preventDefault();
+          return false;
+        }
+        return true;
       });
     }
-  }
+
+    function setupForm(appRoot, elem, key, name) {
+      if (! elem[0]) {
+        return;
+      }
+      var tagName = elem[0].tagName.toLowerCase();
+      if (tagName != "form") {
+        jiant.logError(key + "." + name + " form element assigned to non-form: " + tagName);
+        if (jiant.DEV_MODE) {
+          alert(key + "." + name + " form element assigned to non-form: " + tagName);
+        }
+      }
+      elem.submitForm = function(url, cb) {
+        url = url ? url : elem.attr("action");
+        if (appRoot.ajaxPrefix) {
+          url = appRoot.ajaxPrefix + url;
+        } else if (jiant.AJAX_PREFIX) {
+          url = jiant.AJAX_PREFIX = url;
+        }
+        if (appRoot.ajaxSuffix) {
+          url += appRoot.ajaxSuffix;
+        } else if (jiant.AJAX_SUFFIX) {
+          url += jiant.AJAX_SUFFIX;
+        }
+        var data = {
+          type: "POST",
+          url: url,
+          data: elem.serialize(),
+          success: cb
+        };
+        if (appRoot.crossDomain) {
+          data.contentType = "application/json";
+          data.dataType = 'jsonp';
+          data.xhrFields = {withCredentials: true};
+          data.crossDomain = true;
+        }
+        return $.ajax(data);
+      };
+    }
+
+    function logError(error) {
+      $.each(arguments, function(idx, arg) {
+        window.console && window.console.error && window.console.error(arg);
+      });
+    }
+
+    function logInfo(s) {
+      if (jiant.DEV_MODE && window.console && window.console.info) {
+        $.each(arguments, function(idx, arg) {
+          window.console.info(arg);
+        });
+      }
+    }
 
 
-  function debug(s) {
-    if (window.console && window.console.error) {
-      window.console.error(s);
+    function debug(s) {
+      if (window.console && window.console.error) {
+        window.console.error(s);
 //      var callerName = "not available";
 //      if (arguments && arguments.callee && arguments.callee.caller) {
 //        callerName = arguments.callee.caller.name;
 //        callerName && window.console.debug(callerName);
 //        arguments.callee.caller.caller && arguments.callee.caller.caller.name && window.console.debug(arguments.callee.caller.caller.name);
 //      }
-      return true;
-    } else {
-      return false;
+        return true;
+      } else {
+        return false;
+      }
     }
-  }
 
-  function setupPager(uiElem) {
-    var pagerBus = $({}),
-        root = $("<ul></ul>");
-    uiElem.addClass("pagination");
-    uiElem.append(root);
-    uiElem.onValueChange = function(callback) {
-      pagerBus.on("ValueChange", callback);
-    };
-    uiElem.updatePager = function(page) {
-      root.empty();
+    function setupPager(uiElem) {
+      var pagerBus = $({}),
+          root = $("<ul></ul>");
+      uiElem.addClass("pagination");
+      uiElem.append(root);
+      uiElem.onValueChange = function(callback) {
+        pagerBus.on("ValueChange", callback);
+      };
+      uiElem.updatePager = function(page) {
+        root.empty();
 //      $.each(page, function(key, value) {
 //        logInfo(key + " === " + value);
 //      });
-      var from = Math.max(0, page.number - jiant.PAGER_RADIUS / 2),
-          to = Math.min(page.number + jiant.PAGER_RADIUS / 2, page.totalPages);
-      if (from > 0) {
-        addPageCtl(1, "").find("a").css("margin-right", "20px");
-      }
-      for (var i = from; i < to; i++) {
-        var cls = "";
-        if (i == page.number) {
-          cls += " active";
+        var from = Math.max(0, page.number - jiant.PAGER_RADIUS / 2),
+            to = Math.min(page.number + jiant.PAGER_RADIUS / 2, page.totalPages);
+        if (from > 0) {
+          addPageCtl(1, "").find("a").css("margin-right", "20px");
         }
-        addPageCtl(i + 1, cls);
+        for (var i = from; i < to; i++) {
+          var cls = "";
+          if (i == page.number) {
+            cls += " active";
+          }
+          addPageCtl(i + 1, cls);
+        }
+        if (to < page.totalPages - 1) {
+          addPageCtl(page.totalPages, "").find("a").css("margin-left", "20px");
+        }
+      };
+      function addPageCtl(value, ctlClass) {
+        var ctl = $(parseTemplate($("<b><li class='!!ctlClass!!' style='cursor: pointer;'><a>!!label!!</a></li></b>"), {label: value, ctlClass: ctlClass}));
+        root.append(ctl);
+        ctl.click(function() {
+          pagerBus.trigger("ValueChange", value);
+        });
+        return ctl;
       }
-      if (to < page.totalPages - 1) {
-        addPageCtl(page.totalPages, "").find("a").css("margin-left", "20px");
-      }
-    };
-    function addPageCtl(value, ctlClass) {
-      var ctl = $(parseTemplate($("<b><li class='!!ctlClass!!' style='cursor: pointer;'><a>!!label!!</a></li></b>"), {label: value, ctlClass: ctlClass}));
-      root.append(ctl);
-      ctl.click(function() {
-        pagerBus.trigger("ValueChange", value);
-      });
-      return ctl;
     }
-  }
 
-  function setupContainerPaged(uiElem) {
-    var prev = $("<div>&lt;&lt;</div>"),
-        next = $("<div>&gt;&gt;</div>"),
-        container = $("<div></div>"),
-        pageSize = 8,
-        offset = 0;
-    prev.addClass("paged-prev");
-    next.addClass("paged-next");
-    container.addClass("paged-container");
-    uiElem.empty();
-    uiElem.append(prev);
-    uiElem.append(container);
-    uiElem.append(next);
-    prev.click(function() {
-      offset -= pageSize;
-      sync();
-    });
-    next.click(function() {
-      offset += pageSize;
-      sync();
-    });
-    uiElem.append = function(elem) {
-      container.append(elem);
-      sync();
-    };
-    uiElem.empty = function() {
-      container.empty();
-      sync();
-    };
-    uiElem.setHorizontal = function(bool) {
-      var display = bool ? "inline-block" : "block";
-      prev.css("display", display);
-      next.css("display", display);
-      container.css("display", display);
-    };
-    uiElem.setPageSize = function(val) {
-      pageSize = val;
-      sync();
-    };
-    uiElem.setHorizontal(true);
+    function setupContainerPaged(uiElem) {
+      var prev = $("<div>&lt;&lt;</div>"),
+          next = $("<div>&gt;&gt;</div>"),
+          container = $("<div></div>"),
+          pageSize = 8,
+          offset = 0;
+      prev.addClass("paged-prev");
+      next.addClass("paged-next");
+      container.addClass("paged-container");
+      uiElem.empty();
+      uiElem.append(prev);
+      uiElem.append(container);
+      uiElem.append(next);
+      prev.click(function() {
+        offset -= pageSize;
+        sync();
+      });
+      next.click(function() {
+        offset += pageSize;
+        sync();
+      });
+      uiElem.append = function(elem) {
+        container.append(elem);
+        sync();
+      };
+      uiElem.empty = function() {
+        container.empty();
+        sync();
+      };
+      uiElem.setHorizontal = function(bool) {
+        var display = bool ? "inline-block" : "block";
+        prev.css("display", display);
+        next.css("display", display);
+        container.css("display", display);
+      };
+      uiElem.setPageSize = function(val) {
+        pageSize = val;
+        sync();
+      };
+      uiElem.setHorizontal(true);
 
-    function sync() {
-      offset = Math.max(offset, 0);
-      offset = Math.min(offset, container.children().length - 1);
-      prev.css("visibility", offset > 0 ? "visible" : "hidden");
-      next.css("visibility", offset < container.children().length - pageSize ? "visible" : "hidden");
-      $.each(container.children(), function(idx, domElem) {
-        var elem = $(domElem);
+      function sync() {
+        offset = Math.max(offset, 0);
+        offset = Math.min(offset, container.children().length - 1);
+        prev.css("visibility", offset > 0 ? "visible" : "hidden");
+        next.css("visibility", offset < container.children().length - pageSize ? "visible" : "hidden");
+        $.each(container.children(), function(idx, domElem) {
+          var elem = $(domElem);
 //        logInfo("comparing " + idx + " vs " + offset + " - " + (offset+pageSize));
-        if (idx >= offset && idx < offset + pageSize) {
+          if (idx >= offset && idx < offset + pageSize) {
 //          logInfo("showing");
-          elem.show();
-        } else {
-          elem.hide();
-        }
-      });
+            elem.show();
+          } else {
+            elem.hide();
+          }
+        });
+      }
     }
-  }
 
-  function setupExtras(appRoot, uiElem, elemContent, key, elem) {
-    if ((elemContent == tabs || elemContent.tabsTmInner) && uiElem.tabs) {
-      uiElem.tabs();
-      uiElem.refreshTabs = function() {uiElem.tabs("refresh");};
-    } else if (elemContent == inputInt || elemContent.inputIntTmInner) {
-      setupInputInt(uiElem);
-    } else if ((elemContent == inputDate || elemContent.inputDateTmInner) && uiElem.datepicker) {
-      uiElem.datepicker();
-    } else if (elemContent == pager || elemContent.pagerTmInner) {
-      setupPager(uiElem);
-    } else if (elemContent == form || elemContent.formTmInner) {
-      setupForm(appRoot, uiElem, key, elem);
-    } else if (elemContent == containerPaged || elemContent.containerPagedTmInner) {
-      setupContainerPaged(uiElem);
+    function setupExtras(appRoot, uiElem, elemContent, key, elem) {
+      if ((elemContent == tabs || elemContent.tabsTmInner) && uiElem.tabs) {
+        uiElem.tabs();
+        uiElem.refreshTabs = function() {uiElem.tabs("refresh");};
+      } else if (elemContent == inputInt || elemContent.inputIntTmInner) {
+        setupInputInt(uiElem);
+      } else if ((elemContent == inputDate || elemContent.inputDateTmInner) && uiElem.datepicker) {
+        uiElem.datepicker();
+      } else if (elemContent == pager || elemContent.pagerTmInner) {
+        setupPager(uiElem);
+      } else if (elemContent == form || elemContent.formTmInner) {
+        setupForm(appRoot, uiElem, key, elem);
+      } else if (elemContent == containerPaged || elemContent.containerPagedTmInner) {
+        setupContainerPaged(uiElem);
+      }
+      maybeAddDevHook(uiElem, key, elem);
     }
-    maybeAddDevHook(uiElem, key, elem);
-  }
 
-  function getStackTrace() {
-    var obj = {stack: {}};
-    Error.captureStackTrace && Error.captureStackTrace(obj, getStackTrace);
-    return obj.stack;
-  }
+    function getStackTrace() {
+      var obj = {stack: {}};
+      Error.captureStackTrace && Error.captureStackTrace(obj, getStackTrace);
+      return obj.stack;
+    }
 
 // ------------ views ----------------
 
-  function _bindContent(appRoot, subRoot, key, content, view, prefix) {
-    $.each(content, function (elem, elemContent) {
+    function _bindContent(appRoot, subRoot, key, content, view, prefix) {
+      $.each(content, function (elem, elemContent) {
 //      window.console && window.console.logInfo(elem + "    : " + subRoot[elem]);
-      if (elem != "appPrefix") {
-        if (subRoot[elem] == lookup) {
-          logInfo("    loookup element, no checks/bindings: " + elem);
-          subRoot[elem] = function() {return view.find("." + prefix + elem);};
-        } else {
-          var uiElem = view.find("." + prefix + elem);
-          ensureExists(prefix, appRoot.dirtyList, uiElem, prefix + key, prefix + elem);
-          subRoot[elem] = uiElem;
-          setupExtras(appRoot, uiElem, elemContent, key, elem);
-  //        logInfo("    bound UI for: " + elem);
-        }
-      }
-    });
-  }
-
-  function ensureSafeExtend(spec, jqObject) {
-    $.each(spec, function(key, content) {
-      if (jqObject[key]) {
-        logError("unsafe extension: " + key + " already defined in base jQuery, shouldn't be used, now overriding!");
-        jqObject[key] = undefined;
-      }
-    });
-  }
-
-  function makePropagationFunction(spec, obj) {
-    var map = {};
-    $.each(spec, function (key, elem) {
-      map[key] = elem;
-    });
-    return function(data, subscribe4updates) {
-      subscribe4updates = (subscribe4updates == undefined) ? true : subscribe4updates;
-      $.each(map, function (key, elem) {
-        if (data[key] != undefined && data[key] != null) {
-          var val = data[key];
-          elem = obj[key];
-          if ($.isFunction(val)) {
-            getRenderer(spec, key)(data, elem, val());
-            if (subscribe4updates && $.isFunction(val.on)) {
-              val.on(function(obj, newVal) {
-                getRenderer(spec, key)(data, elem, newVal, true);
-              });
-            }
+        if (elem != "appPrefix") {
+          if (subRoot[elem] == lookup) {
+            logInfo("    loookup element, no checks/bindings: " + elem);
+            subRoot[elem] = function() {return view.find("." + prefix + elem);};
           } else {
-            getRenderer(spec, key)(data, elem, val);
+            var uiElem = view.find("." + prefix + elem);
+            ensureExists(prefix, appRoot.dirtyList, uiElem, prefix + key, prefix + elem);
+            subRoot[elem] = uiElem;
+            setupExtras(appRoot, uiElem, elemContent, key, elem);
+            //        logInfo("    bound UI for: " + elem);
           }
         }
       });
     }
-  }
 
-  function getRenderer(spec, key) {
-    if (spec[key] && spec[key].customRenderer && $.isFunction(spec[key].customRenderer)) {
-      return spec[key].customRenderer;
-    } else {
-      return updateViewElement;
+    function ensureSafeExtend(spec, jqObject) {
+      $.each(spec, function(key, content) {
+        if (jqObject[key]) {
+          logError("unsafe extension: " + key + " already defined in base jQuery, shouldn't be used, now overriding!");
+          jqObject[key] = undefined;
+        }
+      });
     }
-  }
 
-  function updateViewElement(obj, elem, val) {
-    if (! elem || ! elem[0]) {
-      return;
-    }
-    var types = ["text", "hidden", undefined];
-    var tagName = elem[0].tagName.toLowerCase();
-    if (tagName == "input" || tagName == "textarea") {
-      var el = $(elem[0]),
-          tp = el.attr("type");
-      if ($.inArray(tp, types) >= 0) {
-        elem.val(val);
-      } else if (tp == "radio") {
-        $.each(elem, function(idx, subelem) {
-          $(subelem).prop("checked", subelem.value == val);
+    function makePropagationFunction(spec, obj) {
+      var map = {};
+      $.each(spec, function (key, elem) {
+        map[key] = elem;
+      });
+      return function(data, subscribe4updates) {
+        subscribe4updates = (subscribe4updates == undefined) ? true : subscribe4updates;
+        $.each(map, function (key, elem) {
+          if (data[key] != undefined && data[key] != null) {
+            var val = data[key];
+            elem = obj[key];
+            if ($.isFunction(val)) {
+              getRenderer(spec, key)(data, elem, val());
+              if (subscribe4updates && $.isFunction(val.on)) {
+                val.on(function(obj, newVal) {
+                  getRenderer(spec, key)(data, elem, newVal, true);
+                });
+              }
+            } else {
+              getRenderer(spec, key)(data, elem, val);
+            }
+          }
         });
       }
-    } else if (tagName == "img") {
-      elem.attr("src", val);
-    } else {
-      elem.html(val);
     }
-  }
 
-  function _bindViews(pfx, root, appRoot) {
-    $.each(root, function (key, content) {
-      var prefix = content.appPrefix ? content.appPrefix : (pfx ? pfx : "");
-      logInfo("binding UI for view: " + key + " using prefix " + prefix);
-      var view = $("#" + prefix + key);
-      ensureExists(prefix, appRoot.dirtyList, view, prefix + key);
-      _bindContent(appRoot, root[key], key, content, view, prefix);
-      ensureSafeExtend(root[key], view);
-      root[key].propagate = makePropagationFunction(content, content);
-      $.extend(root[key], view);
-      maybeAddDevHook(view, key, undefined);
-    });
-  }
+    function getRenderer(spec, key) {
+      if (spec[key] && spec[key].customRenderer && $.isFunction(spec[key].customRenderer)) {
+        return spec[key].customRenderer;
+      } else {
+        return updateViewElement;
+      }
+    }
+
+    function updateViewElement(obj, elem, val) {
+      if (! elem || ! elem[0]) {
+        return;
+      }
+      var types = ["text", "hidden", undefined];
+      var tagName = elem[0].tagName.toLowerCase();
+      if (tagName == "input" || tagName == "textarea") {
+        var el = $(elem[0]),
+            tp = el.attr("type");
+        if ($.inArray(tp, types) >= 0) {
+          elem.val(val);
+        } else if (tp == "radio") {
+          $.each(elem, function(idx, subelem) {
+            $(subelem).prop("checked", subelem.value == val);
+          });
+        }
+      } else if (tagName == "img") {
+        elem.attr("src", val);
+      } else {
+        elem.html(val);
+      }
+    }
+
+    function _bindViews(pfx, root, appRoot) {
+      $.each(root, function (key, content) {
+        var prefix = content.appPrefix ? content.appPrefix : (pfx ? pfx : "");
+        logInfo("binding UI for view: " + key + " using prefix " + prefix);
+        var view = $("#" + prefix + key);
+        ensureExists(prefix, appRoot.dirtyList, view, prefix + key);
+        _bindContent(appRoot, root[key], key, content, view, prefix);
+        ensureSafeExtend(root[key], view);
+        root[key].propagate = makePropagationFunction(content, content);
+        $.extend(root[key], view);
+        maybeAddDevHook(view, key, undefined);
+      });
+    }
 
 // ------------ templates ----------------
 
-  function calcInnerTmKey(elem) {
-    switch (elem) {
-      case (label): return "labelTmInner";
-      case (ctl): return "ctlTmInner";
-      case (container): return "containerTmInner";
-      case (containerPaged): return "containerPagedTmInner";
-      case (form): return "formTmInner";
-      case (pager): return "pagerTmInner";
-      case (image): return "imageTmInner";
-      case (grid): return "gridTmInner";
-      case (input): return "inputTmInner";
-      case (inputInt): return "inputIntTmInner";
-      case (inputDate): return "inputDateTmInner";
-      default: return "customTmInner";
+    function calcInnerTmKey(elem) {
+      switch (elem) {
+        case (label): return "labelTmInner";
+        case (ctl): return "ctlTmInner";
+        case (container): return "containerTmInner";
+        case (containerPaged): return "containerPagedTmInner";
+        case (form): return "formTmInner";
+        case (pager): return "pagerTmInner";
+        case (image): return "imageTmInner";
+        case (grid): return "gridTmInner";
+        case (input): return "inputTmInner";
+        case (inputInt): return "inputIntTmInner";
+        case (inputDate): return "inputDateTmInner";
+        default: return "customTmInner";
+      }
     }
-  }
 
-  function _bindTemplates(pfx, root, appRoot) {
-    $.each(root, function(key, content) {
-      var prefix = content.appPrefix ? content.appPrefix : (pfx ? pfx : "");
-      logInfo("binding UI for template: " + key + " using prefix " + prefix);
-      var tm = $("#" + prefix + key);
-      ensureExists(prefix, appRoot.dirtyList, tm, prefix + key);
-      $.each(content, function (elem, elemType) {
-        if (elem != "appPrefix") {
-          ensureExists(prefix, appRoot.dirtyList, tm.find("." + prefix + elem), prefix + key, prefix + elem);
-          var innerTmKey = calcInnerTmKey(content[elem]);
-          content[elem] = {};
-          content[elem][innerTmKey] = true;
-        }
-      });
-      root[key].parseTemplate = function(data) {
-        var retVal = $("<!-- -->" + parseTemplate(tm, data)); // add comment to force jQuery to read it as HTML fragment
+    function _bindTemplates(pfx, root, appRoot) {
+      $.each(root, function(key, content) {
+        var prefix = content.appPrefix ? content.appPrefix : (pfx ? pfx : "");
+        logInfo("binding UI for template: " + key + " using prefix " + prefix);
+        var tm = $("#" + prefix + key);
+        ensureExists(prefix, appRoot.dirtyList, tm, prefix + key);
         $.each(content, function (elem, elemType) {
-          if (elem != "parseTemplate" && elem != "parseTemplate2Text" && elem != "appPrefix") {
-            retVal[elem] = $.merge(retVal.filter("." + prefix + elem), retVal.find("." + prefix + elem));
-            setupExtras(appRoot, retVal[elem], root[key][elem], key, elem);
-            maybeAddDevHook(retVal[elem], key, elem);
+          if (elem != "appPrefix") {
+            ensureExists(prefix, appRoot.dirtyList, tm.find("." + prefix + elem), prefix + key, prefix + elem);
+            var innerTmKey = calcInnerTmKey(content[elem]);
+            content[elem] = {};
+            content[elem][innerTmKey] = true;
           }
         });
-        retVal.splice(0, 1); // remove first comment
-        retVal.propagate = makePropagationFunction(content, retVal);
-        return retVal;
-      };
-      root[key].parseTemplate2Text = function(data) {
-        return parseTemplate(tm, data);
-      };
-    });
-  }
+        root[key].parseTemplate = function(data) {
+          var retVal = $("<!-- -->" + parseTemplate(tm, data)); // add comment to force jQuery to read it as HTML fragment
+          $.each(content, function (elem, elemType) {
+            if (elem != "parseTemplate" && elem != "parseTemplate2Text" && elem != "appPrefix") {
+              retVal[elem] = $.merge(retVal.filter("." + prefix + elem), retVal.find("." + prefix + elem));
+              setupExtras(appRoot, retVal[elem], root[key][elem], key, elem);
+              maybeAddDevHook(retVal[elem], key, elem);
+            }
+          });
+          retVal.splice(0, 1); // remove first comment
+          retVal.propagate = makePropagationFunction(content, retVal);
+          return retVal;
+        };
+        root[key].parseTemplate2Text = function(data) {
+          return parseTemplate(tm, data);
+        };
+      });
+    }
 
-  function parseTemplate2Text(tm, data) {
-    return parseTemplate(tm, data);
-  }
+    function parseTemplate2Text(tm, data) {
+      return parseTemplate(tm, data);
+    }
 
 // ------------ model staff ----------------
 
-  function assignAsapHandler(obj, eventName, fname) {
-    var fn = function(cb) {
-      var trace;
-      if (jiant.DEBUG_MODE.events) {
-        debug("assigning event handler to " + eventName);
-        eventsUsed[eventName] && debug(" !!! Event handler assigned after fire occured, possible error, for event " + eventName);
-        trace = getStackTrace();
-      }
-      if (obj[fname]() != undefined) {
-        var args = $.makeArray(arguments);
-        args.splice(0, 1);
-        cb && cb.apply(cb, args);
-      } else {
-        obj._innerData.one(eventName, function () {
+    function assignAsapHandler(obj, eventName, fname) {
+      var fn = function(cb) {
+        var trace;
+        if (jiant.DEBUG_MODE.events) {
+          debug("assigning event handler to " + eventName);
+          eventsUsed[eventName] && debug(" !!! Event handler assigned after fire occured, possible error, for event " + eventName);
+          trace = getStackTrace();
+        }
+        if (obj[fname]() != undefined) {
+          var args = $.makeArray(arguments);
+          args.splice(0, 1);
+          cb && cb.apply(cb, args);
+        } else {
+          obj._innerData.one(eventName, function () {
+            jiant.DEBUG_MODE.events && debug("called event handler: " + eventName + ", registered at " + trace);
+            var args = $.makeArray(arguments);
+            args.splice(0, 1);
+            cb && cb.apply(cb, args);
+          })
+        }
+      };
+      obj[fname].asap = fn;
+      obj[fname].asaa = fn;
+    }
+
+    function assignOnHandler(obj, eventName, fname, eventObject) {
+      eventObject = eventObject ? eventObject : obj._innerData;
+      var fn = function(cb) {
+        var trace;
+        if (jiant.DEBUG_MODE.events) {
+          debug("assigning event handler to " + eventName);
+          eventsUsed[eventName] && debug(" !!! Event handler assigned after fire occured, possible error, for event " + eventName);
+          trace = getStackTrace();
+        }
+        if (fname) {
+          obj[fname].listenersCount++;
+        } else {
+          obj.listenersCount++;
+        }
+        eventObject.on(eventName, function () {
           jiant.DEBUG_MODE.events && debug("called event handler: " + eventName + ", registered at " + trace);
           var args = $.makeArray(arguments);
           args.splice(0, 1);
+//        args.splice(0, 2);
           cb && cb.apply(cb, args);
         })
-      }
-    };
-    obj[fname].asap = fn;
-    obj[fname].asaa = fn;
-  }
-
-  function assignOnHandler(obj, eventName, fname, eventObject) {
-    eventObject = eventObject ? eventObject : obj._innerData;
-    var fn = function(cb) {
-      var trace;
-      if (jiant.DEBUG_MODE.events) {
-        debug("assigning event handler to " + eventName);
-        eventsUsed[eventName] && debug(" !!! Event handler assigned after fire occured, possible error, for event " + eventName);
-        trace = getStackTrace();
-      }
+      };
       if (fname) {
-        obj[fname].listenersCount++;
+        obj[fname].on = fn;
+        obj[fname].listenersCount = 0;
+        assignAsapHandler(obj, eventName, fname);
       } else {
-        obj.listenersCount++;
+        obj.on = fn;
+        obj.listenersCount = 0;
       }
-      eventObject.on(eventName, function () {
-        jiant.DEBUG_MODE.events && debug("called event handler: " + eventName + ", registered at " + trace);
-        var args = $.makeArray(arguments);
-        args.splice(0, 1);
-//        args.splice(0, 2);
-        cb && cb.apply(cb, args);
-      })
-    };
-    if (fname) {
-      obj[fname].on = fn;
-      obj[fname].listenersCount = 0;
-      assignAsapHandler(obj, eventName, fname);
-    } else {
-      obj.on = fn;
-      obj.listenersCount = 0;
     }
-  }
 
-  function bindFunctions(name, spec, obj, appId) {
-    var storage = [],
-        fldPrefix = "fld_prefix_";
-    if (spec.updateAll && spec.id) {
-      if (! spec.addAll) spec.addAll = function(val) {};
-      if (! spec.update) spec.update = function(val) {};
-      if (! spec.findById) spec.findById = function(val) {};
-    }
-    if (! spec.update) {
+    function bindFunctions(name, spec, obj, appId) {
+      var storage = [],
+          fldPrefix = "fld_prefix_";
+      if (spec.updateAll && spec.id) {
+        if (! spec.addAll) spec.addAll = function(val) {};
+        if (! spec.update) spec.update = function(val) {};
+        if (! spec.findById) spec.findById = function(val) {};
+      }
+      if (! spec.update) {
+        $.each(spec, function(fname, funcSpec) {
+          if (fname.indexOf("set") == 0 && fname.length > 3 && ("" + funcSpec).indexOf("{}") == ("" + funcSpec).length - 2) {
+            spec.update = function(val) {};
+            return false;
+          }
+        });
+      }
+      obj._innerData = $({});
       $.each(spec, function(fname, funcSpec) {
-        if (fname.indexOf("set") == 0 && fname.length > 3 && ("" + funcSpec).indexOf("{}") == ("" + funcSpec).length - 2) {
-          spec.update = function(val) {};
-          return false;
+        var eventName = name + "_" + fname + "_event",
+            globalChangeEventName = appId + name + "_globalevent";
+//      jiant.logInfo("  implementing model function " + fname);
+        if (fname == "_innerData") {
+        } else if (fname == "all") {
+          obj[fname] = function() {
+            return storage;
+          };
+        } else if (fname == "on") {
+          assignOnHandler(obj, globalChangeEventName, undefined, eventBus);
+        } else if (fname == "update") {
+          obj[fname] = function(objFrom) {
+            var smthChanged = false;
+            var toTrigger = {};
+            $.each(objFrom, function(key, val) {
+              if (obj[key] && $.isFunction(obj[key]) && obj[key]() != val) {
+                obj[key](val, false);
+                toTrigger[key] = true;
+                smthChanged = true;
+              }
+            });
+            $.each(toTrigger, function(key, val) {
+              obj[key](obj[key](), true);
+            });
+            if (smthChanged) {
+              jiant.DEBUG_MODE.events && debug("fire event: " + eventName);
+              jiant.DEBUG_MODE.events && (! eventsUsed[eventName]) && (eventsUsed[eventName] = 1);
+              obj._innerData.trigger(eventName, obj);
+              obj != spec && spec._innerData.trigger(eventName, obj);
+              jiant.DEBUG_MODE.events && debug("fire event: " + globalChangeEventName);
+              jiant.DEBUG_MODE.events && (! eventsUsed[globalChangeEventName]) && (eventsUsed[globalChangeEventName] = 1);
+              eventBus.trigger(globalChangeEventName, [obj, fname]);
+            }
+          };
+          assignOnHandler(obj, eventName, fname);
+        } else if (fname == "updateAll") {
+          obj[fname] = function(arr) {
+            function up(item) {
+              if (spec.id) {
+                var src = obj.findById(item.id);
+                src.length == 0 ? obj.addAll(item) : src[0].update(item);
+              } else {
+                obj.update(item);
+              }
+            }
+            if ($.isArray(arr)) {
+              $.each(arr, function(idx, item) {
+                up(item);
+              });
+            } else {
+              up(arr);
+            }
+          };
+          assignOnHandler(obj, eventName, fname);
+        } else if (fname == "add") {
+          var params = getParamNames(funcSpec);
+          obj[fname] = function() {
+            var newObj = {};
+            $.each(arguments, function(idx, arg) {
+              params[idx] && (newObj[fldPrefix + params[idx]] = arg);
+            });
+            storage.push(newObj);
+            bindFunctions(name, spec, newObj, appId);
+            jiant.DEBUG_MODE.events && debug("fire event: " + eventName);
+            jiant.DEBUG_MODE.events && (! eventsUsed[eventName]) && (eventsUsed[eventName] = 1);
+            obj._innerData.trigger(eventName, newObj);
+            jiant.DEBUG_MODE.events && debug("fire event: " + globalChangeEventName);
+            jiant.DEBUG_MODE.events && (! eventsUsed[globalChangeEventName]) && (eventsUsed[globalChangeEventName] = 1);
+            eventBus.trigger(globalChangeEventName, [newObj, fname]);
+            return newObj;
+          };
+          assignOnHandler(obj, eventName, fname);
+        } else if (fname == "addAll") {
+          obj[fname] = function(arr) {
+            var newArr = [];
+            function fn(item) {
+              var newObj = {};
+              storage.push(newObj);
+              newArr.push(newObj);
+              bindFunctions(name, spec, newObj, appId);
+              $.each(item, function(name, param) {
+                newObj[name] && newObj[name](param);
+//              newObj[fldPrefix + name] = param;
+              });
+            }
+            if ($.isArray(arr)) {
+              $.each(arr, function(idx, item) {
+                fn(item);
+              });
+            } else {
+              fn(arr);
+            }
+            jiant.DEBUG_MODE.events && debug("fire event: " + eventName);
+            jiant.DEBUG_MODE.events && (! eventsUsed[eventName]) && (eventsUsed[eventName] = 1);
+            obj._innerData.trigger(eventName, [newArr]);
+            jiant.DEBUG_MODE.events && debug("fire event: " + globalChangeEventName);
+            jiant.DEBUG_MODE.events && (! eventsUsed[globalChangeEventName]) && (eventsUsed[globalChangeEventName] = 1);
+            eventBus.trigger(globalChangeEventName, [newArr, fname]);
+            if ($.isArray(arr)) {
+              $.each(arr, function(idx, item) {
+                newArr[idx].update && newArr[idx].update(item); // todo: replace by just trigger update event
+              });
+            } else {
+              newArr.update && newArr.update(arr); // todo: replace by just trigger update event
+            }
+            return newArr;
+          };
+          assignOnHandler(obj, eventName, fname);
+        } else if (fname == "remove") {
+          obj[fname] = function(elem) {
+            var prevLen = storage.length;
+            storage = $.grep(storage, function(value) {return value != elem;});
+            if (storage.length != prevLen) {
+              jiant.DEBUG_MODE.events && debug("fire event: " + eventName);
+              jiant.DEBUG_MODE.events && (! eventsUsed[eventName]) && (eventsUsed[eventName] = 1);
+              obj._innerData.trigger(eventName, elem);
+              jiant.DEBUG_MODE.events && debug("fire event: " + globalChangeEventName);
+              jiant.DEBUG_MODE.events && (! eventsUsed[globalChangeEventName]) && (eventsUsed[globalChangeEventName] = 1);
+              eventBus.trigger(globalChangeEventName, [elem, fname]);
+            }
+            return elem;
+          };
+          assignOnHandler(obj, eventName, fname);
+        } else if (fname.indexOf("findBy") == 0 && fname.length > 6) {
+          var arr = fname.substring(6).split("And");
+          obj[fname] = function() {
+            var retVal = storage,
+                outerArgs = arguments;
+            function filter(arr, fieldName, val) {
+              return $.grep(arr, function(item) {return val == undefined || item[fieldName]() == val});
+            }
+            $.each(arr, function(idx, name) {
+              var fieldName = name.substring(0, 1).toLowerCase() + name.substring(1);
+              retVal = filter(retVal, fieldName, outerArgs[idx]);
+            });
+            return retVal;
+          };
+        } else if (fname.indexOf("set") == 0 && fname.length > 3) {
+          var arr = fname.substring(3).split("And");
+          obj[fname] = function() {
+            var outerArgs = arguments,
+                newVals = {};
+            $.each(arr, function(idx, name) {
+              var fieldName = name.substring(0, 1).toLowerCase() + name.substring(1);
+              newVals[fieldName] = outerArgs[idx];
+            });
+            obj.update(newVals);
+            return newVals;
+          }
+        } else if (("" + funcSpec).indexOf("{}") == ("" + funcSpec).length - 2 || spec._innerData[fname]) {
+          spec._innerData[fname] = true;
+          var params = getParamNames(funcSpec);
+//          jiant.logInfo(params);
+          obj[fname] = function(val, forceEvent) {
+            var fieldName = fldPrefix + fname;
+            if (arguments.length == 0) {
+              return obj[fieldName];
+            } else if (params.length == 1) {
+              if (forceEvent || (obj[fieldName] !== val && forceEvent !== false)) {
+                obj[fieldName] = val;
+                jiant.DEBUG_MODE.events && debug("fire event: " + eventName);
+                jiant.DEBUG_MODE.events && (! eventsUsed[eventName]) && (eventsUsed[eventName] = 1);
+                obj._innerData.trigger(eventName, [obj, val]);
+                obj != spec && spec._innerData.trigger(eventName, [obj, val]);
+//              jiant.logInfo(fieldName, obj[fieldName], val, obj != spec);
+                jiant.DEBUG_MODE.events && debug("fire event: " + globalChangeEventName);
+                jiant.DEBUG_MODE.events && (! eventsUsed[globalChangeEventName]) && (eventsUsed[globalChangeEventName] = 1);
+                eventBus.trigger(globalChangeEventName, [obj, fname, val]);
+              } else {
+                obj[fieldName] = val;
+              }
+              return obj[fieldName];
+            } else {
+              var args = [obj];
+              $.each(arguments, function(idx, arg) {args.push(arg);});
+              jiant.DEBUG_MODE.events && debug("fire event: " + eventName);
+              jiant.DEBUG_MODE.events && (! eventsUsed[eventName]) && (eventsUsed[eventName] = 1);
+              obj._innerData.trigger(eventName, args);
+              obj != spec && spec._innerData.trigger(eventName, args);
+              jiant.DEBUG_MODE.events && debug("fire event: " + globalChangeEventName);
+              jiant.DEBUG_MODE.events && (! eventsUsed[globalChangeEventName]) && (eventsUsed[globalChangeEventName] = 1);
+              args = [obj, fname];
+              $.each(arguments, function(idx, arg) {args.push(arg);});
+              eventBus.trigger(globalChangeEventName, args);
+            }
+          };
+          assignOnHandler(obj, eventName, fname);
         }
       });
     }
-    obj._innerData = $({});
-    $.each(spec, function(fname, funcSpec) {
-      var eventName = name + "_" + fname + "_event",
-          globalChangeEventName = appId + name + "_globalevent";
-//      jiant.logInfo("  implementing model function " + fname);
-      if (fname == "_innerData") {
-      } else if (fname == "all") {
-        obj[fname] = function() {
-          return storage;
-        };
-      } else if (fname == "on") {
-        assignOnHandler(obj, globalChangeEventName, undefined, eventBus);
-      } else if (fname == "update") {
-        obj[fname] = function(objFrom) {
-          var smthChanged = false;
-          var toTrigger = {};
-          $.each(objFrom, function(key, val) {
-            if (obj[key] && $.isFunction(obj[key]) && obj[key]() != val) {
-              obj[key](val, false);
-              toTrigger[key] = true;
-              smthChanged = true;
-            }
-          });
-          $.each(toTrigger, function(key, val) {
-            obj[key](obj[key](), true);
-          });
-          if (smthChanged) {
-            jiant.DEBUG_MODE.events && debug("fire event: " + eventName);
-            jiant.DEBUG_MODE.events && (! eventsUsed[eventName]) && (eventsUsed[eventName] = 1);
-            obj._innerData.trigger(eventName, obj);
-            obj != spec && spec._innerData.trigger(eventName, obj);
-            jiant.DEBUG_MODE.events && debug("fire event: " + globalChangeEventName);
-            jiant.DEBUG_MODE.events && (! eventsUsed[globalChangeEventName]) && (eventsUsed[globalChangeEventName] = 1);
-            eventBus.trigger(globalChangeEventName, [obj, fname]);
-          }
-        };
-        assignOnHandler(obj, eventName, fname);
-      } else if (fname == "updateAll") {
-        obj[fname] = function(arr) {
-          function up(item) {
-            if (spec.id) {
-              var src = obj.findById(item.id);
-              src.length == 0 ? obj.addAll(item) : src[0].update(item);
-            } else {
-              obj.update(item);
-            }
-          }
-          if ($.isArray(arr)) {
-            $.each(arr, function(idx, item) {
-              up(item);
-            });
-          } else {
-            up(arr);
-          }
-        };
-        assignOnHandler(obj, eventName, fname);
-      } else if (fname == "add") {
-        var params = getParamNames(funcSpec);
-        obj[fname] = function() {
-          var newObj = {};
-          $.each(arguments, function(idx, arg) {
-            params[idx] && (newObj[fldPrefix + params[idx]] = arg);
-          });
-          storage.push(newObj);
-          bindFunctions(name, spec, newObj, appId);
-          jiant.DEBUG_MODE.events && debug("fire event: " + eventName);
-          jiant.DEBUG_MODE.events && (! eventsUsed[eventName]) && (eventsUsed[eventName] = 1);
-          obj._innerData.trigger(eventName, newObj);
-          jiant.DEBUG_MODE.events && debug("fire event: " + globalChangeEventName);
-          jiant.DEBUG_MODE.events && (! eventsUsed[globalChangeEventName]) && (eventsUsed[globalChangeEventName] = 1);
-          eventBus.trigger(globalChangeEventName, [newObj, fname]);
-          return newObj;
-        };
-        assignOnHandler(obj, eventName, fname);
-      } else if (fname == "addAll") {
-        obj[fname] = function(arr) {
-          var newArr = [];
-          function fn(item) {
-            var newObj = {};
-            storage.push(newObj);
-            newArr.push(newObj);
-            bindFunctions(name, spec, newObj, appId);
-            $.each(item, function(name, param) {
-              newObj[name] && newObj[name](param);
-//              newObj[fldPrefix + name] = param;
-            });
-          }
-          if ($.isArray(arr)) {
-            $.each(arr, function(idx, item) {
-              fn(item);
-            });
-          } else {
-            fn(arr);
-          }
-          jiant.DEBUG_MODE.events && debug("fire event: " + eventName);
-          jiant.DEBUG_MODE.events && (! eventsUsed[eventName]) && (eventsUsed[eventName] = 1);
-          obj._innerData.trigger(eventName, [newArr]);
-          jiant.DEBUG_MODE.events && debug("fire event: " + globalChangeEventName);
-          jiant.DEBUG_MODE.events && (! eventsUsed[globalChangeEventName]) && (eventsUsed[globalChangeEventName] = 1);
-          eventBus.trigger(globalChangeEventName, [newArr, fname]);
-          if ($.isArray(arr)) {
-            $.each(arr, function(idx, item) {
-              newArr[idx].update && newArr[idx].update(item); // todo: replace by just trigger update event
-            });
-          } else {
-            newArr.update && newArr.update(arr); // todo: replace by just trigger update event
-          }
-          return newArr;
-        };
-        assignOnHandler(obj, eventName, fname);
-      } else if (fname == "remove") {
-        obj[fname] = function(elem) {
-          var prevLen = storage.length;
-          storage = $.grep(storage, function(value) {return value != elem;});
-          if (storage.length != prevLen) {
-            jiant.DEBUG_MODE.events && debug("fire event: " + eventName);
-            jiant.DEBUG_MODE.events && (! eventsUsed[eventName]) && (eventsUsed[eventName] = 1);
-            obj._innerData.trigger(eventName, elem);
-            jiant.DEBUG_MODE.events && debug("fire event: " + globalChangeEventName);
-            jiant.DEBUG_MODE.events && (! eventsUsed[globalChangeEventName]) && (eventsUsed[globalChangeEventName] = 1);
-            eventBus.trigger(globalChangeEventName, [elem, fname]);
-          }
-          return elem;
-        };
-        assignOnHandler(obj, eventName, fname);
-      } else if (fname.indexOf("findBy") == 0 && fname.length > 6) {
-        var cut = fname.substring(6),
-            arr = cut.split("And");
-        obj[fname] = function() {
-          var retVal = storage,
-              outerArgs = arguments;
-          function filter(arr, fieldName, val) {
-            return $.grep(arr, function(item) {return val == undefined || item[fieldName]() == val});
-          }
-          $.each(arr, function(idx, name) {
-            var fieldName = name.substring(0, 1).toLowerCase() + name.substring(1);
-            retVal = filter(retVal, fieldName, outerArgs[idx]);
-          });
-          return retVal;
-        };
-      } else if (fname.indexOf("set") == 0 && fname.length > 3) {
-        var cut = fname.substring(3),
-            arr = cut.split("And");
-        obj[fname] = function() {
-          var outerArgs = arguments,
-              newVals = {};
-          $.each(arr, function(idx, name) {
-            var fieldName = name.substring(0, 1).toLowerCase() + name.substring(1);
-            newVals[fieldName] = outerArgs[idx];
-          });
-          obj.update(newVals);
-          return newVals;
-        }
-      } else if (("" + funcSpec).indexOf("{}") == ("" + funcSpec).length - 2 || spec._innerData[fname]) {
-        spec._innerData[fname] = true;
-        obj[fname] = function(val, forceEvent) {
-          var fieldName = fldPrefix + fname;
-          if (arguments.length == 0) {
-            return obj[fieldName];
-          } else {
-            if (forceEvent || (obj[fieldName] !== val && forceEvent !== false)) {
-              obj[fieldName] = val;
-              jiant.DEBUG_MODE.events && debug("fire event: " + eventName);
-              jiant.DEBUG_MODE.events && (! eventsUsed[eventName]) && (eventsUsed[eventName] = 1);
-              obj._innerData.trigger(eventName, [obj, val]);
-              obj != spec && spec._innerData.trigger(eventName, [obj, val]);
-//              jiant.logInfo(fieldName, obj[fieldName], val, obj != spec);
-              jiant.DEBUG_MODE.events && debug("fire event: " + globalChangeEventName);
-              jiant.DEBUG_MODE.events && (! eventsUsed[globalChangeEventName]) && (eventsUsed[globalChangeEventName] = 1);
-              eventBus.trigger(globalChangeEventName, [obj, fname, val]);
-            } else {
-              obj[fieldName] = val;
-            }
-            return obj[fieldName];
-          }
-        };
-        assignOnHandler(obj, eventName, fname);
-      }
-    });
-  }
 
-  function _bindModels(models, appId) {
-    $.each(models, function(name, spec) {
-      jiant.logInfo("implementing model " + name);
-      bindFunctions(name, spec, spec, appId);
-    });
-  }
+    function _bindModels(models, appId) {
+      $.each(models, function(name, spec) {
+        jiant.logInfo("implementing model " + name);
+        bindFunctions(name, spec, spec, appId);
+      });
+    }
 
 // ------------ events staff ----------------
 
-  function _bindEvents(events, appId) {
-    $.each(events, function(name, spec) {
-      logInfo("binding event: " + name);
-      events[name].listenersCount = 0;
-      events[name].fire = function() {
-        jiant.DEBUG_MODE.events && debug("fire event: " + name);
-        jiant.DEBUG_MODE.events && (! eventsUsed[name]) && (eventsUsed[name] = 1);
-        eventBus.trigger(appId + name + ".event", arguments);
-      };
-      events[name].on = function (cb) {
-        var trace;
-        if (jiant.DEBUG_MODE.events) {
-          debug("assigning event handler to: " + name);
-          eventsUsed[name] && debug(" !!! Event handler assigned after fire occured, possible error, for event " + name);
-          trace = getStackTrace();
-        }
-        events[name].listenersCount++;
-        eventBus.on(appId + name + ".event", function () {
-          jiant.DEBUG_MODE.events && debug("called event handler: " + name + ", registered at " + trace);
-          var args = $.makeArray(arguments);
-          args.splice(0, 1);
-          cb && cb.apply(cb, args);
-        })
-      };
-    });
-  }
+    function _bindEvents(events, appId) {
+      $.each(events, function(name, spec) {
+        logInfo("binding event: " + name);
+        events[name].listenersCount = 0;
+        events[name].fire = function() {
+          jiant.DEBUG_MODE.events && debug("fire event: " + name);
+          jiant.DEBUG_MODE.events && (! eventsUsed[name]) && (eventsUsed[name] = 1);
+          eventBus.trigger(appId + name + ".event", arguments);
+        };
+        events[name].on = function (cb) {
+          var trace;
+          if (jiant.DEBUG_MODE.events) {
+            debug("assigning event handler to: " + name);
+            eventsUsed[name] && debug(" !!! Event handler assigned after fire occured, possible error, for event " + name);
+            trace = getStackTrace();
+          }
+          events[name].listenersCount++;
+          eventBus.on(appId + name + ".event", function () {
+            jiant.DEBUG_MODE.events && debug("called event handler: " + name + ", registered at " + trace);
+            var args = $.makeArray(arguments);
+            args.splice(0, 1);
+            cb && cb.apply(cb, args);
+          })
+        };
+      });
+    }
 
 // ------------ states staff ----------------
 
-  function _bindStates(states, stateExternalBase, appId) {
-    if (! $(window).hashchange) {
-      var err = "No hashchange plugin and states configured. Don't use states or add hashchange plugin (supplied with jiant)";
-      jiant.logError(err);
-      if (jiant.DEV_MODE) {
-        alert(err);
+    function _bindStates(states, stateExternalBase, appId) {
+      if (! $(window).hashchange) {
+        var err = "No hashchange plugin and states configured. Don't use states or add hashchange plugin (supplied with jiant)";
+        jiant.logError(err);
+        if (jiant.DEV_MODE) {
+          alert(err);
+        }
+        return;
       }
-      return;
-    }
-    $.each(states, function(name, stateSpec) {
-      logInfo("binding state: " + appId + name);
-      stateSpec.go = go(name, stateSpec.root, stateExternalBase);
-      stateSpec.start = function(cb) {
-        var trace;
-        if (jiant.DEBUG_MODE.states) {
-          debug("register state start handler: " + appId + name);
-          statesUsed[appId + name] && debug(" !!! State start handler registered after state triggered, possible error, for state " + appId + name);
-          trace = getStackTrace();
-        }
-        eventBus.on(appId + "state_" + name + "_start", function() {
-          jiant.DEBUG_MODE.states && debug("called state start handler: " + appId + name + ", registered at " + trace);
-          var args = $.makeArray(arguments);
-          args.splice(0, 1);
-          cb && cb.apply(cb, args);
-        });
-        var current = parseState();
-        if (uiBoundRoot[appId] && ((name == "" && current.now.length == 0) || (current.now[0] == name))) {
-          var params = current.now;
-          params.splice(0, 1);
-          cb && cb.apply(cb, params);
-        }
-      };
-      stateSpec.end = function(cb) {
-        var trace;
-        if (jiant.DEBUG_MODE.states) {
-          debug("register state end handler: " + appId + name);
-          statesUsed[appId + name] && debug(" !!! State end handler registered after state triggered, possible error, for state " + name);
-          trace = getStackTrace();
-        }
-        eventBus.on(appId + "state_" + name + "_end", function() {
-          jiant.DEBUG_MODE.states && debug("called state end handler: " + appId + name + ", registered at " + trace);
-          var args = $.makeArray(arguments);
-          args.splice(0, 1);
-          cb && cb.apply(cb, args);
-        });
-      };
-    });
-    $(window).hashchange(function () {
-      var state = location.hash.substring(1),
-          parsed = parseState(),
-          stateId = parsed.now[0],
-          handler = states[stateId],
-          params = parsed.now;
-      jiant.logInfo(appId + ": " + state);
-      params.splice(0, 1);
-      $.each(params, function(idx, p) {
-        if (p == "undefined") {
-          params[idx] = undefined;
-        }
+      $.each(states, function(name, stateSpec) {
+        logInfo("binding state: " + appId + name);
+        stateSpec.go = go(name, stateSpec.root, stateExternalBase);
+        stateSpec.start = function(cb) {
+          var trace;
+          if (jiant.DEBUG_MODE.states) {
+            debug("register state start handler: " + appId + name);
+            statesUsed[appId + name] && debug(" !!! State start handler registered after state triggered, possible error, for state " + appId + name);
+            trace = getStackTrace();
+          }
+          eventBus.on(appId + "state_" + name + "_start", function() {
+            jiant.DEBUG_MODE.states && debug("called state start handler: " + appId + name + ", registered at " + trace);
+            var args = $.makeArray(arguments);
+            args.splice(0, 1);
+            cb && cb.apply(cb, args);
+          });
+          var current = parseState();
+          if (uiBoundRoot[appId] && ((name == "" && current.now.length == 0) || (current.now[0] == name))) {
+            var params = current.now;
+            params.splice(0, 1);
+            cb && cb.apply(cb, params);
+          }
+        };
+        stateSpec.end = function(cb) {
+          var trace;
+          if (jiant.DEBUG_MODE.states) {
+            debug("register state end handler: " + appId + name);
+            statesUsed[appId + name] && debug(" !!! State end handler registered after state triggered, possible error, for state " + name);
+            trace = getStackTrace();
+          }
+          eventBus.on(appId + "state_" + name + "_end", function() {
+            jiant.DEBUG_MODE.states && debug("called state end handler: " + appId + name + ", registered at " + trace);
+            var args = $.makeArray(arguments);
+            args.splice(0, 1);
+            cb && cb.apply(cb, args);
+          });
+        };
       });
-      if (lastStates[appId] != undefined && lastStates[appId] != stateId) {
-        jiant.DEBUG_MODE.states && debug("trigger state end: " + appId + (lastStates[appId] ? lastStates[appId] : ""));
-        eventBus.trigger(appId + "state_" + lastStates[appId] + "_end");
-      }
-      lastStates[appId] = stateId;
-      stateId = (stateId ? stateId : "");
-      jiant.DEBUG_MODE.states && debug("trigger state start: " + appId + stateId);
-      jiant.DEBUG_MODE.states && (! statesUsed[appId + stateId]) && (statesUsed[appId + stateId] = 1);
-      eventBus.trigger(appId + "state_" + stateId + "_start", params);
-    });
-    lastStates[appId] = parseState().now[0];
-  }
+      $(window).hashchange(function () {
+        var state = location.hash.substring(1),
+            parsed = parseState(),
+            stateId = parsed.now[0],
+            handler = states[stateId],
+            params = parsed.now;
+        jiant.logInfo(appId + ": " + state);
+        params.splice(0, 1);
+        $.each(params, function(idx, p) {
+          if (p == "undefined") {
+            params[idx] = undefined;
+          }
+        });
+        if (lastStates[appId] != undefined && lastStates[appId] != stateId) {
+          jiant.DEBUG_MODE.states && debug("trigger state end: " + appId + (lastStates[appId] ? lastStates[appId] : ""));
+          eventBus.trigger(appId + "state_" + lastStates[appId] + "_end");
+        }
+        lastStates[appId] = stateId;
+        stateId = (stateId ? stateId : "");
+        jiant.DEBUG_MODE.states && debug("trigger state start: " + appId + stateId);
+        jiant.DEBUG_MODE.states && (! statesUsed[appId + stateId]) && (statesUsed[appId + stateId] = 1);
+        eventBus.trigger(appId + "state_" + stateId + "_start", params);
+      });
+      lastStates[appId] = parseState().now[0];
+    }
 
-  function go(stateId, root, stateExternalBase) {
-    return function() {
-      var parsed = parseState(),
-          prevState = parsed.now;
-      parsed.now = [stateId];
-      $.each(arguments, function(idx, arg) {
-        if (arg != undefined) {
-          parsed.now.push(pack(arg + ""));
-        } else if (prevState[0] == stateId && prevState[idx + 1] != undefined) {
-          parsed.now.push(pack(prevState[idx + 1] + ""));
+    function go(stateId, root, stateExternalBase) {
+      return function() {
+        var parsed = parseState(),
+            prevState = parsed.now;
+        parsed.now = [stateId];
+        $.each(arguments, function(idx, arg) {
+          if (arg != undefined) {
+            parsed.now.push(pack(arg + ""));
+          } else if (prevState[0] == stateId && prevState[idx + 1] != undefined) {
+            parsed.now.push(pack(prevState[idx + 1] + ""));
+          } else {
+            parsed.now.push(pack(arg + ""));
+          }
+        });
+        if (root) {
+          parsed.root = [];
+          $.each(parsed.now, function(idx, param) {
+            parsed.root.push(param);
+          });
         } else {
-          parsed.now.push(pack(arg + ""));
+          $.each(parsed.root, function(idx, param) {
+            parsed.root[idx] = pack(param);
+          });
         }
-      });
-      if (root) {
-        parsed.root = [];
-        $.each(parsed.now, function(idx, param) {
-          parsed.root.push(param);
-        });
-      } else {
-        $.each(parsed.root, function(idx, param) {
-          parsed.root[idx] = pack(param);
-        });
-      }
-      setState(parsed, stateExternalBase);
-    };
-  }
-
-  function goRoot() {
-    var parsed = parseState();
-    parsed.now = [];
-    $.each(parsed.root, function(idx, param) {
-      parsed.now.push(pack(param));
-      parsed.root[idx] = pack(param);
-    });
-    setState(parsed, undefined); // external base not used
-  }
-
-  function setState(parsed, stateExternalBase) {
-    var s = "now=" + parsed.now + "|root=" + parsed.root;
-    var extBase = (stateExternalBase || stateExternalBase == "") ? stateExternalBase : jiant.STATE_EXTERNAL_BASE;
-    if (extBase) {
-      window.location.assign(extBase + "#" + s);
-    } else {
-      location.hash = "#" + s;
+        setState(parsed, stateExternalBase);
+      };
     }
-  }
 
-  function parseState() {
-    var state = location.hash.substring(1);
-    var arr = state.split("|");
-    var parsed = {};
-    $.each(arr, function(idx, item) {
-      var itemArr = item.split("="),
-          args = [];
-      if (itemArr.length >= 2) {
-        args = itemArr[1].split(",");
-      }
-      parsed[itemArr[0]] = [];
-      $.each(args, function(idx, arg) {
-        parsed[itemArr[0]].push(unpack(arg));
+    function goRoot() {
+      var parsed = parseState();
+      parsed.now = [];
+      $.each(parsed.root, function(idx, param) {
+        parsed.now.push(pack(param));
+        parsed.root[idx] = pack(param);
       });
-    });
-    parsed.now = parsed.now || [];
-    parsed.root = parsed.root || [];
-    return parsed;
-  }
+      setState(parsed, undefined); // external base not used
+    }
 
-  function pack(s) {
-    return s ? s.replace(/;/g, ";;").replace(/,/g, ";1").replace(/=/g, ";2").replace(/\|/g, ";3") : "";
-  }
+    function setState(parsed, stateExternalBase) {
+      var s = "now=" + parsed.now + "|root=" + parsed.root;
+      var extBase = (stateExternalBase || stateExternalBase == "") ? stateExternalBase : jiant.STATE_EXTERNAL_BASE;
+      if (extBase) {
+        window.location.assign(extBase + "#" + s);
+      } else {
+        location.hash = "#" + s;
+      }
+    }
 
-  function unpack(s) {
-    return s ? s.replace(/;3/g, "|").replace(/;2/g, "=").replace(/;1/g, ",").replace(/;;/g, ";") : "";
-  }
+    function parseState() {
+      var state = location.hash.substring(1);
+      var arr = state.split("|");
+      var parsed = {};
+      $.each(arr, function(idx, item) {
+        var itemArr = item.split("="),
+            args = [];
+        if (itemArr.length >= 2) {
+          args = itemArr[1].split(",");
+        }
+        parsed[itemArr[0]] = [];
+        $.each(args, function(idx, arg) {
+          parsed[itemArr[0]].push(unpack(arg));
+        });
+      });
+      parsed.now = parsed.now || [];
+      parsed.root = parsed.root || [];
+      return parsed;
+    }
 
-  function getCurrentState() {
-    var parsed = parseState();
-    return parsed.now[0] ? parsed.now[0] : "";
-  }
+    function pack(s) {
+      return s ? s.replace(/;/g, ";;").replace(/,/g, ";1").replace(/=/g, ";2").replace(/\|/g, ";3") : "";
+    }
 
-  function refreshState() {
-    $(window).hashchange && $(window).hashchange();
-  }
+    function unpack(s) {
+      return s ? s.replace(/;3/g, "|").replace(/;2/g, "=").replace(/;1/g, ",").replace(/;;/g, ";") : "";
+    }
+
+    function getCurrentState() {
+      var parsed = parseState();
+      return parsed.now[0] ? parsed.now[0] : "";
+    }
+
+    function refreshState() {
+      $(window).hashchange && $(window).hashchange();
+    }
 
 // ------------ ajax staff ----------------
 
-  function getParamNames(func) {
-    var funStr = func.toString();
-    return funStr.slice(funStr.indexOf('(')+1, funStr.indexOf(')')).match(/([^\s,]+)/g);
-  }
-
-  function _bindAjax(root, ajaxPrefix, ajaxSuffix, crossDomain) {
-    $.each(root, function(uri, funcSpec) {
-      logInfo("binding ajax for function: " + uri);
-      var params = getParamNames(funcSpec);
-      params.splice(params.length - 1, 1);
-      root[uri] = makeAjaxPerformer(ajaxPrefix, ajaxSuffix, uri, params, $.isFunction(root[uri]) ? root[uri]() : undefined, crossDomain);
-    });
-  }
-
-  function parseForAjaxCall(root, path, actual) {
-    if ($.isArray(actual)) {
-      root[path] = actual;
-    } else if ($.isPlainObject(actual)) {
-      $.each(actual, function(key, value) {
-        parseForAjaxCall(root, key, value);
-//        parseForAjaxCall(root, path + "." + key, value);
-      });
-    } else {
-      root[path] = actual;
+    function getParamNames(func) {
+      var funStr = func.toString();
+      return funStr.slice(funStr.indexOf('(')+1, funStr.indexOf(')')).match(/([^\s,]+)/g);
     }
-  }
 
-  function makeAjaxPerformer(ajaxPrefix, ajaxSuffix, uri, params, hardUrl, crossDomain) {
-    return function() {
-      var callData = {},
-          callback,
-          errHandler,
-          outerArgs = arguments;
-      if ($.isFunction(outerArgs[outerArgs.length - 2])) {
-        callback = outerArgs[outerArgs.length - 2];
-        errHandler = outerArgs[outerArgs.length - 1];
-      } else if ($.isFunction(outerArgs[outerArgs.length - 1])) {
-        callback = outerArgs[outerArgs.length - 1];
-      }
-      $.each(params, function(idx, param) {
-        if (idx < outerArgs.length && !$.isFunction(outerArgs[idx]) && outerArgs[idx] != undefined && outerArgs[idx] != null) {
-          var actual = outerArgs[idx];
-          parseForAjaxCall(callData, param, actual);
-        }
+    function _bindAjax(root, ajaxPrefix, ajaxSuffix, crossDomain) {
+      $.each(root, function(uri, funcSpec) {
+        logInfo("binding ajax for function: " + uri);
+        var params = getParamNames(funcSpec);
+        params.splice(params.length - 1, 1);
+        root[uri] = makeAjaxPerformer(ajaxPrefix, ajaxSuffix, uri, params, $.isFunction(root[uri]) ? root[uri]() : undefined, crossDomain);
       });
-      if (! callData["antiCache3721"]) {
-        callData["antiCache3721"] = new Date().getTime();
-      }
-      var pfx = (ajaxPrefix || ajaxPrefix == "") ? ajaxPrefix : jiant.AJAX_PREFIX;
-      var sfx = (ajaxSuffix || ajaxSuffix == "") ? ajaxSuffix : jiant.AJAX_SUFFIX;
-      var url = hardUrl ? hardUrl : pfx + uri + sfx;
-      logInfo("    AJAX call. " + uri + " to server url: " + url);
-      var settings = {data: callData, traditional: true, success: function(data) {
-        if (callback) {
-          try {
-            data = $.parseJSON(data);
-          } catch (ex) {
-          }
-          jiant.DEBUG_MODE.ajax && debug("Ajax call results for uri " + uri) && debug(data);
-          callback(data);
-        }
-      }, error: function (jqXHR, textStatus, errorText) {
-        if (errHandler) {
-          errHandler(jqXHR.responseText);
-        } else {
-          jiant.handleErrorFn(jqXHR.responseText);
-        }
-      }};
-      if (crossDomain) {
-        settings.contentType = "application/json";
-        settings.dataType = 'jsonp';
-        settings.xhrFields = {withCredentials: true};
-        settings.crossDomain = true;
-      }
-      $.ajax(url, settings);
-    };
-  }
+    }
 
-  function defaultAjaxErrorsHandle(errorDetails) {
-    logError(errorDetails);
-  }
+    function parseForAjaxCall(root, path, actual) {
+      if ($.isArray(actual)) {
+        root[path] = actual;
+      } else if ($.isPlainObject(actual)) {
+        $.each(actual, function(key, value) {
+          parseForAjaxCall(root, key, value);
+//        parseForAjaxCall(root, path + "." + key, value);
+        });
+      } else {
+        root[path] = actual;
+      }
+    }
+
+    function makeAjaxPerformer(ajaxPrefix, ajaxSuffix, uri, params, hardUrl, crossDomain) {
+      return function() {
+        var callData = {},
+            callback,
+            errHandler,
+            outerArgs = arguments;
+        if ($.isFunction(outerArgs[outerArgs.length - 2])) {
+          callback = outerArgs[outerArgs.length - 2];
+          errHandler = outerArgs[outerArgs.length - 1];
+        } else if ($.isFunction(outerArgs[outerArgs.length - 1])) {
+          callback = outerArgs[outerArgs.length - 1];
+        }
+        $.each(params, function(idx, param) {
+          if (idx < outerArgs.length && !$.isFunction(outerArgs[idx]) && outerArgs[idx] != undefined && outerArgs[idx] != null) {
+            var actual = outerArgs[idx];
+            parseForAjaxCall(callData, param, actual);
+          }
+        });
+        if (! callData["antiCache3721"]) {
+          callData["antiCache3721"] = new Date().getTime();
+        }
+        var pfx = (ajaxPrefix || ajaxPrefix == "") ? ajaxPrefix : jiant.AJAX_PREFIX;
+        var sfx = (ajaxSuffix || ajaxSuffix == "") ? ajaxSuffix : jiant.AJAX_SUFFIX;
+        var url = hardUrl ? hardUrl : pfx + uri + sfx;
+        logInfo("    AJAX call. " + uri + " to server url: " + url);
+        var settings = {data: callData, traditional: true, success: function(data) {
+          if (callback) {
+            try {
+              data = $.parseJSON(data);
+            } catch (ex) {
+            }
+            jiant.DEBUG_MODE.ajax && debug("Ajax call results for uri " + uri) && debug(data);
+            callback(data);
+          }
+        }, error: function (jqXHR, textStatus, errorText) {
+          if (errHandler) {
+            errHandler(jqXHR.responseText);
+          } else {
+            jiant.handleErrorFn(jqXHR.responseText);
+          }
+        }};
+        if (crossDomain) {
+          settings.contentType = "application/json";
+          settings.dataType = 'jsonp';
+          settings.xhrFields = {withCredentials: true};
+          settings.crossDomain = true;
+        }
+        $.ajax(url, settings);
+      };
+    }
+
+    function defaultAjaxErrorsHandle(errorDetails) {
+      logError(errorDetails);
+    }
 
 // ------------ base staff ----------------
 
-  function maybeSetDevModeFromQueryString() {
-    if ((window.location + "").toLowerCase().indexOf("jiant.dev_mode") >= 0) {
-      jiant.DEV_MODE = true;
-    }
-  }
-
-  function maybeSetDebugModeFromQueryString() {
-    if ((window.location + "").toLowerCase().indexOf("jiant.debug_events") >= 0) {
-      jiant.DEBUG_MODE.events = 1;
-    }
-    if ((window.location + "").toLowerCase().indexOf("jiant.debug_states") >= 0) {
-      jiant.DEBUG_MODE.states = 1;
-    }
-    if ((window.location + "").toLowerCase().indexOf("jiant.debug_ajax") >= 0) {
-      jiant.DEBUG_MODE.ajax = 1;
-    }
-  }
-
-  function _bindUi(prefix, root, devMode) {
-    jiant.DEV_MODE = devMode;
-    if (! devMode) {
-      maybeSetDevModeFromQueryString();
-    }
-    maybeSetDebugModeFromQueryString();
-    errString = "";
-    bindingsResult = true;
-    var appId = (root.id ? root.id : "no_app_id");
-    if (! root.id) {
-      jiant.logError("!!! Application id not specified. Not recommended since 0.20. Use 'id' property of application root to specify application id");
-    } else {
-      jiant.logInfo("Loading application, id: " + root.id);
-    }
-    if (root.views) {
-      _bindViews(prefix, root.views, root);
-    } else {
-      root.views = {};
-    }
-    if (root.templates) {
-      _bindTemplates(prefix, root.templates, root);
-    } else {
-      root.templates = {};
-    }
-    if (root.ajax) {
-      _bindAjax(root.ajax, root.ajaxPrefix, root.ajaxSuffix, root.crossDomain);
-    } else {
-      root.ajax = {};
-    }
-    if (root.events) {
-      _bindEvents(root.events, appId);
-    } else {
-      root.events = {};
-    }
-    if (root.states) {
-      _bindStates(root.states, root.stateExternalBase, appId);
-    } else {
-      root.states = {};
-    }
-    if (root.models) {
-      _bindModels(root.models, appId);
-    } else {
-      root.models = {};
-    }
-    if (jiant.DEV_MODE && !bindingsResult) {
-      alert("Some elements not bound to HTML properly, check console" + errString);
-    }
-    uiBoundRoot[appId] = root;
-    var eventId = appId + "jiant_uiBound_" + appId;
-    eventBus.trigger(eventId);
-//    refreshState();
-  }
-
-  function bindUi(prefix, root, devMode, viewsUrl, injectId) {
-    var startedAt = new Date().getMilliseconds();
-    if ($.isPlainObject(prefix)) { // no prefix syntax
-      injectId = viewsUrl;
-      viewsUrl = devMode;
-      devMode = root;
-      root = prefix;
-      prefix = root.appPrefix;
-    }
-    if (viewsUrl) {
-      var injectionPoint = injectId ? $("#" + injectId) : $("body");
-      injectionPoint.load(viewsUrl, {}, function() {
-        _bindUi(prefix, root, devMode);
-      });
-    } else {
-      _bindUi(prefix, root, devMode);
-    }
-    jiant.logInfo("UI bound in " + (new Date().getMilliseconds() - startedAt) + "ms");
-  }
-
-  function bind(obj1, obj2) {
-    $.extend(obj1, obj2);
-  }
-
-  function onUiBound(appId, cb) {
-    if (! cb) {
-      jiant.logError("!!! Registering anonymous logic without application id. Not recommended since 0.20");
-      cb = appId;
-      appId = "no_app_id";
-    } else {
-      if ($.isPlainObject(appId)) {
-        appId = appId.id;
+    function maybeSetDevModeFromQueryString() {
+      if ((window.location + "").toLowerCase().indexOf("jiant.dev_mode") >= 0) {
+        jiant.DEV_MODE = true;
       }
     }
-    if (uiBoundRoot[appId]) {
-      cb && cb($, uiBoundRoot[appId]);
-    } else {
-      var eventId = appId + "jiant_uiBound_" + appId;
-      eventBus.on(eventId, function() {
-        cb && cb($, uiBoundRoot[appId]);
-      });
+
+    function maybeSetDebugModeFromQueryString() {
+      if ((window.location + "").toLowerCase().indexOf("jiant.debug_events") >= 0) {
+        jiant.DEBUG_MODE.events = 1;
+      }
+      if ((window.location + "").toLowerCase().indexOf("jiant.debug_states") >= 0) {
+        jiant.DEBUG_MODE.states = 1;
+      }
+      if ((window.location + "").toLowerCase().indexOf("jiant.debug_ajax") >= 0) {
+        jiant.DEBUG_MODE.ajax = 1;
+      }
     }
+
+    function _bindUi(prefix, root, devMode) {
+      jiant.DEV_MODE = devMode;
+      if (! devMode) {
+        maybeSetDevModeFromQueryString();
+      }
+      maybeSetDebugModeFromQueryString();
+      errString = "";
+      bindingsResult = true;
+      var appId = (root.id ? root.id : "no_app_id");
+      if (! root.id) {
+        jiant.logError("!!! Application id not specified. Not recommended since 0.20. Use 'id' property of application root to specify application id");
+      } else {
+        jiant.logInfo("Loading application, id: " + root.id);
+      }
+      if (root.views) {
+        _bindViews(prefix, root.views, root);
+      } else {
+        root.views = {};
+      }
+      if (root.templates) {
+        _bindTemplates(prefix, root.templates, root);
+      } else {
+        root.templates = {};
+      }
+      if (root.ajax) {
+        _bindAjax(root.ajax, root.ajaxPrefix, root.ajaxSuffix, root.crossDomain);
+      } else {
+        root.ajax = {};
+      }
+      if (root.events) {
+        _bindEvents(root.events, appId);
+      } else {
+        root.events = {};
+      }
+      if (root.states) {
+        _bindStates(root.states, root.stateExternalBase, appId);
+      } else {
+        root.states = {};
+      }
+      if (root.models) {
+        _bindModels(root.models, appId);
+      } else {
+        root.models = {};
+      }
+      if (jiant.DEV_MODE && !bindingsResult) {
+        alert("Some elements not bound to HTML properly, check console" + errString);
+      }
+      uiBoundRoot[appId] = root;
+      var eventId = appId + "jiant_uiBound_" + appId;
+      eventBus.trigger(eventId);
+//    refreshState();
+    }
+
+    function bindUi(prefix, root, devMode, viewsUrl, injectId) {
+      var startedAt = new Date().getMilliseconds();
+      if ($.isPlainObject(prefix)) { // no prefix syntax
+        injectId = viewsUrl;
+        viewsUrl = devMode;
+        devMode = root;
+        root = prefix;
+        prefix = root.appPrefix;
+      }
+      if (viewsUrl) {
+        var injectionPoint = injectId ? $("#" + injectId) : $("body");
+        injectionPoint.load(viewsUrl, {}, function() {
+          _bindUi(prefix, root, devMode);
+        });
+      } else {
+        _bindUi(prefix, root, devMode);
+      }
+      jiant.logInfo("UI bound in " + (new Date().getMilliseconds() - startedAt) + "ms");
+    }
+
+    function bind(obj1, obj2) {
+      $.extend(obj1, obj2);
+    }
+
+    function onUiBound(appId, cb) {
+      if (! cb) {
+        jiant.logError("!!! Registering anonymous logic without application id. Not recommended since 0.20");
+        cb = appId;
+        appId = "no_app_id";
+      } else {
+        if ($.isPlainObject(appId)) {
+          appId = appId.id;
+        }
+      }
+      if (uiBoundRoot[appId]) {
+        cb && cb($, uiBoundRoot[appId]);
+      } else {
+        var eventId = appId + "jiant_uiBound_" + appId;
+        eventBus.on(eventId, function() {
+          cb && cb($, uiBoundRoot[appId]);
+        });
+      }
+    }
+
+    function version() {
+      return 53;
+    }
+
+    return {
+      AJAX_PREFIX: "",
+      AJAX_SUFFIX: "",
+      DEV_MODE: false,
+      DEBUG_MODE: {
+        states: 0,
+        events: 0,
+        ajax: 0
+      },
+      PAGER_RADIUS: 6,
+      isMSIE: eval("/*@cc_on!@*/!1"),
+      STATE_EXTERNAL_BASE: undefined,
+
+      bind: bind,
+      bindUi: bindUi,
+      goRoot: goRoot,
+      goState: goState,
+      onUiBound: onUiBound,
+      refreshState: refreshState,
+      getCurrentState: getCurrentState,
+
+      handleErrorFn: defaultAjaxErrorsHandle,
+      logInfo: logInfo,
+      logError: logError,
+      parseTemplate: function(text, data) {return $(parseTemplate(text, data));},
+      parseTemplate2Text: parseTemplate2Text,
+      version: version,
+
+      collection: collection,
+      container: container,
+      containerPaged: containerPaged,
+      ctl : ctl,
+      fn: fn,
+      form: form,
+      formatDate: formatDate,
+      formatTime: formatTime,
+      formatTimeSeconds: formatTimeSeconds,
+      grid: grid,
+      image: image,
+      input: input,
+      inputDate: inputDate,
+      inputInt: inputInt,
+      label: label,
+      lfill: lfill,
+      lookup: lookup,
+      on: on,
+      pager: pager,
+      slider: slider,
+      stub: stub,
+      tabs: tabs,
+
+      key: {left: 37, up: 38, right: 39, down: 40, del: 46, backspace: 8, tab: 9, end: 35, home: 36, enter: 13, ctrl: 17,
+        escape: 27,
+        a: 65, c: 67, u: 85, w: 87, space: 32, 1: 49, 2: 50, 3: 51, 4: 52, 5: 53, 6: 54}
+
+    };
+
+  })(jQuery);
+
+  if (! (window.jiant && window.jiant.version && window.jiant.version() >= tmpJiant.version())) {
+    window.jiant = tmpJiant;
   }
-
-  function version() {
-    return 53;
-  }
-
-  return {
-    AJAX_PREFIX: "",
-    AJAX_SUFFIX: "",
-    DEV_MODE: false,
-    DEBUG_MODE: {
-      states: 0,
-      events: 0,
-      ajax: 0
-    },
-    PAGER_RADIUS: 6,
-    isMSIE: eval("/*@cc_on!@*/!1"),
-    STATE_EXTERNAL_BASE: undefined,
-
-    bind: bind,
-    bindUi: bindUi,
-    goRoot: goRoot,
-    goState: goState,
-    onUiBound: onUiBound,
-    refreshState: refreshState,
-    getCurrentState: getCurrentState,
-
-    handleErrorFn: defaultAjaxErrorsHandle,
-    logInfo: logInfo,
-    logError: logError,
-    parseTemplate: function(text, data) {return $(parseTemplate(text, data));},
-    parseTemplate2Text: parseTemplate2Text,
-    version: version,
-
-    collection: collection,
-    container: container,
-    containerPaged: containerPaged,
-    ctl : ctl,
-    fn: fn,
-    form: form,
-    formatDate: formatDate,
-    formatTime: formatTime,
-    formatTimeSeconds: formatTimeSeconds,
-    grid: grid,
-    image: image,
-    input: input,
-    inputDate: inputDate,
-    inputInt: inputInt,
-    label: label,
-    lfill: lfill,
-    lookup: lookup,
-    on: on,
-    pager: pager,
-    slider: slider,
-    stub: stub,
-    tabs: tabs,
-
-    key: {left: 37, up: 38, right: 39, down: 40, del: 46, backspace: 8, tab: 9, end: 35, home: 36, enter: 13, ctrl: 17,
-      escape: 27,
-      a: 65, c: 67, u: 85, w: 87, space: 32, 1: 49, 2: 50, 3: 51, 4: 52, 5: 53, 6: 54}
-
-  };
-
-})(jQuery);
-
-if (! (window.jiant && window.jiant.version && window.jiant.version() >= tmpJiant.version())) {
-  window.jiant = tmpJiant;
-}
 })();
