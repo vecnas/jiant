@@ -54,6 +54,7 @@
 // 0.53 setXXXAndYYYAndZZZ(xxx, yyy, zzz) support for models, set several fields
 // 0.54 custom behaviour injection into model via functions with more than 1 argument and empty body
 // 0.55 reverted 0.54, added logic support, added shortenings for sections: (v)iews, (m)odels, (t)emplates, (e)vents, (a)jax, (s)tates, (l)ogic
+// 0.56 parseTemplate executes propagate, customRenderer accepts one more parameter - reference to parse result or view, double bindUi call notify, 0-len params on ajax call fix
 
 (function() {
 var tmpJiant = (function($) {
@@ -474,14 +475,14 @@ var tmpJiant = (function($) {
           var val = data[key];
           elem = obj[key];
           if ($.isFunction(val)) {
-            getRenderer(spec, key)(data, elem, val());
+            getRenderer(spec, key)(data, elem, val(), false, obj);
             if (subscribe4updates && $.isFunction(val.on)) {
               val.on(function(obj, newVal) {
-                getRenderer(spec, key)(data, elem, newVal, true);
+                getRenderer(spec, key)(data, elem, newVal, true, obj);
               });
             }
           } else {
-            getRenderer(spec, key)(data, elem, val);
+            getRenderer(spec, key)(data, elem, val, false, obj);
           }
         }
       });
@@ -496,7 +497,7 @@ var tmpJiant = (function($) {
     }
   }
 
-  function updateViewElement(obj, elem, val) {
+  function updateViewElement(obj, elem, val, idUpdate, viewOrTemplate) {
     if (! elem || ! elem[0]) {
       return;
     }
@@ -577,6 +578,7 @@ var tmpJiant = (function($) {
         });
         retVal.splice(0, 1); // remove first comment
         retVal.propagate = makePropagationFunction(content, retVal);
+        retVal.propagate(data);
         return retVal;
       };
       root[key].parseTemplate2Text = function(data) {
@@ -1079,7 +1081,7 @@ var tmpJiant = (function($) {
     $.each(root, function(uri, funcSpec) {
       logInfo("binding ajax for function: " + uri);
       var params = getParamNames(funcSpec);
-      params.splice(params.length - 1, 1);
+      params && params.length > 0 ? params.splice(params.length - 1, 1) : params = [];
       root[uri] = makeAjaxPerformer(ajaxPrefix, ajaxSuffix, uri, params, $.isFunction(root[uri]) ? root[uri]() : undefined, crossDomain);
     });
   }
@@ -1195,6 +1197,10 @@ var tmpJiant = (function($) {
       jiant.logError("!!! Application id not specified. Not recommended since 0.20. Use 'id' property of application root to specify application id");
     } else {
       jiant.logInfo("Loading application, id: " + root.id);
+    }
+    if (uiBoundRoot[appId]) {
+      jiant.logError("Application '" + appId + "' already loaded, skipping multiple bind call");
+      return;
     }
     maybeShort(root, "views", "v") && _bindViews(prefix, root.views, root);
     maybeShort(root, "templates", "t") && _bindTemplates(prefix, root.templates, root);
