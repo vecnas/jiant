@@ -55,6 +55,7 @@
 // 0.54 custom behaviour injection into model via functions with more than 1 argument and empty body
 // 0.55 reverted 0.54, added logic support, added shortenings for sections: (v)iews, (m)odels, (t)emplates, (e)vents, (a)jax, (s)tates, (l)ogic
 // 0.56 parseTemplate executes propagate, customRenderer accepts one more parameter - reference to parse result or view, double bindUi call notify, 0-len params on ajax call fix
+// 0.57 parseTemplate call without parameters supported
 
 (function() {
 var tmpJiant = (function($) {
@@ -463,6 +464,11 @@ var tmpJiant = (function($) {
     });
   }
 
+  function isServiceName(key) {
+    var words = ["parseTemplate", "parseTemplate2Text", "propagate"];
+    return $.inArray(key, words) >= 0;
+  }
+
   function makePropagationFunction(spec, obj) {
     var map = {};
     $.each(spec, function (key, elem) {
@@ -471,7 +477,7 @@ var tmpJiant = (function($) {
     return function(data, subscribe4updates) {
       subscribe4updates = (subscribe4updates == undefined) ? true : subscribe4updates;
       $.each(map, function (key, elem) {
-        if (data[key] != undefined && data[key] != null) {
+        if (data && data[key] != undefined && data[key] != null && ! isServiceName(key)) {
           var val = data[key];
           elem = obj[key];
           if ($.isFunction(val)) {
@@ -578,7 +584,7 @@ var tmpJiant = (function($) {
         });
         retVal.splice(0, 1); // remove first comment
         retVal.propagate = makePropagationFunction(content, retVal);
-        retVal.propagate(data);
+        data && retVal.propagate(data);
         return retVal;
       };
       root[key].parseTemplate2Text = function(data) {
