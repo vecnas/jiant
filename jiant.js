@@ -56,6 +56,7 @@
 // 0.55 reverted 0.54, added logic support, added shortenings for sections: (v)iews, (m)odels, (t)emplates, (e)vents, (a)jax, (s)tates, (l)ogic
 // 0.56 parseTemplate executes propagate, customRenderer accepts one more parameter - reference to parse result or view, double bindUi call notify, 0-len params on ajax call fix
 // 0.57 parseTemplate call without parameters supported
+// 0.58 dependency load logic via onUiBound parameter, every logic received .implement(obj) method, for implementation declaration, 0.55 logic behaviour cancelled
 
 (function() {
 var tmpJiant = (function($) {
@@ -87,6 +88,8 @@ var tmpJiant = (function($) {
       tabs = {},
 
       lastStates = {},
+      loadedLogics = {},
+      awaitingDepends = {},
       eventBus = $({}),
       bindingsResult = true,
       uiBoundRoot = {},
@@ -869,21 +872,38 @@ var tmpJiant = (function($) {
       jiant.logInfo("binding logic " + name);
       if ($.isFunction(spec)) {
         if (isEmptyFunction(spec)) {
-          logics[name] = function() {
-            eventBus.trigger(appId + name + ".logic", arguments);
-          };
-          logics[name].on = function (cb) {
-            var trace;
-            eventBus.on(appId + name + ".logic", function () {
-              var args = $.makeArray(arguments);
-              args.splice(0, 1);
-              cb && cb.apply(cb, args);
-            });
-          };
+          jiant.logError("don't declare empty logic functions, use objects for namespace grouping");
         }
       } else {
-        _bindLogic(spec, appId);
+        $.each(spec, function(fname, fnbody) {
+          isEmptyFunction(fnbody) && (spec[fname] = function() {
+            jiant.logError("Logic function app.logics." + name + "." + fname + " called before implemented!");
+          });
+        });
+        spec.implement = function(obj) {
+          jiant.logInfo("implementation assigned to " + name);
+          $.each(spec, function(fname, fnbody) {
+            if (fname != "implement") {
+              if (! obj[fname]) {
+                jiant.logError("Logic function " + fname + " is not implemented by declared implementation");
+              } else {
+                spec[fname] = obj[fname];
+              }
+            }
+          });
+          awakeAwaitingDepends(appId, name);
+          (! loadedLogics[appId]) && (loadedLogics[appId] = {});
+          loadedLogics[appId][name] = 1;
+        };
       }
+    });
+  }
+
+  function awakeAwaitingDepends(appId, name) {
+    var awaiters = awaitingDepends[appId][name];
+    delete awaitingDepends[appId][name];
+    awaiters && $.each(awaiters, function(idx, cb) {
+      handleBound(appId, cb);
     });
   }
 
@@ -1246,15 +1266,46 @@ var tmpJiant = (function($) {
     $.extend(obj1, obj2);
   }
 
-  function onUiBound(appId, cb) {
-    if (! cb) {
+  // onUiBound(cb);
+  // onUiBound(depList, cb);
+  // onUiBound(appId, cb);
+  // onUiBound(appId, depList, cb)
+  function onUiBound(appId, dependenciesList, cb) {
+    if (! cb && ! dependenciesList) {
       jiant.logError("!!! Registering anonymous logic without application id. Not recommended since 0.20");
       cb = appId;
       appId = "no_app_id";
-    } else {
-      if ($.isPlainObject(appId)) {
-        appId = appId.id;
+    } else if (! cb) {
+      cb = dependenciesList;
+      if ($.isArray(appId)) {
+        jiant.logError("!!! Registering anonymous logic without application id. Not recommended since 0.20");
+        cb = appId;
+        dependenciesList = appId;
+        appId = "no_app_id";
+      } else {
+        dependenciesList = [];
       }
+    }
+    if ($.isPlainObject(appId)) {
+      appId = appId.id;
+    }
+    (! awaitingDepends[appId]) && (awaitingDepends[appId] = {});
+    (! loadedLogics[appId]) && (loadedLogics[appId] = {});
+    dependenciesList && $.each(dependenciesList, function(idx, depName) {
+      (!awaitingDepends[appId][depName]) && (awaitingDepends[appId][depName] = []);
+      (!loadedLogics[appId][depName]) && awaitingDepends[appId][depName].push(cb);
+    });
+    handleBound(appId, cb);
+  }
+
+  function handleBound(appId, cb) {
+    var allDependsResolved = true;
+    $.each(awaitingDepends[appId], function(depName, cbArr) {
+      allDependsResolved = allDependsResolved && ($.inArray(cb, cbArr) < 0);
+      return allDependsResolved;
+    });
+    if (! allDependsResolved) {
+      return;
     }
     if (uiBoundRoot[appId]) {
       cb && cb($, uiBoundRoot[appId]);
@@ -1266,8 +1317,12 @@ var tmpJiant = (function($) {
     }
   }
 
+  function getAwaitingDepends() {
+    return awaitingDepends;
+  }
+
   function version() {
-    return 53;
+    return 58;
   }
 
   return {
@@ -1282,6 +1337,7 @@ var tmpJiant = (function($) {
     PAGER_RADIUS: 6,
     isMSIE: eval("/*@cc_on!@*/!1"),
     STATE_EXTERNAL_BASE: undefined,
+    getAwaitingDepends: getAwaitingDepends, // for application debug purposes
 
     bind: bind,
     bindUi: bindUi,
