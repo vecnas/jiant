@@ -7,12 +7,14 @@
 // xl.0.03 noItems optional parameter added to pagedContent, renderList; version() added
 // xl.0.04 onCompleteCb optional parameters added to pagedContent
 // xl.0.05 confirmedActionBs(ctl, confirmDialogView, dialogOkCtl, actionFn) added
+// xl.0.06 saveCtl(ctl, saveFn, markerElemOptional, markerTextOptional) added
+
 (function() {
 
   var tmpJiantXl = {
 
     version: function() {
-      return 4;
+      return 6;
     },
 
     ctl2state: function(ctl, state, selectedCssClass) {
@@ -138,21 +140,37 @@
     },
 
     confirmedActionBs: function(ctl, confirmDialogView, dialogOkCtl, actionFn) {
-      var selectedFn, firstTime = true;
+      var selectedFn;
       return function() {
         ctl.click(function() {
           confirmDialogView.modal("show");
           selectedFn = actionFn;
         });
-        firstTime && dialogOkCtl.click(function() {
+        !confirmDialogView.firstTimeConfirmation && dialogOkCtl.click(function() {
           confirmDialogView.modal("hide");
           selectedFn && selectedFn();
         });
-        firstTime && confirmDialogView.on("hidden", function() {
+        !confirmDialogView.firstTimeConfirmation && confirmDialogView.on("hidden", function() {
           selectedFn = null;
         });
-        firstTime = false;
+        confirmDialogView.firstTimeConfirmation = true;
       }
+    },
+
+    saveCtl: function(ctl, saveFn, markerElem, markerText) {
+      return function() {
+        markerElem = markerElem ? markerElem : ctl;
+        markerText = markerText ? markerText : "saving";
+        ctl.click(function() {
+          var prevLabel = markerElem.html();
+          ctl.attr("disabled", "disabled");
+          markerElem.html(markerText);
+          saveFn(function () {
+            ctl.attr("disabled", null);
+            markerElem.html(prevLabel);
+          });
+        });
+      };
     },
 
     elementVisibilityByEvent: function(elem, eventsList) {},
