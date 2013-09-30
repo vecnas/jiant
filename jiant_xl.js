@@ -8,6 +8,7 @@
 // xl.0.04 onCompleteCb optional parameters added to pagedContent
 // xl.0.05 confirmedActionBs(ctl, confirmDialogView, dialogOkCtl, actionFn) added
 // xl.0.06 saveCtl(ctl, saveFn, markerElemOptional, markerTextOptional) added
+// xl.0.07 confirmedActionBs accepts one more optional parameter - preCb - called just before showing confirmation
 
 (function() {
 
@@ -139,10 +140,11 @@
       }
     },
 
-    confirmedActionBs: function(ctl, confirmDialogView, dialogOkCtl, actionFn) {
+    confirmedActionBs: function(ctl, confirmDialogView, dialogOkCtl, actionFn, preCb) {
       var selectedFn;
       return function() {
         ctl.click(function() {
+          preCb && preCb();
           confirmDialogView.modal("show");
           selectedFn = actionFn;
         });
