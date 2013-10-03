@@ -9,13 +9,14 @@
 // xl.0.05 confirmedActionBs(ctl, confirmDialogView, dialogOkCtl, actionFn) added
 // xl.0.06 saveCtl(ctl, saveFn, markerElemOptional, markerTextOptional) added
 // xl.0.07 confirmedActionBs accepts one more optional parameter - preCb - called just before showing confirmation
+// xl.0.08 bindList(model, container, template, viewFieldSetterName) accepts both template or callback as 3rd parameter, usage: template(obj)
 
 (function() {
 
   var tmpJiantXl = {
 
     version: function() {
-      return 6;
+      return 8;
     },
 
     ctl2state: function(ctl, state, selectedCssClass) {
@@ -84,11 +85,12 @@
       };
     },
 
-    bindList: function(model, container, template, setterName) {
+    bindList: function(model, container, template, viewFieldSetterName) {
       function renderObj(obj) {
-        var view = template.parseTemplate({id: $.isFunction(obj.id) ? obj.id() : obj.id});
+        var tm = $.isFunction(template) ? template(obj) : template;
+        var view = tm.parseTemplate({id: $.isFunction(obj.id) ? obj.id() : obj.id});
         container.append(view);
-        setterName && $.isFunction(obj[setterName]) && obj[setterName](view);
+        viewFieldSetterName && $.isFunction(obj[viewFieldSetterName]) && obj[viewFieldSetterName](view);
         view.propagate(obj);
         container.refreshTabs && container.refreshTabs();
       }
