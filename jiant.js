@@ -58,6 +58,7 @@
 // 0.57 parseTemplate call without parameters supported
 // 0.58 dependency load logic via onUiBound parameter, every logic received .implement(obj) method, for implementation declaration, 0.55 logic behaviour cancelled
 // 0.59 asap() fixed, wrong params when value already set
+// 0.60 parseTemplate logs error to console on parse failure, inputInt: left/right keys enabled, added dot/comma keys, added inputFloat
 
 (function() {
   var tmpJiant = (function($) {
@@ -72,6 +73,7 @@
         image = {},
         input = {},
         inputInt = {},
+        inputFloat = {},
         inputDate = {},
         label = {},
         lookup = function(selector) {},
@@ -226,6 +228,7 @@
         return $.trim(func(data));
       } catch (e) {
         err = e.message;
+        logError("Error parse template: " + err);
       }
       return "!!! ERROR: " + err.toString() + " !!!";
     }
@@ -238,7 +241,29 @@
         } else if (event.keyCode == jiant.key.up) {
           input.val(parseInt(input.val()) + 1);
           return false;
-        } else if (event.keyCode == jiant.key.backspace || event.keyCode == jiant.key.del || event.keyCode == jiant.key.end
+        } else if (event.keyCode == jiant.key.backspace || event.keyCode == jiant.key.del
+            || event.keyCode == jiant.key.end || event.keyCode == jiant.key.left || event.keyCode == jiant.key.right
+            || event.keyCode == jiant.key.home || event.keyCode == jiant.key.tab || event.keyCode == jiant.key.enter) {
+        } else if (event.shiftKey || (event.keyCode < 48 || event.keyCode > 57) && (event.keyCode < 96 || event.keyCode > 105 )) {
+          event.preventDefault();
+          return false;
+        }
+        return true;
+      });
+    }
+
+    function setupInputFloat(input) {
+      input.keydown(function(event) {
+        if (event.keyCode == jiant.key.down && input.val() > 0) {
+          input.val(input.val() - 1);
+          return false;
+        } else if (event.keyCode == jiant.key.up) {
+          input.val(parseInt(input.val()) + 1);
+          return false;
+        } else if (event.keyCode == jiant.key.dot) {
+          return (input.val().indexOf(".") < 0) && input.val().length > 0;
+        } else if (event.keyCode == jiant.key.backspace || event.keyCode == jiant.key.del
+            || event.keyCode == jiant.key.end || event.keyCode == jiant.key.left || event.keyCode == jiant.key.right
             || event.keyCode == jiant.key.home || event.keyCode == jiant.key.tab || event.keyCode == jiant.key.enter) {
         } else if (event.shiftKey || (event.keyCode < 48 || event.keyCode > 57) && (event.keyCode < 96 || event.keyCode > 105 )) {
           event.preventDefault();
@@ -421,6 +446,8 @@
         uiElem.refreshTabs = function() {uiElem.tabs("refresh");};
       } else if (elemContent == inputInt || elemContent.inputIntTmInner) {
         setupInputInt(uiElem);
+      } else if (elemContent == inputFloat || elemContent.inputFloatTmInner) {
+        setupInputFloat(uiElem);
       } else if ((elemContent == inputDate || elemContent.inputDateTmInner) && uiElem.datepicker) {
         uiElem.datepicker();
       } else if (elemContent == pager || elemContent.pagerTmInner) {
@@ -513,7 +540,7 @@
       }
       var types = ["text", "hidden", undefined];
       var tagName = elem[0].tagName.toLowerCase();
-      if (tagName == "input" || tagName == "textarea") {
+      if (tagName == "input" || tagName == "textarea" || tagName == "select") {
         var el = $(elem[0]),
             tp = el.attr("type");
         if ($.inArray(tp, types) >= 0) {
@@ -558,6 +585,7 @@
         case (grid): return "gridTmInner";
         case (input): return "inputTmInner";
         case (inputInt): return "inputIntTmInner";
+        case (inputFloat): return "inputFloatTmInner";
         case (inputDate): return "inputDateTmInner";
         default: return "customTmInner";
       }
@@ -1322,7 +1350,7 @@
     }
 
     function version() {
-      return 59;
+      return 60;
     }
 
     return {
@@ -1368,6 +1396,7 @@
       input: input,
       inputDate: inputDate,
       inputInt: inputInt,
+      inputFloat: inputFloat,
       label: label,
       lfill: lfill,
       lookup: lookup,
@@ -1378,7 +1407,7 @@
       tabs: tabs,
 
       key: {left: 37, up: 38, right: 39, down: 40, del: 46, backspace: 8, tab: 9, end: 35, home: 36, enter: 13, ctrl: 17,
-        escape: 27,
+        escape: 27, dot: 190, comma: 188,
         a: 65, c: 67, u: 85, w: 87, space: 32, 1: 49, 2: 50, 3: 51, 4: 52, 5: 53, 6: 54}
 
     };
