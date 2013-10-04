@@ -10,13 +10,16 @@
 // xl.0.06 saveCtl(ctl, saveFn, markerElemOptional, markerTextOptional) added
 // xl.0.07 confirmedActionBs accepts one more optional parameter - preCb - called just before showing confirmation
 // xl.0.08 bindList(model, container, template, viewFieldSetterName) accepts both template or callback as 3rd parameter, usage: template(obj)
+// xl.0.09 confirmedActionBs multiple targets bug fixed
 
 (function() {
+
+  var confirmedActionBsSelectedFn;
 
   var tmpJiantXl = {
 
     version: function() {
-      return 8;
+      return 9;
     },
 
     ctl2state: function(ctl, state, selectedCssClass) {
@@ -143,19 +146,18 @@
     },
 
     confirmedActionBs: function(ctl, confirmDialogView, dialogOkCtl, actionFn, preCb) {
-      var selectedFn;
       return function() {
         ctl.click(function() {
           preCb && preCb();
           confirmDialogView.modal("show");
-          selectedFn = actionFn;
+          confirmedActionBsSelectedFn = actionFn;
         });
         !confirmDialogView.firstTimeConfirmation && dialogOkCtl.click(function() {
           confirmDialogView.modal("hide");
-          selectedFn && selectedFn();
+          confirmedActionBsSelectedFn && confirmedActionBsSelectedFn();
         });
         !confirmDialogView.firstTimeConfirmation && confirmDialogView.on("hidden", function() {
-          selectedFn = null;
+          confirmedActionBsSelectedFn = null;
         });
         confirmDialogView.firstTimeConfirmation = true;
       }
