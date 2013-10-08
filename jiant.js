@@ -169,7 +169,7 @@
 
     function formatDate(millis) {
       var dt = new Date(millis);
-      return lfill(dt.getYear()) + "-" + lfill(dt.getMonth()) + "-" + lfill(dt.getDate());
+      return lfill(dt.getFullYear()) + "-" + lfill(dt.getMonth()) + "-" + lfill(dt.getDate());
     }
 
     function formatTime(millis) {
@@ -1351,7 +1351,7 @@
     }
 
     function version() {
-      return 60;
+      return 61;
     }
 
     return {
