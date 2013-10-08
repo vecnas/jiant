@@ -59,6 +59,7 @@
 // 0.58 dependency load logic via onUiBound parameter, every logic received .implement(obj) method, for implementation declaration, 0.55 logic behaviour cancelled
 // 0.59 asap() fixed, wrong params when value already set
 // 0.60 parseTemplate logs error to console on parse failure, inputInt: left/right keys enabled, added dot/comma keys, added inputFloat
+// 0.61 formatDate() independent from datepicker
 
 (function() {
   var tmpJiant = (function($) {
@@ -168,7 +169,7 @@
 
     function formatDate(millis) {
       var dt = new Date(millis);
-      return $.datepicker.formatDate("yy-mm-dd", dt);
+      return lfill(dt.getYear()) + "-" + lfill(dt.getMonth()) + "-" + lfill(dt.getDate());
     }
 
     function formatTime(millis) {
