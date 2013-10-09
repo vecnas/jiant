@@ -88,17 +88,17 @@
       }
     }
 
-    function _bindContent(appRoot, subRoot, key, content, view, prefix, setupExtras) {
-      $.each(content, function (elem, elemContent) {
+    function _bindContent(appRoot, subRoot, viewId, viewContent, viewElem, prefix, setupExtras) {
+      $.each(viewContent, function (elem, elemContent) {
         if (elem != "appPrefix") {
           if (subRoot[elem] == jiant.lookup) {
             jiant.logInfo("    loookup element, no checks/bindings: " + elem);
-            subRoot[elem] = function() {return view.find("." + prefix + elem);};
+            subRoot[elem] = function() {return viewElem.find("." + prefix + elem);};
           } else {
-            var uiElem = view.find("." + prefix + elem);
-            ensureExists(prefix, appRoot.dirtyList, uiElem, prefix + key, prefix + elem);
+            var uiElem = viewElem.find("." + prefix + elem);
+            ensureExists(prefix, appRoot.dirtyList, uiElem, prefix + viewId, prefix + elem);
             subRoot[elem] = uiElem;
-            setupExtras(appRoot, uiElem, elemContent, key, elem);
+            setupExtras(appRoot, uiElem, elemContent, viewId, elem);
             //        logInfo("    bound UI for: " + elem);
           }
         }
@@ -106,7 +106,6 @@
     }
 
     function view(prefix, root, appRoot, viewId, viewContent, setupExtras) {
-      jiant.logInfo("binding UI for view: " + viewId + " using prefix " + prefix);
       var view = $("#" + prefix + viewId);
       ensureExists(prefix, appRoot.dirtyList, view, prefix + viewId);
       _bindContent(appRoot, root[viewId], viewId, viewContent, view, prefix, setupExtras);
@@ -132,7 +131,6 @@
     }
 
     function template(prefix, root, appRoot, tmId, tmContent) {
-      jiant.logInfo("binding UI for template: " + tmId + " using prefix " + prefix);
       var tm = $("#" + prefix + tmId);
       ensureExists(prefix, appRoot.dirtyList, tm, prefix + tmId);
       $.each(tmContent, function (elem, elemType) {
@@ -618,8 +616,9 @@
 
     function _bindViews(pfx, root, appRoot, appUiFactory) {
       $.each(root, function(viewId, viewContent) {
-        var prefix = viewContent.appPrefix ? viewContent.appPrefix : (pfx ? pfx : ""),
-            view = appUiFactory.view(prefix, root, appRoot, viewId, viewContent, setupExtras, makePropagationFunction, maybeAddDevHook);
+        var prefix = viewContent.appPrefix ? viewContent.appPrefix : (pfx ? pfx : "");
+        jiant.logInfo("binding UI for view: " + viewId + " using prefix " + prefix);
+        var view = appUiFactory.view(prefix, root, appRoot, viewId, viewContent, setupExtras, makePropagationFunction, maybeAddDevHook);
         ensureSafeExtend(root[viewId], view);
         root[viewId].propagate = makePropagationFunction(viewContent, viewContent);
         $.extend(root[viewId], view);
@@ -635,8 +634,9 @@
 
     function _bindTemplates(pfx, root, appRoot, appUiFactory) {
       $.each(root, function(tmId, tmContent) {
-        var prefix = tmContent.appPrefix ? tmContent.appPrefix : (pfx ? pfx : ""),
-            tm = appUiFactory.template(prefix, root, appRoot, tmId, tmContent);
+        var prefix = tmContent.appPrefix ? tmContent.appPrefix : (pfx ? pfx : "");
+        jiant.logInfo("binding UI for template: " + tmId + " using prefix " + prefix);
+        var tm = appUiFactory.template(prefix, root, appRoot, tmId, tmContent);
         root[tmId].parseTemplate = function(data) {
           var retVal = $("<!-- -->" + parseTemplate(tm, data)); // add comment to force jQuery to read it as HTML fragment
           $.each(tmContent, function (elem, elemType) {
