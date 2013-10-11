@@ -61,102 +61,28 @@
 // 0.60 parseTemplate logs error to console on parse failure, inputInt: left/right keys enabled, added dot/comma keys, added inputFloat
 // 0.61 formatDate() independent from datepicker
 // 0.62 UiFactory extracted, it is possible to override it
+// 0.63 UiFactory updated, check for setUiFactory added, removed reporting of missing elements of already missing view
 
 (function() {
   var
 
   DefaultUiFactory = function() {
 
-    var bindingsResult = true, errString;
-
-    function ensureExists(appPrefix, dirtyList, obj, idName, className) {
-      if (idName && dirtyList && ($.inArray(idName, dirtyList) >= 0
-          || (appPrefix && $.inArray(idName.substring(appPrefix.length), dirtyList) >= 0))) {
-        return;
-      }
-      if (!obj || !obj.length) {
-        window.console && window.console.error
-        && (className ? jiant.logError("non existing object referred by class under object id '" + idName
-            + "', check stack trace for details, expected obj class: " + className) :
-            jiant.logError("non existing object referred by id, check stack trace for details, expected obj id: " + idName));
-        if (className) {
-          errString += "   ,    #" + idName + " ." + className;
-        } else {
-          errString += ", #" + idName;
-        }
-        bindingsResult = false;
-      }
+    function view(prefix, viewId) {
+      return $("#" + prefix + viewId);
     }
 
-    function _bindContent(appRoot, subRoot, viewId, viewContent, viewElem, prefix, setupExtras) {
-      $.each(viewContent, function (elem, elemContent) {
-        if (elem != "appPrefix") {
-          if (subRoot[elem] == jiant.lookup) {
-            jiant.logInfo("    loookup element, no checks/bindings: " + elem);
-            subRoot[elem] = function() {return viewElem.find("." + prefix + elem);};
-          } else {
-            var uiElem = viewElem.find("." + prefix + elem);
-            ensureExists(prefix, appRoot.dirtyList, uiElem, prefix + viewId, prefix + elem);
-            subRoot[elem] = uiElem;
-            setupExtras(appRoot, uiElem, elemContent, viewId, elem);
-            //        logInfo("    bound UI for: " + elem);
-          }
-        }
-      });
+    function viewComponent(viewElem, viewId, prefix, componentId, componentContent) {
+      return viewElem.find("." + prefix + componentId);
     }
 
-    function view(prefix, root, appRoot, viewId, viewContent, setupExtras) {
-      var view = $("#" + prefix + viewId);
-      ensureExists(prefix, appRoot.dirtyList, view, prefix + viewId);
-      _bindContent(appRoot, root[viewId], viewId, viewContent, view, prefix, setupExtras);
-      return view;
-    }
-
-    function calcInnerTmKey(elem) {
-      switch (elem) {
-        case (jiant.label): return "labelTmInner";
-        case (jiant.ctl): return "ctlTmInner";
-        case (jiant.container): return "containerTmInner";
-        case (jiant.containerPaged): return "containerPagedTmInner";
-        case (jiant.form): return "formTmInner";
-        case (jiant.pager): return "pagerTmInner";
-        case (jiant.image): return "imageTmInner";
-        case (jiant.grid): return "gridTmInner";
-        case (jiant.input): return "inputTmInner";
-        case (jiant.inputInt): return "inputIntTmInner";
-        case (jiant.inputFloat): return "inputFloatTmInner";
-        case (jiant.inputDate): return "inputDateTmInner";
-        default: return "customTmInner";
-      }
-    }
-
-    function template(prefix, root, appRoot, tmId, tmContent) {
-      var tm = $("#" + prefix + tmId);
-      ensureExists(prefix, appRoot.dirtyList, tm, prefix + tmId);
-      $.each(tmContent, function (elem, elemType) {
-        if (elem != "appPrefix") {
-          ensureExists(prefix, appRoot.dirtyList, tm.find("." + prefix + elem), prefix + tmId, prefix + elem);
-          var innerTmKey = calcInnerTmKey(tmContent[elem]);
-          tmContent[elem] = {};
-          tmContent[elem][innerTmKey] = true;
-        }
-      });
-      return tm;
-    }
-
-    function start() {
-      errString = "";
-      bindingsResult = true;
-    }
-
-    function end() {
-      jiant.DEV_MODE && !bindingsResult && alert("Some elements not bound to HTML properly, check console" + errString);
+    function template(prefix, tmId, tmContent) {
+      return $("#" + prefix + tmId);
     }
 
     return {
-      end: end,
-      start: start,
       template: template,
+      viewComponent: viewComponent,
       view: view
     }
   },
@@ -189,6 +115,9 @@
           alert("stub called from function: " + callerName);
         },
         tabs = {},
+
+        bindingsResult = true,
+        errString,
 
         lastStates = {},
         loadedLogics = {},
@@ -481,6 +410,23 @@
 
 // ------------ views ----------------
 
+    function _bindContent(appRoot, viewRoot, viewId, viewContent, viewElem, prefix) {
+      $.each(viewContent, function (componentId, componentContent) {
+        if (componentId != "appPrefix") {
+          if (viewRoot[componentId] == jiant.lookup) {
+            jiant.logInfo("    loookup element, no checks/bindings: " + componentId);
+            viewRoot[componentId] = function() {return viewElem.find("." + prefix + componentId);};
+          } else {
+            var uiElem = uiFactory.viewComponent(viewElem, viewId, prefix, componentId, componentContent);
+            ensureExists(prefix, appRoot.dirtyList, uiElem, prefix + viewId, prefix + componentId);
+            viewRoot[componentId] = uiElem;
+            setupExtras(appRoot, uiElem, componentContent, viewId, componentId);
+            //        logInfo("    bound UI for: " + componentId);
+          }
+        }
+      });
+    }
+
     function ensureSafeExtend(spec, jqObject) {
       $.each(spec, function(key, content) {
         if (jqObject[key]) {
@@ -530,6 +476,27 @@
           event.stopImmediatePropagation();
         }
       });
+    }
+
+    function ensureExists(appPrefix, dirtyList, obj, idName, className) {
+      if (idName && dirtyList && ($.inArray(idName, dirtyList) >= 0
+          || (appPrefix && $.inArray(idName.substring(appPrefix.length), dirtyList) >= 0))) {
+        return true;
+      }
+      if (!obj || !obj.length) {
+        window.console && window.console.error
+        && (className ? jiant.logError("non existing object referred by class under object id '" + idName
+            + "', check stack trace for details, expected obj class: " + className) :
+            jiant.logError("non existing object referred by id, check stack trace for details, expected obj id: " + idName));
+        if (className) {
+          errString += "   ,    #" + idName + " ." + className;
+        } else {
+          errString += ", #" + idName;
+        }
+        bindingsResult = false;
+        return false;
+      }
+      return true;
     }
 
     function setupExtras(appRoot, uiElem, elemContent, key, elem) {
@@ -618,7 +585,9 @@
       $.each(root, function(viewId, viewContent) {
         var prefix = viewContent.appPrefix ? viewContent.appPrefix : (pfx ? pfx : "");
         jiant.logInfo("binding UI for view: " + viewId + " using prefix " + prefix);
-        var view = appUiFactory.view(prefix, root, appRoot, viewId, viewContent, setupExtras, makePropagationFunction, maybeAddDevHook);
+        var view = appUiFactory.view(prefix, viewId);
+        var viewOk = ensureExists(prefix, appRoot.dirtyList, view, prefix + viewId);
+        viewOk && _bindContent(appRoot, root[viewId], viewId, viewContent, view, prefix);
         ensureSafeExtend(root[viewId], view);
         root[viewId].propagate = makePropagationFunction(viewContent, viewContent);
         $.extend(root[viewId], view);
@@ -628,6 +597,24 @@
 
 // ------------ templates ----------------
 
+    function calcInnerTmKey(elem) {
+      switch (elem) {
+        case (jiant.label): return "labelTmInner";
+        case (jiant.ctl): return "ctlTmInner";
+        case (jiant.container): return "containerTmInner";
+        case (jiant.containerPaged): return "containerPagedTmInner";
+        case (jiant.form): return "formTmInner";
+        case (jiant.pager): return "pagerTmInner";
+        case (jiant.image): return "imageTmInner";
+        case (jiant.grid): return "gridTmInner";
+        case (jiant.input): return "inputTmInner";
+        case (jiant.inputInt): return "inputIntTmInner";
+        case (jiant.inputFloat): return "inputFloatTmInner";
+        case (jiant.inputDate): return "inputDateTmInner";
+        default: return "customTmInner";
+      }
+    }
+
     function parseTemplate2Text(tm, data) {
       return parseTemplate(tm, data);
     }
@@ -636,7 +623,16 @@
       $.each(root, function(tmId, tmContent) {
         var prefix = tmContent.appPrefix ? tmContent.appPrefix : (pfx ? pfx : "");
         jiant.logInfo("binding UI for template: " + tmId + " using prefix " + prefix);
-        var tm = appUiFactory.template(prefix, root, appRoot, tmId, tmContent);
+        var tm = appUiFactory.template(prefix, tmId, tmContent);
+        $.each(tmContent, function (elem, elemType) {
+          if (elem != "appPrefix") {
+            ensureExists(prefix, appRoot.dirtyList, tm.find("." + prefix + elem), prefix + tmId, prefix + elem);
+            var innerTmKey = calcInnerTmKey(tmContent[elem]);
+            tmContent[elem] = {};
+            tmContent[elem][innerTmKey] = true;
+          }
+        });
+        ensureExists(prefix, appRoot.dirtyList, tm, prefix + tmId);
         root[tmId].parseTemplate = function(data) {
           var retVal = $("<!-- -->" + parseTemplate(tm, data)); // add comment to force jQuery to read it as HTML fragment
           $.each(tmContent, function (elem, elemType) {
@@ -1272,7 +1268,8 @@
       jiant.DEV_MODE = devMode;
       ! devMode && maybeSetDevModeFromQueryString();
       maybeSetDebugModeFromQueryString();
-      appUiFactory.start();
+      errString = "";
+      bindingsResult = true;
       var appId = (root.id ? root.id : "no_app_id");
       if (! root.id) {
         jiant.logError("!!! Application id not specified. Not recommended since 0.20. Use 'id' property of application root to specify application id");
@@ -1290,7 +1287,7 @@
       maybeShort(root, "states", "s") && _bindStates(root.states, root.stateExternalBase, appId);
       maybeShort(root, "models", "m") && _bindModels(root.models, appId);
       maybeShort(root, "logic", "l") && _bindLogic(root.logic, appId);
-      appUiFactory.end();
+      jiant.DEV_MODE && !bindingsResult && alert("Some elements not bound to HTML properly, check console" + errString);
       uiBoundRoot[appId] = root;
       var eventId = appId + "jiant_uiBound_" + appId;
       eventBus.trigger(eventId);
@@ -1378,7 +1375,14 @@
     }
 
     function setUiFactory(factory) {
-      uiFactory = factory;
+      var ok = true;
+      $.each(["template", "viewComponent", "view"], function(idx, name) {
+        if (! factory[name]) {
+          jiant.logError("UI Factory doesn't implement method " + name + ", ignoring bad factory");
+          ok = false;
+        }
+      });
+      ok ? uiFactory = factory : 0;
     }
 
     function version() {
