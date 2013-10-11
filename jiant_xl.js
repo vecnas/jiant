@@ -11,6 +11,7 @@
 // xl.0.07 confirmedActionBs accepts one more optional parameter - preCb - called just before showing confirmation
 // xl.0.08 bindList(model, container, template, viewFieldSetterName) accepts both template or callback as 3rd parameter, usage: template(obj)
 // xl.0.09 confirmedActionBs multiple targets bug fixed
+// xl.0.10 statefulViews autohides bound views on initialization
 
 (function() {
 
@@ -19,7 +20,7 @@
   var tmpJiantXl = {
 
     version: function() {
-      return 9;
+      return 10;
     },
 
     ctl2state: function(ctl, state, selectedCssClass) {
@@ -60,13 +61,16 @@
           });
           state.end(function() {
             if ($.isArray(views)) {
-              $.each(views, function(idx, view) {
-                view.hide();
-              });
+              $.each(views, function(idx, view) {view.hide();});
             } else {
               views.hide();
             }
           });
+        }
+        if ($.isArray(views)) {
+          $.each(views, function(idx, view) {view.hide();});
+        } else {
+          views.hide();
         }
         if ($.isArray(states)) {
           $.each(states, function(idx, state) {
