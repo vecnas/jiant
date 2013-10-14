@@ -63,6 +63,7 @@
 // 0.62 UiFactory extracted, it is possible to override it
 // 0.63 UiFactory updated, check for setUiFactory added, removed reporting of missing elements of already missing view
 // 0.64 UiFactory applied to template components via viewComponent() call
+// 0.65 parseState pack/unpack fixed (removed old seldom occuring bugs), data objects can be passed as state params from now
 
 (function() {
   var
@@ -1072,11 +1073,11 @@
         parsed.now = [stateId];
         $.each(arguments, function(idx, arg) {
           if (arg != undefined) {
-            parsed.now.push(pack(arg + ""));
+            parsed.now.push(pack(arg));
           } else if (prevState[0] == stateId && prevState[idx + 1] != undefined) {
-            parsed.now.push(pack(prevState[idx + 1] + ""));
+            parsed.now.push(pack(prevState[idx + 1]));
           } else {
-            parsed.now.push(pack(arg + ""));
+            parsed.now.push(pack(arg));
           }
         });
         if (root) {
@@ -1133,12 +1134,52 @@
       return parsed;
     }
 
+    var replacementMap = {
+      ";" : ";;",
+      "," : ";1",
+      "=" : ";2",
+      "|" : ";3",
+      "{" : ";4",
+      "}" : ";5",
+      ":" : ";6",
+      "#" : ";7"
+    }, reverseMap = {},
+    replacementRegex = /;|,|=|\||\{|\}|:|#/gi,
+    reverseRegex = /;;|;1|;2|;3|;4|;5|;6|;7/gi;
+    $.each(replacementMap, function(key, val) {
+      reverseMap[val] = key;
+    });
+
     function pack(s) {
-      return s ? s.replace(/;/g, ";;").replace(/,/g, ";1").replace(/=/g, ";2").replace(/\|/g, ";3") : "";
+      if ($.isPlainObject(s)) {
+        var retVal = "{";
+        $.each(s, function(key, val) {
+          retVal += pack(key);
+          retVal += ":";
+          retVal += pack(val);
+          retVal += "}";
+        });
+        retVal = retVal[retVal.length - 1] == "}" ? retVal.substring(0, retVal.length - 1) : retVal;
+        return pack(retVal);
+      } else {
+        s = s + "";
+        return s ? s.replace(replacementRegex, function(matched) {return replacementMap[matched];}) : "";
+      }
     }
 
     function unpack(s) {
-      return s ? s.replace(/;3/g, "|").replace(/;2/g, "=").replace(/;1/g, ",").replace(/;;/g, ";") : "";
+      s = s ? s.replace(reverseRegex, function(matched) {return reverseMap[matched];}) : "";
+      if (s && s[0] == "{") {
+        var retVal = {};
+        var arr = s.substring(1, s.length).split("}");
+        $.each(arr, function(idx, item) {
+          var sub = item.split(":");
+          (sub.length == 2) && (retVal[unpack(sub[0])] = unpack(sub[1]));
+        });
+        return retVal;
+      } else {
+        return s;
+      }
     }
 
     function getCurrentState() {
@@ -1388,7 +1429,7 @@
     }
 
     function version() {
-      return 64;
+      return 65;
     }
 
     return {
