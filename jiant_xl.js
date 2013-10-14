@@ -12,6 +12,7 @@
 // xl.0.08 bindList(model, container, template, viewFieldSetterName) accepts both template or callback as 3rd parameter, usage: template(obj)
 // xl.0.09 confirmedActionBs multiple targets bug fixed
 // xl.0.10 statefulViews autohides bound views on initialization
+// xl.0.11 pagedContent notification about wrong arguments
 
 (function() {
 
@@ -20,7 +21,7 @@
   var tmpJiantXl = {
 
     version: function() {
-      return 10;
+      return 11;
     },
 
     ctl2state: function(ctl, state, selectedCssClass) {
@@ -120,6 +121,12 @@
 
         state.start(function(pageNum) {
           pageNum = pageNum ? pageNum : 0;
+          var parsedNum = parseInt(pageNum) + "";
+          if (parsedNum != pageNum) {
+            jiant.logError("pagedContent expects pageNum as first state parameter, passed: " + pageNum
+                + ", recommended fix: make pageNum first argument, now replacing pageNum by 0");
+            pageNum = 0;
+          }
           ajax({"page.page": pageNum}, function(data) {
             container.empty();
             noItemsLabel && (data.content.length ? noItemsLabel.hide() : noItemsLabel.show());
