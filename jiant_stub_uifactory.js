@@ -30,6 +30,8 @@ if (! window.jiant) {
         elem = $("<button>" + componentId + "</button>");
       } else if (componentContent == jiant.container) {
         elem = $("<div>" + componentId + "</div>");
+      } else if (componentContent == jiant.label) {
+        elem = $("<div>" + componentId + "</div>");
       } else if (componentContent == jiant.pager) {
         elem = $("<div>" + componentId + "</div>");
       } else {
