@@ -62,6 +62,7 @@
 // 0.61 formatDate() independent from datepicker
 // 0.62 UiFactory extracted, it is possible to override it
 // 0.63 UiFactory updated, check for setUiFactory added, removed reporting of missing elements of already missing view
+// 0.64 UiFactory applied to template components via viewComponent() call
 
 (function() {
   var
@@ -626,7 +627,8 @@
         var tm = appUiFactory.template(prefix, tmId, tmContent);
         $.each(tmContent, function (elem, elemType) {
           if (elem != "appPrefix") {
-            ensureExists(prefix, appRoot.dirtyList, tm.find("." + prefix + elem), prefix + tmId, prefix + elem);
+            var comp = appUiFactory.viewComponent(tm, tmId, prefix, elem, elemType);
+            ensureExists(prefix, appRoot.dirtyList, comp, prefix + tmId, prefix + elem);
             var innerTmKey = calcInnerTmKey(tmContent[elem]);
             tmContent[elem] = {};
             tmContent[elem][innerTmKey] = true;
@@ -1386,7 +1388,7 @@
     }
 
     function version() {
-      return 62;
+      return 64;
     }
 
     return {
