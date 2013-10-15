@@ -4,19 +4,16 @@ if (! window.jiant) {
   jiant.setUiFactory(new function() {
 
     function view(prefix, viewId) {
-      var viewElem = $("<div>" + viewId + "</div>");
+      var viewElem = $("<div class='jiant_view'>" + viewId + "</div>");
       viewElem.attr("id", prefix + viewId);
       viewElem.attr("title", "view: " + viewId);
-      viewElem.attr("class", "jiant_view");
       $("body").append(viewElem);
       return viewElem;
     }
 
     function template(prefix, tmId, tmContent) {
-      var tmElem = $("<div><div>" + tmId + "</div></div>");
+      var tmElem = $("<div><div class='jiant_tm' title='tm: " + tmId + "'>" + tmId + "</div></div>");
       tmElem.attr("id", prefix + tmId);
-      tmElem.attr("title", "tm: " + tmId);
-      tmElem.attr("class", "jiant_tm");
       tmElem.hide();
       $("body").append(tmElem);
       return tmElem;
@@ -24,7 +21,8 @@ if (! window.jiant) {
 
     function viewComponent(viewElem, viewId, prefix, componentId, componentContent) {
       var elem;
-      if (componentContent == jiant.input || componentContent == jiant.inputInt) {
+      if (componentContent == jiant.input || componentContent == jiant.inputInt || componentContent == jiant.inputFloat
+          || componentContent == jiant.inputDate) {
         elem = $("<input type='text'/>");
       } else if (componentContent == jiant.ctl) {
         elem = $("<button>" + componentId + "</button>");
@@ -35,12 +33,12 @@ if (! window.jiant) {
       } else if (componentContent == jiant.pager) {
         elem = $("<div>" + componentId + "</div>");
       } else {
-        alert("Unsupported element type: " + componentContent);
+        jiant.logError("Unsupported element type: " + componentContent);
         elem = $("<div>" + componentId + "</div>");
       }
       elem.attr("class", prefix + componentId + " jiant_elem");
       elem.attr("title", viewId + "." + componentId);
-      viewElem.append(elem);
+      (viewElem.find(".jiant_tm")[0] ? viewElem.find(".jiant_tm") : viewElem) .append(elem);
       return elem;
     }
 
