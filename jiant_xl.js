@@ -13,6 +13,7 @@
 // xl.0.09 confirmedActionBs multiple targets bug fixed
 // xl.0.10 statefulViews autohides bound views on initialization
 // xl.0.11 pagedContent notification about wrong arguments
+// xl.0.12 statefulApp accepts 3rd optional argument: defaultState to go from empty state
 
 (function() {
 
@@ -83,13 +84,14 @@
       };
     },
 
-    statefulApp: function(app, viewNameSuffix) {
+    statefulApp: function(app, viewNameSuffix, defaultState) {
       return function() {
         viewNameSuffix = viewNameSuffix ? viewNameSuffix : "";
         $.each(app.states, function(name, state) {
           var view = app.views[name + viewNameSuffix];
           view && jiant.xl.statefulViews(state, view)();
         });
+        app.states[""] && defaultState && app.states[""].start(function() {defaultState.go();});
       };
     },
 
