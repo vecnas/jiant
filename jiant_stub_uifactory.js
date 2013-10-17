@@ -4,7 +4,11 @@ if (! window.jiant) {
   jiant.setUiFactory(new function() {
 
     function view(prefix, viewId) {
-      var viewElem = $("<div class='jiant_view'>" + viewId + "</div>");
+      var viewElem = $("#" + prefix + viewId);
+      if (viewElem[0]) {
+        return viewElem;
+      }
+      viewElem = $("<div class='jiant_view'>" + viewId + "</div>");
       viewElem.attr("id", prefix + viewId);
       viewElem.attr("title", "view: " + viewId);
       $("body").append(viewElem);
@@ -12,7 +16,11 @@ if (! window.jiant) {
     }
 
     function template(prefix, tmId, tmContent) {
-      var tmElem = $("<div><div class='jiant_tm' title='tm: " + tmId + "'>" + tmId + "</div></div>");
+      var tmElem = $("#" + prefix + tmId);
+      if (tmElem[0]) {
+        return tmElem;
+      }
+      tmElem = $("<div><div class='jiant_tm " + prefix + tmId + "' title='tm: " + tmId + "'></div></div>");
       tmElem.attr("id", prefix + tmId);
       tmElem.hide();
       $("body").append(tmElem);
@@ -20,7 +28,10 @@ if (! window.jiant) {
     }
 
     function viewComponent(viewElem, viewId, prefix, componentId, componentContent) {
-      var elem;
+      var elem = viewElem.find("." + prefix + componentId);
+      if (elem[0]) {
+        return elem;
+      }
       if (componentContent == jiant.input || componentContent == jiant.inputInt || componentContent == jiant.inputFloat
           || componentContent == jiant.inputDate) {
         elem = $("<input type='text'/>");
@@ -32,12 +43,15 @@ if (! window.jiant) {
         elem = $("<div>" + componentId + "</div>");
       } else if (componentContent == jiant.pager) {
         elem = $("<div>" + componentId + "</div>");
+      } else if (componentContent == jiant.image) {
+        elem = $("<img/>");
       } else {
         jiant.logError("Unsupported element type: " + componentContent);
         elem = $("<div>" + componentId + "</div>");
       }
       elem.attr("class", prefix + componentId + " jiant_elem");
       elem.attr("title", viewId + "." + componentId);
+      elem.attr("placeholder", viewId + "." + componentId);
       (viewElem.find(".jiant_tm")[0] ? viewElem.find(".jiant_tm") : viewElem) .append(elem);
       return elem;
     }
