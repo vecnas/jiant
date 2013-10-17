@@ -1,69 +1,74 @@
-// 0.01 : ajax alpha, views, templates
-// 0.02 : event bus
-// 0.03 : ajax with callback and errHandler per call
-// 0.04 : bind plugin
-// 0.05 : states
-// 0.06 : onUiBound event for anonymous plugins, empty hash state
-// 0.07 : crossdomain views load, setupForm check for form, pager update
-// 0.08 : broken for some ie cases, templates IE attribute quotes workaround from http://weblogs.asp.net/alexeigorkov/archive/2010/03/16/lazy-html-attributes-wrapping-in-internet-explorer.aspx
-// 0.09 : broken for some ie cases, templates IE redone, to avoid bug with "a=!!val!!" situation, isMSIE flag added
-// 0.10 : templates IE one more redone, attributes DOM manipulation, for templates parse, parse template starting with plain text by adding comment, template controls binding
-// 0.11: ajax url override for ajax calls via returning value from specification function
-// 0.12: return from submitForm, template parse results binding changed to merge of filter and find to support no-root templates, added propagate(data) function to views
-// 0.13: comment node removed from template parse results
-// 0.14: events[name].listenersCount++;
-// 0.15: parseInt for inputInt value arrow up
-// 0.16: state parameters - undefined replacement by current value properly, inputDate added, works when datepicker available, formatDate, formatTime added
-// 0.17: propagate "0" and "" passed as valid values
-// 0.18: default state "end" not triggered - fixed
-// 0.19: DEBUG_MODE added, state start vs trigger check in debug mode, event usage check in debug mode
-// 0.20: appId introduced
-// 0.21: root state not packed, go back not packed - fixed, propagate added to parseTemplate results
-// 0.22: onUiBound accepts both app and app.id as first param
-// 0.23: model initial auto-implementation added for method names "add", "remove", "setXXX", "getXXX", "findByXXX"; .xl added
-// 0.24: model modified, "set"/"get" replaced by single method xxx(optional_param), in jquery style, added global "on" event for any model change. incompatible with 0.23
-// 0.25: radio button handled properly in propagate function
-// 0.26: jiant.STATE_EXTERNAL_BASE added for navigation to another page in frames of state change, fixed multiple apps on a page mixing
-// 0.27: predefined model functions not created automatically more
-// 0.28: ajaxPrefix, ajaxSuffix, stateExternalBase per application for multi-app support
-// 0.28.1: minor fix for "" comparison
-// 0.29: refreshState() workaround for used History plugin timeout, states tuning, per app cross domain via flag for multiple app cross/noncross domain mix, form influenced by ajax pre/suff
-// 0.30: cross domain settings for submitForm
-// 0.31: addAll() method added to model with auto-wrap for all source object properties
-// 0.32: propagate() fixed for templates, propagate(model) with auto data binding added, customRenderer(elem, value, isUpdate) for view/template controls
-// 0.33: refreshTabs added to jiant.tabs, logInfo prints any amount of arguments
-// 0.34: override unsafe extended properties with user jiant specified
-// 0.35: customRenderer accepts 4 parameters: bound object, bound view, new field value, is update
-// 0.36: models.on fixed - fired for target object only, models.update() added
-// 0.37: provided implementation for model functions support
-// 0.38: models.updateAll, models.update.on triggered on addAll, AI on .update.on subscription to spec
-// 0.39: $.History replaced by $.hashchange usage
-// 0.40: triggering current state for later registered state handlers, logError accepts any amount of arguments, model events manipulations
-// 0.41: transact update() of models
-// 0.42: mixed case field name support by findByXXX, minor fixes
-// 0.43: default renderer handles missing view elements
-// 0.44: initial state switch fixed
-// 0.45: app.dirtyList added, app.appPrefix with new bindUi syntax added
-// 0.46: lfill made public
-// 0.47: added asaa/asap synonim functions to models for synchronization by value availability, added jiant.getCurrentState()
-// 0.48 global model .on() fixed, now works
-// 0.49 per view/template appPrefix support, for better cross-application integration, added version() function and override by latest version
-// 0.50 fixed multiple apps events/states intersection, still exists tracking bug with events/statesUsed for multiple apps
-// 0.51 fix for minor bug in 0.50 - no notification on state end for 2nd application on a page
-// 0.52 findByXXXAndYYYAndZZZ() support for models, find by several parameters, separated by And
-// 0.53 setXXXAndYYYAndZZZ(xxx, yyy, zzz) support for models, set several fields
-// 0.54 custom behaviour injection into model via functions with more than 1 argument and empty body
-// 0.55 reverted 0.54, added logic support, added shortenings for sections: (v)iews, (m)odels, (t)emplates, (e)vents, (a)jax, (s)tates, (l)ogic
-// 0.56 parseTemplate executes propagate, customRenderer accepts one more parameter - reference to parse result or view, double bindUi call notify, 0-len params on ajax call fix
-// 0.57 parseTemplate call without parameters supported
-// 0.58 dependency load logic via onUiBound parameter, every logic received .implement(obj) method, for implementation declaration, 0.55 logic behaviour cancelled
-// 0.59 asap() fixed, wrong params when value already set
-// 0.60 parseTemplate logs error to console on parse failure, inputInt: left/right keys enabled, added dot/comma keys, added inputFloat
-// 0.61 formatDate() independent from datepicker
-// 0.62 UiFactory extracted, it is possible to override it
-// 0.63 UiFactory updated, check for setUiFactory added, removed reporting of missing elements of already missing view
-// 0.64 UiFactory applied to template components via viewComponent() call
-// 0.65 parseState pack/unpack fixed (removed old seldom occuring bugs), data objects can be passed as state params from now
+/*
+0.01 : ajax alpha, views, templates
+0.02 : event bus
+0.03 : ajax with callback and errHandler per call
+0.04 : bind plugin
+0.05 : states
+0.06 : onUiBound event for anonymous plugins, empty hash state
+0.07 : crossdomain views load, setupForm check for form, pager update
+0.08 : broken for some ie cases, templates IE attribute quotes workaround from http:weblogs.asp.net/alexeigorkov/archive/2010/03/16/lazy-html-attributes-wrapping-in-internet-explorer.aspx
+0.09 : broken for some ie cases, templates IE redone, to avoid bug with "a=!!val!!" situation, isMSIE flag added
+0.10 : templates IE one more redone, attributes DOM manipulation, for templates parse, parse template starting with plain text by adding comment, template controls binding
+0.11: ajax url override for ajax calls via returning value from specification function
+0.12: return from submitForm, template parse results binding changed to merge of filter and find to support no-root templates, added propagate(data) function to views
+0.13: comment node removed from template parse results
+0.14: events[name].listenersCount++;
+0.15: parseInt for inputInt value arrow up
+0.16: state parameters - undefined replacement by current value properly, inputDate added, works when datepicker available, formatDate, formatTime added
+0.17: propagate "0" and "" passed as valid values
+0.18: default state "end" not triggered - fixed
+0.19: DEBUG_MODE added, state start vs trigger check in debug mode, event usage check in debug mode
+0.20: appId introduced
+0.21: root state not packed, go back not packed - fixed, propagate added to parseTemplate results
+0.22: onUiBound accepts both app and app.id as first param
+0.23: model initial auto-implementation added for method names "add", "remove", "setXXX", "getXXX", "findByXXX"; .xl added
+0.24: model modified, "set"/"get" replaced by single method xxx(optional_param), in jquery style, added global "on" event for any model change. incompatible with 0.23
+0.25: radio button handled properly in propagate function
+0.26: jiant.STATE_EXTERNAL_BASE added for navigation to another page in frames of state change, fixed multiple apps on a page mixing
+0.27: predefined model functions not created automatically more
+0.28: ajaxPrefix, ajaxSuffix, stateExternalBase per application for multi-app support
+0.28.1: minor fix for "" comparison
+0.29: refreshState() workaround for used History plugin timeout, states tuning, per app cross domain via flag for multiple app cross/noncross domain mix, form influenced by ajax pre/suff
+0.30: cross domain settings for submitForm
+0.31: addAll() method added to model with auto-wrap for all source object properties
+0.32: propagate() fixed for templates, propagate(model) with auto data binding added, customRenderer(elem, value, isUpdate) for view/template controls
+0.33: refreshTabs added to jiant.tabs, logInfo prints any amount of arguments
+0.34: override unsafe extended properties with user jiant specified
+0.35: customRenderer accepts 4 parameters: bound object, bound view, new field value, is update
+0.36: models.on fixed - fired for target object only, models.update() added
+0.37: provided implementation for model functions support
+0.38: models.updateAll, models.update.on triggered on addAll, AI on .update.on subscription to spec
+0.39: $.History replaced by $.hashchange usage
+0.40: triggering current state for later registered state handlers, logError accepts any amount of arguments, model events manipulations
+0.41: transact update() of models
+0.42: mixed case field name support by findByXXX, minor fixes
+0.43: default renderer handles missing view elements
+0.44: initial state switch fixed
+0.45: app.dirtyList added, app.appPrefix with new bindUi syntax added
+0.46: lfill made public
+0.47: added asaa/asap synonim functions to models for synchronization by value availability, added jiant.getCurrentState()
+0.48 global model .on() fixed, now works
+0.49 per view/template appPrefix support, for better cross-application integration, added version() function and override by latest version
+0.50 fixed multiple apps events/states intersection, still exists tracking bug with events/statesUsed for multiple apps
+0.51 fix for minor bug in 0.50 - no notification on state end for 2nd application on a page
+0.52 findByXXXAndYYYAndZZZ() support for models, find by several parameters, separated by And
+0.53 setXXXAndYYYAndZZZ(xxx, yyy, zzz) support for models, set several fields
+0.54 custom behaviour injection into model via functions with more than 1 argument and empty body
+0.55 reverted 0.54, added logic support, added shortenings for sections: (v)iews, (m)odels, (t)emplates, (e)vents, (a)jax, (s)tates, (l)ogic
+0.56 parseTemplate executes propagate, customRenderer accepts one more parameter - reference to parse result or view, double bindUi call notify, 0-len params on ajax call fix
+0.57 parseTemplate call without parameters supported
+0.58 dependency load logic via onUiBound parameter, every logic received .implement(obj) method, for implementation declaration, 0.55 logic behaviour cancelled
+0.59 asap() fixed, wrong params when value already set
+0.60 parseTemplate logs error to console on parse failure, inputInt: left/right keys enabled, added dot/comma keys, added inputFloat
+0.61 formatDate() independent from datepicker
+0.62 UiFactory extracted, it is possible to override it
+0.63 UiFactory updated, check for setUiFactory added, removed reporting of missing elements of already missing view
+0.64 UiFactory applied to template components via viewComponent() call
+0.65 parseState pack/unpack fixed (removed old seldom occuring bugs), data objects can be passed as state params from now
+0.66 models.add from now is same as models.addAll, not back compatible, added DEBUG_MODE.data switch,
+    updateAll now accepts 3 arguments: updateAll(arr, removeMissing, matcherCb), arr - could be single item or array,
+    removeMissing - is to remove missing elements (default false), matcherCb(elem1, elem2) - comparator, default - by id
+*/
 
 (function() {
   var
@@ -160,7 +165,8 @@
       return $.trim($(elem).html()).replace(/!!/g, "!! ").replace(/e2013e03e11eee /g, "!! ");
     }
 
-    function parseTemplate(that, data) {
+    function parseTemplate(that, data, tmId) {
+      debugData("Called parse template " + (tmId ? tmId : "") + " with data", data);
       data = data || {};
       var str = $.trim($(that).html()),
           _tmplCache = {},
@@ -244,22 +250,12 @@
       var tagName = elem[0].tagName.toLowerCase();
       if (tagName != "form") {
         jiant.logError(key + "." + name + " form element assigned to non-form: " + tagName);
-        if (jiant.DEV_MODE) {
-          alert(key + "." + name + " form element assigned to non-form: " + tagName);
-        }
+        jiant.DEV_MODE && alert(key + "." + name + " form element assigned to non-form: " + tagName);
       }
       elem.submitForm = function(url, cb) {
         url = url ? url : elem.attr("action");
-        if (appRoot.ajaxPrefix) {
-          url = appRoot.ajaxPrefix + url;
-        } else if (jiant.AJAX_PREFIX) {
-          url = jiant.AJAX_PREFIX = url;
-        }
-        if (appRoot.ajaxSuffix) {
-          url += appRoot.ajaxSuffix;
-        } else if (jiant.AJAX_SUFFIX) {
-          url += jiant.AJAX_SUFFIX;
-        }
+        url = (appRoot.ajaxPrefix ? appRoot.ajaxPrefix : jiant.AJAX_PREFIX ? jiant.AJAX_PREFIX : "") + url;
+        url = url + (appRoot.ajaxSuffix ? appRoot.ajaxSuffix : jiant.AJAX_SUFFIX ? jiant.AJAX_SUFFIX : "");
         var data = {
           type: "POST",
           url: url,
@@ -272,6 +268,7 @@
           data.xhrFields = {withCredentials: true};
           data.crossDomain = true;
         }
+        debugData("Submitting form", data);
         return $.ajax(data);
       };
     }
@@ -290,16 +287,21 @@
       }
     }
 
+    function debugData(s, obj) {
+      jiant.DEBUG_MODE.data && debug("   ---   " + s) && debug(obj);
+    }
+
+    function debugStates(s) {
+      jiant.DEBUG_MODE.states && debug("   ---   " + s);
+    }
+
+    function debugEvents(s) {
+      jiant.DEBUG_MODE.events && debug("   ---   " + s);
+    }
 
     function debug(s) {
       if (window.console && window.console.error) {
         window.console.error(s);
-//      var callerName = "not available";
-//      if (arguments && arguments.callee && arguments.callee.caller) {
-//        callerName = arguments.callee.caller.name;
-//        callerName && window.console.debug(callerName);
-//        arguments.callee.caller.caller && arguments.callee.caller.caller.name && window.console.debug(arguments.callee.caller.caller.name);
-//      }
         return true;
       } else {
         return false;
@@ -315,10 +317,8 @@
         pagerBus.on("ValueChange", callback);
       };
       uiElem.updatePager = function(page) {
+        debugData("Updating pager", page);
         root.empty();
-//      $.each(page, function(key, value) {
-//        logInfo(key + " === " + value);
-//      });
         var from = Math.max(0, page.number - jiant.PAGER_RADIUS / 2),
             to = Math.min(page.number + jiant.PAGER_RADIUS / 2, page.totalPages);
         if (from > 0) {
@@ -526,12 +526,13 @@
       return $.inArray(key, words) >= 0;
     }
 
-    function makePropagationFunction(spec, obj) {
+    function makePropagationFunction(viewId, spec, obj) {
       var map = {};
       $.each(spec, function (key, elem) {
         map[key] = elem;
       });
       return function(data, subscribe4updates) {
+        debugData("Propagating " + viewId + " with data", data);
         subscribe4updates = (subscribe4updates == undefined) ? true : subscribe4updates;
         $.each(map, function (key, elem) {
           if (data && data[key] != undefined && data[key] != null && ! isServiceName(key)) {
@@ -591,7 +592,7 @@
         var viewOk = ensureExists(prefix, appRoot.dirtyList, view, prefix + viewId);
         viewOk && _bindContent(appRoot, root[viewId], viewId, viewContent, view, prefix);
         ensureSafeExtend(root[viewId], view);
-        root[viewId].propagate = makePropagationFunction(viewContent, viewContent);
+        root[viewId].propagate = makePropagationFunction(viewId, viewContent, viewContent);
         $.extend(root[viewId], view);
         maybeAddDevHook(view, viewId, undefined);
       });
@@ -637,7 +638,7 @@
         });
         ensureExists(prefix, appRoot.dirtyList, tm, prefix + tmId);
         root[tmId].parseTemplate = function(data) {
-          var retVal = $("<!-- -->" + parseTemplate(tm, data)); // add comment to force jQuery to read it as HTML fragment
+          var retVal = $("<!-- -->" + parseTemplate(tm, data, tmId)); // add comment to force jQuery to read it as HTML fragment
           $.each(tmContent, function (elem, elemType) {
             if (elem != "parseTemplate" && elem != "parseTemplate2Text" && elem != "appPrefix") {
               retVal[elem] = $.merge(retVal.filter("." + prefix + elem), retVal.find("." + prefix + elem));
@@ -646,7 +647,7 @@
             }
           });
           retVal.splice(0, 1); // remove first comment
-          retVal.propagate = makePropagationFunction(tmContent, retVal);
+          retVal.propagate = makePropagationFunction(tmId, tmContent, retVal);
           data && retVal.propagate(data);
           return retVal;
         };
@@ -671,7 +672,7 @@
           cb && cb.apply(cb, [obj, val]);
         } else {
           obj._innerData.one(eventName, function () {
-            jiant.DEBUG_MODE.events && debug("called event handler: " + eventName + ", registered at " + trace);
+            debugEvents("called event handler: " + eventName + ", registered at " + trace);
             var args = $.makeArray(arguments);
             args.splice(0, 1);
             cb && cb.apply(cb, args);
@@ -697,7 +698,7 @@
           obj.listenersCount++;
         }
         eventObject.on(eventName, function () {
-          jiant.DEBUG_MODE.events && debug("called event handler: " + eventName + ", registered at " + trace);
+          debugEvents("called event handler: " + eventName + ", registered at " + trace);
           var args = $.makeArray(arguments);
           args.splice(0, 1);
 //        args.splice(0, 2);
@@ -721,6 +722,9 @@
         if (! spec.addAll) spec.addAll = function(val) {};
         if (! spec.update) spec.update = function(val) {};
         if (! spec.findById) spec.findById = function(val) {};
+      }
+      if (spec.updateAll) {
+        if (! spec.remove) spec.remove = function(elem) {};
       }
       if (! spec.update) {
         $.each(spec, function(fname, funcSpec) {
@@ -756,56 +760,45 @@
             $.each(toTrigger, function(key, val) {
               obj[key](obj[key](), true);
             });
+            debugData("Called update on model " + name + " with data", objFrom);
             if (smthChanged) {
-              jiant.DEBUG_MODE.events && debug("fire event: " + eventName);
+              debugEvents("fire event: " + eventName);
               jiant.DEBUG_MODE.events && (! eventsUsed[eventName]) && (eventsUsed[eventName] = 1);
               obj._innerData.trigger(eventName, obj);
               obj != spec && spec._innerData.trigger(eventName, obj);
-              jiant.DEBUG_MODE.events && debug("fire event: " + globalChangeEventName);
+              debugEvents("fire event: " + globalChangeEventName);
               jiant.DEBUG_MODE.events && (! eventsUsed[globalChangeEventName]) && (eventsUsed[globalChangeEventName] = 1);
               eventBus.trigger(globalChangeEventName, [obj, fname]);
             }
           };
           assignOnHandler(obj, eventName, fname);
         } else if (fname == "updateAll") {
-          obj[fname] = function(arr) {
-            function up(item) {
-              if (spec.id) {
-                var src = obj.findById(item.id);
-                src.length == 0 ? obj.addAll(item) : src[0].update(item);
-              } else {
-                obj.update(item);
-              }
-            }
-            if ($.isArray(arr)) {
-              $.each(arr, function(idx, item) {
-                up(item);
+          obj[fname] = function(arr, removeMissing, matcherCb) {
+            debugData("Called updateAll on model " + name + " with data", arr);
+            arr = $.isArray(arr) ? arr : [arr];
+            matcherCb = matcherCb ? matcherCb : function(modelObj, outerObj) {return modelObj.id ? modelObj.id() == outerObj.id : false;};
+            var toRemove = [];
+            $.each(storage, function(idx, oldItem) {
+              var matchingObj;
+              $.each(arr, function(idx, newItem) {
+                if (matcherCb(oldItem, newItem)) {
+                  matchingObj = newItem;
+                  return false;
+                }
+                return true;
               });
-            } else {
-              up(arr);
-            }
-          };
-          assignOnHandler(obj, eventName, fname);
-        } else if (fname == "add") {
-          var params = getParamNames(funcSpec);
-          obj[fname] = function() {
-            var newObj = {};
-            $.each(arguments, function(idx, arg) {
-              params[idx] && (newObj[fldPrefix + params[idx]] = arg);
+              !matchingObj && toRemove.push(oldItem);
+              matchingObj && oldItem.update(matchingObj);
             });
-            storage.push(newObj);
-            bindFunctions(name, spec, newObj, appId);
-            jiant.DEBUG_MODE.events && debug("fire event: " + eventName);
-            jiant.DEBUG_MODE.events && (! eventsUsed[eventName]) && (eventsUsed[eventName] = 1);
-            obj._innerData.trigger(eventName, newObj);
-            jiant.DEBUG_MODE.events && debug("fire event: " + globalChangeEventName);
-            jiant.DEBUG_MODE.events && (! eventsUsed[globalChangeEventName]) && (eventsUsed[globalChangeEventName] = 1);
-            eventBus.trigger(globalChangeEventName, [newObj, fname]);
-            return newObj;
+            $.each(toRemove, function(idx, item) {
+              obj.remove(item);
+            });
           };
           assignOnHandler(obj, eventName, fname);
-        } else if (fname == "addAll") {
+        } else if (fname == "addAll" || fname == "add") {
           obj[fname] = function(arr) {
+            debugData("Called " + fname + " on model " + name + " with data", arr);
+            arr = $.isArray(arr) ? arr : [arr];
             var newArr = [];
             function fn(item) {
               var newObj = {};
@@ -817,26 +810,18 @@
 //              newObj[fldPrefix + name] = param;
               });
             }
-            if ($.isArray(arr)) {
-              $.each(arr, function(idx, item) {
-                fn(item);
-              });
-            } else {
-              fn(arr);
-            }
-            jiant.DEBUG_MODE.events && debug("fire event: " + eventName);
+            $.each(arr, function(idx, item) {
+              fn(item);
+            });
+            debugEvents("fire event: " + eventName);
             jiant.DEBUG_MODE.events && (! eventsUsed[eventName]) && (eventsUsed[eventName] = 1);
             obj._innerData.trigger(eventName, [newArr]);
-            jiant.DEBUG_MODE.events && debug("fire event: " + globalChangeEventName);
+            debugEvents("fire event: " + globalChangeEventName);
             jiant.DEBUG_MODE.events && (! eventsUsed[globalChangeEventName]) && (eventsUsed[globalChangeEventName] = 1);
             eventBus.trigger(globalChangeEventName, [newArr, fname]);
-            if ($.isArray(arr)) {
-              $.each(arr, function(idx, item) {
-                newArr[idx].update && newArr[idx].update(item); // todo: replace by just trigger update event
-              });
-            } else {
-              newArr.update && newArr.update(arr); // todo: replace by just trigger update event
-            }
+            $.each(arr, function(idx, item) {
+              newArr[idx].update && newArr[idx].update(item); // todo: replace by just trigger update event
+            });
             return newArr;
           };
           assignOnHandler(obj, eventName, fname);
@@ -845,10 +830,10 @@
             var prevLen = storage.length;
             storage = $.grep(storage, function(value) {return value != elem;});
             if (storage.length != prevLen) {
-              jiant.DEBUG_MODE.events && debug("fire event: " + eventName);
+              debugEvents("fire event: " + eventName);
               jiant.DEBUG_MODE.events && (! eventsUsed[eventName]) && (eventsUsed[eventName] = 1);
               obj._innerData.trigger(eventName, elem);
-              jiant.DEBUG_MODE.events && debug("fire event: " + globalChangeEventName);
+              debugEvents("fire event: " + globalChangeEventName);
               jiant.DEBUG_MODE.events && (! eventsUsed[globalChangeEventName]) && (eventsUsed[globalChangeEventName] = 1);
               eventBus.trigger(globalChangeEventName, [elem, fname]);
             }
@@ -890,12 +875,12 @@
             } else {
               if (forceEvent || (obj[fieldName] !== val && forceEvent !== false)) {
                 obj[fieldName] = val;
-                jiant.DEBUG_MODE.events && debug("fire event: " + eventName);
+                debugEvents("fire event: " + eventName);
                 jiant.DEBUG_MODE.events && (! eventsUsed[eventName]) && (eventsUsed[eventName] = 1);
                 obj._innerData.trigger(eventName, [obj, val]);
                 obj != spec && spec._innerData.trigger(eventName, [obj, val]);
 //              jiant.logInfo(fieldName, obj[fieldName], val, obj != spec);
-                jiant.DEBUG_MODE.events && debug("fire event: " + globalChangeEventName);
+                debugEvents("fire event: " + globalChangeEventName);
                 jiant.DEBUG_MODE.events && (! eventsUsed[globalChangeEventName]) && (eventsUsed[globalChangeEventName] = 1);
                 eventBus.trigger(globalChangeEventName, [obj, fname, val]);
               } else {
@@ -969,7 +954,7 @@
         logInfo("binding event: " + name);
         events[name].listenersCount = 0;
         events[name].fire = function() {
-          jiant.DEBUG_MODE.events && debug("fire event: " + name);
+          debugEvents("fire event: " + name);
           jiant.DEBUG_MODE.events && (! eventsUsed[name]) && (eventsUsed[name] = 1);
           eventBus.trigger(appId + name + ".event", arguments);
         };
@@ -982,7 +967,7 @@
           }
           events[name].listenersCount++;
           eventBus.on(appId + name + ".event", function () {
-            jiant.DEBUG_MODE.events && debug("called event handler: " + name + ", registered at " + trace);
+            debugEvents("called event handler: " + name + ", registered at " + trace);
             var args = $.makeArray(arguments);
             args.splice(0, 1);
             cb && cb.apply(cb, args);
@@ -1013,7 +998,7 @@
             trace = getStackTrace();
           }
           eventBus.on(appId + "state_" + name + "_start", function() {
-            jiant.DEBUG_MODE.states && debug("called state start handler: " + appId + name + ", registered at " + trace);
+            debugStates("called state start handler: " + appId + name + ", registered at " + trace);
             var args = $.makeArray(arguments);
             args.splice(0, 1);
             cb && cb.apply(cb, args);
@@ -1033,7 +1018,7 @@
             trace = getStackTrace();
           }
           eventBus.on(appId + "state_" + name + "_end", function() {
-            jiant.DEBUG_MODE.states && debug("called state end handler: " + appId + name + ", registered at " + trace);
+            debugStates("called state end handler: " + appId + name + ", registered at " + trace);
             var args = $.makeArray(arguments);
             args.splice(0, 1);
             cb && cb.apply(cb, args);
@@ -1054,12 +1039,12 @@
           }
         });
         if (lastStates[appId] != undefined && lastStates[appId] != stateId) {
-          jiant.DEBUG_MODE.states && debug("trigger state end: " + appId + (lastStates[appId] ? lastStates[appId] : ""));
+          debugStates("trigger state end: " + appId + (lastStates[appId] ? lastStates[appId] : ""));
           eventBus.trigger(appId + "state_" + lastStates[appId] + "_end");
         }
         lastStates[appId] = stateId;
         stateId = (stateId ? stateId : "");
-        jiant.DEBUG_MODE.states && debug("trigger state start: " + appId + stateId);
+        debugStates("trigger state start: " + appId + stateId);
         jiant.DEBUG_MODE.states && (! statesUsed[appId + stateId]) && (statesUsed[appId + stateId] = 1);
         eventBus.trigger(appId + "state_" + stateId + "_start", params);
       });
@@ -1071,6 +1056,7 @@
         var parsed = parseState(),
             prevState = parsed.now;
         parsed.now = [stateId];
+        debugData("Going to state " + stateId + " with data", arguments);
         $.each(arguments, function(idx, arg) {
           if (arg != undefined) {
             parsed.now.push(pack(arg));
@@ -1251,7 +1237,7 @@
               data = $.parseJSON(data);
             } catch (ex) {
             }
-            jiant.DEBUG_MODE.ajax && debug("Ajax call results for uri " + uri) && debug(data);
+            jiant.DEBUG_MODE.ajax && debug("   ---   Ajax call results for uri " + uri) && debug(data);
             callback(data);
           }
         }, error: function (jqXHR, textStatus, errorText) {
@@ -1292,6 +1278,9 @@
       }
       if ((window.location + "").toLowerCase().indexOf("jiant.debug_ajax") >= 0) {
         jiant.DEBUG_MODE.ajax = 1;
+      }
+      if ((window.location + "").toLowerCase().indexOf("jiant.debug_data") >= 0) {
+        jiant.DEBUG_MODE.data = 1;
       }
     }
 
@@ -1429,7 +1418,7 @@
     }
 
     function version() {
-      return 65;
+      return 66;
     }
 
     return {
@@ -1439,7 +1428,8 @@
       DEBUG_MODE: {
         states: 0,
         events: 0,
-        ajax: 0
+        ajax: 0,
+        data: 0
       },
       PAGER_RADIUS: 6,
       isMSIE: eval("/*@cc_on!@*/!1"),
