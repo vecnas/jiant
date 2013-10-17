@@ -68,6 +68,7 @@
 0.66 models.add from now is same as models.addAll, not back compatible, added DEBUG_MODE.data switch,
     updateAll now accepts 3 arguments: updateAll(arr, removeMissing, matcherCb), arr - could be single item or array,
     removeMissing - is to remove missing elements (default false), matcherCb(elem1, elem2) - comparator, default - by id
+0.67 updateAll fixed - addAll() call added for new elements
 */
 
 (function() {
@@ -719,11 +720,11 @@
       var storage = [],
           fldPrefix = "fld_prefix_";
       if (spec.updateAll && spec.id) {
-        if (! spec.addAll) spec.addAll = function(val) {};
         if (! spec.update) spec.update = function(val) {};
         if (! spec.findById) spec.findById = function(val) {};
       }
       if (spec.updateAll) {
+        if (! spec.addAll) spec.addAll = function(val) {};
         if (! spec.remove) spec.remove = function(elem) {};
       }
       if (! spec.update) {
@@ -778,6 +779,8 @@
             arr = $.isArray(arr) ? arr : [arr];
             matcherCb = matcherCb ? matcherCb : function(modelObj, outerObj) {return modelObj.id ? modelObj.id() == outerObj.id : false;};
             var toRemove = [];
+            var toAdd = [];
+            $.each(arr, function(idx, item) {toAdd.push(item);});
             $.each(storage, function(idx, oldItem) {
               var matchingObj;
               $.each(arr, function(idx, newItem) {
@@ -788,11 +791,13 @@
                 return true;
               });
               !matchingObj && toRemove.push(oldItem);
+              matchingObj && toAdd.remove(matchingObj);
               matchingObj && oldItem.update(matchingObj);
             });
             $.each(toRemove, function(idx, item) {
               obj.remove(item);
             });
+            obj.addAll(toAdd);
           };
           assignOnHandler(obj, eventName, fname);
         } else if (fname == "addAll" || fname == "add") {
@@ -1418,7 +1423,7 @@
     }
 
     function version() {
-      return 66;
+      return 67;
     }
 
     return {
