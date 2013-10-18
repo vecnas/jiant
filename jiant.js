@@ -69,6 +69,7 @@
     updateAll now accepts 3 arguments: updateAll(arr, removeMissing, matcherCb), arr - could be single item or array,
     removeMissing - is to remove missing elements (default false), matcherCb(elem1, elem2) - comparator, default - by id
 0.67 updateAll fixed - addAll() call added for new elements
+0.68 fixed - state.go() ignored set of undefined params to previous state values, when they are on the tail
 */
 
 (function() {
@@ -1071,6 +1072,12 @@
             parsed.now.push(pack(arg));
           }
         });
+        if (prevState) {
+          var argLen = arguments.length;
+          while (argLen < prevState.length - 1) {
+            parsed.now.push(pack(prevState[++argLen]));
+          }
+        }
         if (root) {
           parsed.root = [];
           $.each(parsed.now, function(idx, param) {
@@ -1423,7 +1430,7 @@
     }
 
     function version() {
-      return 67;
+      return 68;
     }
 
     return {
