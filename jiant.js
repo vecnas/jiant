@@ -70,6 +70,7 @@
     removeMissing - is to remove missing elements (default false), matcherCb(elem1, elem2) - comparator, default - by id
 0.67 updateAll fixed - addAll() call added for new elements
 0.68 fixed - state.go() ignored set of undefined params to previous state values, when they are on the tail
+0.69 propagate() calls customRenderer() for all view elements with customRenderer assigned
 */
 
 (function() {
@@ -537,7 +538,7 @@
         debugData("Propagating " + viewId + " with data", data);
         subscribe4updates = (subscribe4updates == undefined) ? true : subscribe4updates;
         $.each(map, function (key, elem) {
-          if (data && data[key] != undefined && data[key] != null && ! isServiceName(key)) {
+          if (spec[key].customRenderer || (data && data[key] != undefined && data[key] != null && ! isServiceName(key))) {
             var val = data[key];
             elem = obj[key];
             if ($.isFunction(val)) {
@@ -1430,7 +1431,7 @@
     }
 
     function version() {
-      return 68;
+      return 69;
     }
 
     return {
