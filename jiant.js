@@ -72,7 +72,8 @@
  0.68 fixed - state.go() ignored set of undefined params to previous state values, when they are on the tail
  0.69 propagate() calls customRenderer() for all view elements with customRenderer assigned
  0.70 model updateAll fixed, removeMissing not used fixed
- */
+ 0.71 jiant.meta added - field annotated with meta skipped during binding and used by application for metainformation
+*/
 
 (function() {
   var
@@ -113,6 +114,7 @@
             inputFloat = {},
             inputDate = {},
             label = {},
+            meta = {},
             lookup = function(selector) {},
             on = function(cb) {},
             goState = function(params, preserveOmitted) {},
@@ -422,6 +424,8 @@
               if (viewRoot[componentId] == jiant.lookup) {
                 jiant.logInfo("    loookup element, no checks/bindings: " + componentId);
                 viewRoot[componentId] = function() {return viewElem.find("." + prefix + componentId);};
+              } else if (viewRoot[componentId] == jiant.meta) {
+                //skipping, app meta info
               } else {
                 var uiElem = uiFactory.viewComponent(viewElem, viewId, prefix, componentId, componentContent);
                 ensureExists(prefix, appRoot.dirtyList, uiElem, prefix + viewId, prefix + componentId);
@@ -631,13 +635,20 @@
             var prefix = tmContent.appPrefix ? tmContent.appPrefix : (pfx ? pfx : "");
             jiant.logInfo("binding UI for template: " + tmId + " using prefix " + prefix);
             var tm = appUiFactory.template(prefix, tmId, tmContent);
-            $.each(tmContent, function (elem, elemType) {
-              if (elem != "appPrefix") {
-                var comp = appUiFactory.viewComponent(tm, tmId, prefix, elem, elemType);
-                ensureExists(prefix, appRoot.dirtyList, comp, prefix + tmId, prefix + elem);
-                var innerTmKey = calcInnerTmKey(tmContent[elem]);
-                tmContent[elem] = {};
-                tmContent[elem][innerTmKey] = true;
+            $.each(tmContent, function (componentId, elemType) {
+              if (componentId != "appPrefix") {
+                if (tmContent[componentId] == jiant.lookup) {
+                  jiant.logInfo("    loookup element, no checks/bindings: " + componentId);
+                  tmContent[componentId] = function() {return tmContent.find("." + prefix + componentId);};
+                } else if (tmContent[componentId] == jiant.meta) {
+                  //skipping, app meta info
+                } else {
+                  var comp = appUiFactory.viewComponent(tm, tmId, prefix, componentId, elemType);
+                  ensureExists(prefix, appRoot.dirtyList, comp, prefix + tmId, prefix + componentId);
+                  var innerTmKey = calcInnerTmKey(tmContent[componentId]);
+                  tmContent[componentId] = {};
+                  tmContent[componentId][innerTmKey] = true;
+                }
               }
             });
             ensureExists(prefix, appRoot.dirtyList, tm, prefix + tmId);
@@ -1433,7 +1444,7 @@
         }
 
         function version() {
-          return 70;
+          return 71;
         }
 
         return {
@@ -1483,6 +1494,7 @@
           inputInt: inputInt,
           inputFloat: inputFloat,
           label: label,
+          meta: meta,
           lfill: lfill,
           lookup: lookup,
           on: on,
