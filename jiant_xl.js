@@ -14,6 +14,7 @@
 // xl.0.10 statefulViews autohides bound views on initialization
 // xl.0.11 pagedContent notification about wrong arguments
 // xl.0.12 statefulApp accepts 3rd optional argument: defaultState to go from empty state
+// xl.0.13 saveCtl fix: event object was added
 
 (function() {
 
@@ -180,11 +181,11 @@
       return function() {
         markerElem = markerElem ? markerElem : ctl;
         markerText = markerText ? markerText : "saving";
-        ctl.click(function() {
+        ctl.click(function(event) {
           var prevLabel = markerElem.html();
           ctl.attr("disabled", "disabled");
           markerElem.html(markerText);
-          saveFn(function () {
+          saveFn(event, function () {
             ctl.attr("disabled", null);
             markerElem.html(prevLabel);
           });
