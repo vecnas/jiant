@@ -185,10 +185,10 @@
           var prevLabel = markerElem.html();
           ctl.attr("disabled", "disabled");
           markerElem.html(markerText);
-          saveFn(event, function () {
+          saveFn(function () {
             ctl.attr("disabled", null);
             markerElem.html(prevLabel);
-          });
+          }, event);
         });
       };
     },
