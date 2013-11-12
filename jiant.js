@@ -137,6 +137,7 @@
             awaitingDepends = {},
             eventBus = $({}),
             uiBoundRoot = {},
+            onInitAppActions = [],
             uiFactory = new DefaultUiFactory(),
             statesUsed = {},
             eventsUsed = {};
@@ -1347,8 +1348,10 @@
           maybeShort(root, "logic", "l") && _bindLogic(root.logic, appId);
           jiant.DEV_MODE && !bindingsResult && alert("Some elements not bound to HTML properly, check console" + errString);
           uiBoundRoot[appId] = root;
-          var eventId = appId + "jiant_uiBound_" + appId;
-          eventBus.trigger(eventId);
+          var uiIsBoundEvent = appId + "jiant_uiBound_" + appId;
+          var appIsInitEvent = appId + "jiant_appInit_" + appId;
+          eventBus.trigger(appIsInitEvent);
+          $.when.apply($, onInitAppActions).done(function() {eventBus.trigger(uiIsBoundEvent)});
 //    refreshState();
         }
 
@@ -1428,6 +1431,19 @@
           }
         }
 
+        function onInitCompleted(appId, cb) {
+          var deferred = new $.Deferred();
+          onInitAppActions.push(deferred.promise());
+          if (uiBoundRoot[appId]) {
+            cb && cb($, uiBoundRoot[appId]);
+          } else {
+            var eventId = appId + "jiant_appInit_" + appId;
+            eventBus.on(eventId, function () {
+              cb && cb($, uiBoundRoot[appId], deferred);
+            });
+          }
+        }
+
         function getAwaitingDepends() {
           return awaitingDepends;
         }
@@ -1467,6 +1483,7 @@
           goRoot: goRoot,
           goState: goState,
           onUiBound: onUiBound,
+          onInitCompleted: onInitCompleted,
           refreshState: refreshState,
           getCurrentState: getCurrentState,
           setUiFactory: setUiFactory,

@@ -20,6 +20,8 @@ var helloJiant = helloJiant || (function(jiant) {
 
   return {
 
+    id: "helloJiant",
+
     ajax: {
 
       getData: function(cb) {},
