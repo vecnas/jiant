@@ -1349,7 +1349,7 @@
           jiant.DEV_MODE && !bindingsResult && alert("Some elements not bound to HTML properly, check console" + errString);
           uiBoundRoot[appId] = root;
           var uiIsBoundEvent = appId + "jiant_uiBound_" + appId;
-          var appIsInitEvent = appId + "jiant_appInit_" + appId;
+          var appIsInitEvent = appId + "initializingApp" + appId;
           eventBus.trigger(appIsInitEvent);
           $.when.apply($, onInitAppActions).done(function() {eventBus.trigger(uiIsBoundEvent)});
 //    refreshState();
@@ -1431,15 +1431,18 @@
           }
         }
 
-        function onInitCompleted(appId, cb) {
+        function initializingApp(appId, cb) {
           var deferred = new $.Deferred();
           onInitAppActions.push(deferred.promise());
+          var readyCb = function() {
+            deferred.resolve();
+          };
           if (uiBoundRoot[appId]) {
-            cb && cb($, uiBoundRoot[appId]);
+            cb && cb($, uiBoundRoot[appId], readyCb);
           } else {
-            var eventId = appId + "jiant_appInit_" + appId;
+            var eventId = appId + "initializingApp" + appId;
             eventBus.on(eventId, function () {
-              cb && cb($, uiBoundRoot[appId], deferred);
+              cb && cb($, uiBoundRoot[appId], readyCb);
             });
           }
         }
@@ -1483,7 +1486,7 @@
           goRoot: goRoot,
           goState: goState,
           onUiBound: onUiBound,
-          onInitCompleted: onInitCompleted,
+          initializingApp: initializingApp,
           refreshState: refreshState,
           getCurrentState: getCurrentState,
           setUiFactory: setUiFactory,
