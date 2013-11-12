@@ -73,6 +73,7 @@
  0.69 propagate() calls customRenderer() for all view elements with customRenderer assigned
  0.70 model updateAll fixed, removeMissing not used fixed
  0.71 jiant.meta added - field annotated with meta skipped during binding and used by application for metainformation
+ 0.72 lfill and format functions improved, basing on tests
 */
 
 (function() {
@@ -141,23 +142,29 @@
             statesUsed = {},
             eventsUsed = {};
 
+        function toDate(val) {
+          var num = Number(val);
+          return ((num === 0 && val !== 0 && val !== "0") || isNaN(num)) ? null : new Date(num);
+        }
+
         function formatDate(millis) {
-          var dt = new Date(millis);
-          return lfill(dt.getFullYear()) + "-" + lfill(dt.getMonth()) + "-" + lfill(dt.getDate());
+          var dt = toDate(millis);
+          return dt == null ? "" : lfill(dt.getFullYear()) + "-" + lfill(dt.getMonth()) + "-" + lfill(dt.getDate());
         }
 
         function formatTime(millis) {
-          var dt = new Date(millis);
-          return lfill(dt.getHours()) + ":" + lfill(dt.getMinutes());
+          var dt = toDate(millis);
+          return dt == null ? "" : lfill(dt.getHours()) + ":" + lfill(dt.getMinutes());
         }
 
         function formatTimeSeconds(millis) {
-          var dt = new Date(millis);
-          return lfill(dt.getHours()) + ":" + lfill(dt.getMinutes()) + ":" + lfill(dt.getSeconds());
+          var dt = toDate(millis);
+          return dt == null ? "" : lfill(dt.getHours()) + ":" + lfill(dt.getMinutes()) + ":" + lfill(dt.getSeconds());
         }
 
         function lfill(val) {
-          return val < 10 ? "0" + val : val;
+          val = "" + val;
+          return val.length == 0 ? "00" : val.length == 1 ? "0" + val : val;
         }
 
         function msieDom2Html(elem) {
@@ -1444,7 +1451,7 @@
         }
 
         function version() {
-          return 71;
+          return 72;
         }
 
         return {
@@ -1478,15 +1485,17 @@
           parseTemplate2Text: parseTemplate2Text,
           version: version,
 
+          formatDate: formatDate,
+          formatTime: formatTime,
+          formatTimeSeconds: formatTimeSeconds,
+          lfill: lfill,
+
           collection: collection,
           container: container,
           containerPaged: containerPaged,
           ctl : ctl,
           fn: fn,
           form: form,
-          formatDate: formatDate,
-          formatTime: formatTime,
-          formatTimeSeconds: formatTimeSeconds,
           grid: grid,
           image: image,
           input: input,
@@ -1495,7 +1504,6 @@
           inputFloat: inputFloat,
           label: label,
           meta: meta,
-          lfill: lfill,
           lookup: lookup,
           on: on,
           pager: pager,
