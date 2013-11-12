@@ -74,6 +74,7 @@
  0.70 model updateAll fixed, removeMissing not used fixed
  0.71 jiant.meta added - field annotated with meta skipped during binding and used by application for metainformation
  0.72 lfill and format functions improved, basing on tests
+ 0.73 extra update event calls removed
 */
 
 (function() {
@@ -780,7 +781,7 @@
                   }
                 });
                 $.each(toTrigger, function(key, val) {
-                  obj[key](obj[key](), true);
+                  obj[key](obj[key](), true, true);
                 });
                 debugData("Called update on model " + name + " with data", objFrom);
                 if (smthChanged) {
@@ -895,7 +896,7 @@
               }
             } else if (isEmptyFunction(funcSpec) || spec._innerData[fname]) {
               spec._innerData[fname] = true;
-              obj[fname] = function(val, forceEvent) {
+              obj[fname] = function(val, forceEvent, dontFireUpdate) {
                 var fieldName = fldPrefix + fname;
                 if (arguments.length == 0) {
                   return obj[fieldName];
@@ -907,9 +908,11 @@
                     obj._innerData.trigger(eventName, [obj, val]);
                     obj != spec && spec._innerData.trigger(eventName, [obj, val]);
 //              jiant.logInfo(fieldName, obj[fieldName], val, obj != spec);
-                    debugEvents("fire event: " + globalChangeEventName);
-                    jiant.DEBUG_MODE.events && (! eventsUsed[globalChangeEventName]) && (eventsUsed[globalChangeEventName] = 1);
-                    eventBus.trigger(globalChangeEventName, [obj, fname, val]);
+                    if (! dontFireUpdate) {
+                      debugEvents("fire event: " + globalChangeEventName);
+                      jiant.DEBUG_MODE.events && (! eventsUsed[globalChangeEventName]) && (eventsUsed[globalChangeEventName] = 1);
+                      eventBus.trigger(globalChangeEventName, [obj, fname, val]);
+                    }
                   } else {
                     obj[fieldName] = val;
                   }
@@ -1451,7 +1454,7 @@
         }
 
         function version() {
-          return 72;
+          return 73;
         }
 
         return {
