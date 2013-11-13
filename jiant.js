@@ -75,6 +75,7 @@
  0.71 jiant.meta added - field annotated with meta skipped during binding and used by application for metainformation
  0.72 lfill and format functions improved, basing on tests
  0.73 extra update event calls removed
+ 0.74 onInitApp callback was added
 */
 
 (function() {
@@ -1473,7 +1474,7 @@
         }
 
         function version() {
-          return 73;
+          return 74;
         }
 
         return {

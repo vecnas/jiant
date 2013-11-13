@@ -1,14 +1,15 @@
 jiant.onAppInit("initAppTest", function ($, app, readyCb) {
+  ok(1, "Slow part of initialization...");
 
   setTimeout(function () {
-    alert("Slow part of initialization...");
+    app.someInitValue = "test";
+//    alert("Slow part of initialization... completed");
     readyCb();
-  }, 5000)
+  }, 3000)
 });
 
 jiant.onAppInit("initAppTest", function ($, app, readyCb) {
-
-  alert("Fast part of initialization...");
+  ok(1, "Fast part of initialization...");
   readyCb();
 
 });
