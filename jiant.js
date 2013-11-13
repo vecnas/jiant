@@ -1348,10 +1348,10 @@
           maybeShort(root, "logic", "l") && _bindLogic(root.logic, appId);
           jiant.DEV_MODE && !bindingsResult && alert("Some elements not bound to HTML properly, check console" + errString);
           uiBoundRoot[appId] = root;
-          var uiIsBoundEvent = appId + "jiant_uiBound_" + appId;
-          var appIsInitEvent = appId + "initializingApp" + appId;
-          eventBus.trigger(appIsInitEvent);
-          $.when.apply($, onInitAppActions).done(function() {eventBus.trigger(uiIsBoundEvent)});
+          var uiBoundEvent = appId + "jiant_uiBound_" + appId;
+          var appInitEvent = appId + "onAppInit" + appId;
+          eventBus.trigger(appInitEvent);
+          $.when.apply($, onInitAppActions).done(function() {eventBus.trigger(uiBoundEvent)});
 //    refreshState();
         }
 
@@ -1431,16 +1431,16 @@
           }
         }
 
-        function initializingApp(appId, cb) {
+        function onAppInit(appId, cb) {
           var deferred = new $.Deferred();
           onInitAppActions.push(deferred.promise());
           var readyCb = function() {
             deferred.resolve();
           };
           if (uiBoundRoot[appId]) {
-            cb && cb($, uiBoundRoot[appId], readyCb);
+            jiant.logError("Defining and calling onUiBound() before onAppInit().");
           } else {
-            var eventId = appId + "initializingApp" + appId;
+            var eventId = appId + "onAppInit" + appId;
             eventBus.on(eventId, function () {
               cb && cb($, uiBoundRoot[appId], readyCb);
             });
@@ -1486,7 +1486,7 @@
           goRoot: goRoot,
           goState: goState,
           onUiBound: onUiBound,
-          initializingApp: initializingApp,
+          onAppInit: onAppInit,
           refreshState: refreshState,
           getCurrentState: getCurrentState,
           setUiFactory: setUiFactory,
