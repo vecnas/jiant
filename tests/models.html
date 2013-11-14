@@ -13,7 +13,7 @@
   <script src="../jiant.js"></script>
 
   <script>
-
+    jiant.DEBUG_MODE.events = 1;
     module("models");
 
     test("singleton update handlers test", function() {
@@ -29,7 +29,6 @@
           }
         }
       };
-      jiant.bindUi(tstApp);
       jiant.onUiBound(tstApp, function($, app) {
         var tst = app.models.tst;
         tst.on(function(obj, val) {
@@ -52,6 +51,7 @@
         equal(tst.id(), "23", "model.id value after .update(fld, val) call");
         equal(tst.fld(), "val", "model.fld value after .update(fld, val) call");
       });
+      jiant.bindUi(tstApp, true);
     });
 
   </script>

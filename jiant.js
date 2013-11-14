@@ -787,13 +787,15 @@
                 });
                 debugData("Called update on model " + name + " with data", objFrom);
                 if (smthChanged) {
-                  debugEvents("fire event: " + eventName);
-                  jiant.DEBUG_MODE.events && (! eventsUsed[eventName]) && (eventsUsed[eventName] = 1);
-                  obj._innerData.trigger(eventName, obj);
-                  obj != spec && spec._innerData.trigger(eventName, obj);
-                  debugEvents("fire event: " + globalChangeEventName);
-                  jiant.DEBUG_MODE.events && (! eventsUsed[globalChangeEventName]) && (eventsUsed[globalChangeEventName] = 1);
-                  eventBus.trigger(globalChangeEventName, [obj, fname]);
+                  onUiBound(appId, function() {
+                    debugEvents("fire event: " + eventName);
+                    jiant.DEBUG_MODE.events && (! eventsUsed[eventName]) && (eventsUsed[eventName] = 1);
+                    obj._innerData.trigger(eventName, obj);
+                    obj != spec && spec._innerData.trigger(eventName, obj);
+                    debugEvents("fire event: " + globalChangeEventName);
+                    jiant.DEBUG_MODE.events && (! eventsUsed[globalChangeEventName]) && (eventsUsed[globalChangeEventName] = 1);
+                    eventBus.trigger(globalChangeEventName, [obj, fname]);
+                  });
                 }
               };
               assignOnHandler(obj, eventName, fname);
@@ -843,12 +845,14 @@
                 $.each(arr, function(idx, item) {
                   fn(item);
                 });
-                debugEvents("fire event: " + eventName);
-                jiant.DEBUG_MODE.events && (! eventsUsed[eventName]) && (eventsUsed[eventName] = 1);
-                obj._innerData.trigger(eventName, [newArr]);
-                debugEvents("fire event: " + globalChangeEventName);
-                jiant.DEBUG_MODE.events && (! eventsUsed[globalChangeEventName]) && (eventsUsed[globalChangeEventName] = 1);
-                eventBus.trigger(globalChangeEventName, [newArr, fname]);
+                onUiBound(appId, function () {
+                  debugEvents("fire event: " + eventName);
+                  jiant.DEBUG_MODE.events && (!eventsUsed[eventName]) && (eventsUsed[eventName] = 1);
+                  obj._innerData.trigger(eventName, [newArr]);
+                  debugEvents("fire event: " + globalChangeEventName);
+                  jiant.DEBUG_MODE.events && (!eventsUsed[globalChangeEventName]) && (eventsUsed[globalChangeEventName] = 1);
+                  eventBus.trigger(globalChangeEventName, [newArr, fname]);
+                });
                 $.each(arr, function(idx, item) {
                   newArr[idx].update && newArr[idx].update(item); // todo: replace by just trigger update event
                 });
@@ -860,12 +864,14 @@
                 var prevLen = storage.length;
                 storage = $.grep(storage, function(value) {return value != elem;});
                 if (storage.length != prevLen) {
-                  debugEvents("fire event: " + eventName);
-                  jiant.DEBUG_MODE.events && (! eventsUsed[eventName]) && (eventsUsed[eventName] = 1);
-                  obj._innerData.trigger(eventName, elem);
-                  debugEvents("fire event: " + globalChangeEventName);
-                  jiant.DEBUG_MODE.events && (! eventsUsed[globalChangeEventName]) && (eventsUsed[globalChangeEventName] = 1);
-                  eventBus.trigger(globalChangeEventName, [elem, fname]);
+                  onUiBound(appId, function() {
+                    debugEvents("fire event: " + eventName);
+                    jiant.DEBUG_MODE.events && (! eventsUsed[eventName]) && (eventsUsed[eventName] = 1);
+                    obj._innerData.trigger(eventName, elem);
+                    debugEvents("fire event: " + globalChangeEventName);
+                    jiant.DEBUG_MODE.events && (! eventsUsed[globalChangeEventName]) && (eventsUsed[globalChangeEventName] = 1);
+                    eventBus.trigger(globalChangeEventName, [elem, fname]);
+                  });
                 }
                 return elem;
               };
@@ -904,17 +910,19 @@
                   return obj[fieldName];
                 } else {
                   if (forceEvent || (obj[fieldName] !== val && forceEvent !== false)) {
-                    obj[fieldName] = val;
-                    debugEvents("fire event: " + eventName);
-                    jiant.DEBUG_MODE.events && (! eventsUsed[eventName]) && (eventsUsed[eventName] = 1);
-                    obj._innerData.trigger(eventName, [obj, val]);
-                    obj != spec && spec._innerData.trigger(eventName, [obj, val]);
-//              jiant.logInfo(fieldName, obj[fieldName], val, obj != spec);
-                    if (! dontFireUpdate) {
-                      debugEvents("fire event: " + globalChangeEventName);
-                      jiant.DEBUG_MODE.events && (! eventsUsed[globalChangeEventName]) && (eventsUsed[globalChangeEventName] = 1);
-                      eventBus.trigger(globalChangeEventName, [obj, fname, val]);
-                    }
+                    onUiBound(appId, function() {
+                      obj[fieldName] = val;
+                      debugEvents("fire event: " + eventName);
+                      jiant.DEBUG_MODE.events && (! eventsUsed[eventName]) && (eventsUsed[eventName] = 1);
+                      obj._innerData.trigger(eventName, [obj, val]);
+                      obj != spec && spec._innerData.trigger(eventName, [obj, val]);
+  //              jiant.logInfo(fieldName, obj[fieldName], val, obj != spec);
+                      if (! dontFireUpdate) {
+                        debugEvents("fire event: " + globalChangeEventName);
+                        jiant.DEBUG_MODE.events && (! eventsUsed[globalChangeEventName]) && (eventsUsed[globalChangeEventName] = 1);
+                        eventBus.trigger(globalChangeEventName, [obj, fname, val]);
+                      }
+                    });
                   } else {
                     obj[fieldName] = val;
                   }
@@ -986,9 +994,11 @@
             logInfo("binding event: " + name);
             events[name].listenersCount = 0;
             events[name].fire = function() {
-              debugEvents("fire event: " + name);
-              jiant.DEBUG_MODE.events && (! eventsUsed[name]) && (eventsUsed[name] = 1);
-              eventBus.trigger(appId + name + ".event", arguments);
+              onUiBound(appId, function() {
+                debugEvents("fire event: " + name);
+                jiant.DEBUG_MODE.events && (! eventsUsed[name]) && (eventsUsed[name] = 1);
+                eventBus.trigger(appId + name + ".event", arguments);
+              });
             };
             events[name].on = function (cb) {
               var trace;
@@ -1057,28 +1067,30 @@
               });
             };
           });
-          $(window).hashchange(function () {
-            var state = location.hash.substring(1),
-                parsed = parseState(),
-                stateId = parsed.now[0],
-                handler = states[stateId],
-                params = parsed.now;
-            jiant.logInfo(appId + ": " + state);
-            params.splice(0, 1);
-            $.each(params, function(idx, p) {
-              if (p == "undefined") {
-                params[idx] = undefined;
+          onUiBound(appId, function() {
+            $(window).hashchange(function () {
+              var state = location.hash.substring(1),
+                  parsed = parseState(),
+                  stateId = parsed.now[0],
+                  handler = states[stateId],
+                  params = parsed.now;
+              jiant.logInfo(appId + ": " + state);
+              params.splice(0, 1);
+              $.each(params, function(idx, p) {
+                if (p == "undefined") {
+                  params[idx] = undefined;
+                }
+              });
+              if (lastStates[appId] != undefined && lastStates[appId] != stateId) {
+                debugStates("trigger state end: " + appId + (lastStates[appId] ? lastStates[appId] : ""));
+                eventBus.trigger(appId + "state_" + lastStates[appId] + "_end");
               }
+              lastStates[appId] = stateId;
+              stateId = (stateId ? stateId : "");
+              debugStates("trigger state start: " + appId + stateId);
+              jiant.DEBUG_MODE.states && (! statesUsed[appId + stateId]) && (statesUsed[appId + stateId] = 1);
+              eventBus.trigger(appId + "state_" + stateId + "_start", params);
             });
-            if (lastStates[appId] != undefined && lastStates[appId] != stateId) {
-              debugStates("trigger state end: " + appId + (lastStates[appId] ? lastStates[appId] : ""));
-              eventBus.trigger(appId + "state_" + lastStates[appId] + "_end");
-            }
-            lastStates[appId] = stateId;
-            stateId = (stateId ? stateId : "");
-            debugStates("trigger state start: " + appId + stateId);
-            jiant.DEBUG_MODE.states && (! statesUsed[appId + stateId]) && (statesUsed[appId + stateId] = 1);
-            eventBus.trigger(appId + "state_" + stateId + "_start", params);
           });
           lastStates[appId] = parseState().now[0];
         }
