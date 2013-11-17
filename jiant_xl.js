@@ -15,6 +15,7 @@
 // xl.0.11 pagedContent notification about wrong arguments
 // xl.0.12 statefulApp accepts 3rd optional argument: defaultState to go from empty state
 // xl.0.13 saveCtl fix: event object was added
+// xl.0.14 sorting support added to pagedContent
 
 (function() {
 
@@ -23,7 +24,7 @@
   var tmpJiantXl = {
 
     version: function() {
-      return 11;
+      return 14;
     },
 
     ctl2state: function(ctl, state, selectedCssClass) {
@@ -115,14 +116,14 @@
       };
     },
 
-    pagedContent: function(state, ajax, container, pager, template, perItemCb, noItemsLabel, onCompleteCb) {
+    pagedContent: function(state, ajax, container, pager, template, perItemCb, noItemsLabel, onCompleteCb, useSorting) {
       return function() {
 
         pager.onValueChange(function(event, pageNum) {
-          state.go(pageNum);
+          state.go(pageNum, undefined);
         });
 
-        state.start(function(pageNum) {
+        state.start(function(pageNum, sort) {
           pageNum = pageNum ? pageNum : 0;
           var parsedNum = parseInt(pageNum) + "";
           if (parsedNum != pageNum) {
@@ -130,7 +131,9 @@
                 + ", recommended fix: make pageNum first argument, now replacing pageNum by 0");
             pageNum = 0;
           }
-          ajax({"page.page": pageNum}, function(data) {
+          var pageable = {"page.page": pageNum};
+          useSorting && sort && (pageable["page.sort"] = sort);
+          ajax(pageable, function(data) {
             container.empty();
             noItemsLabel && (data.content.length ? noItemsLabel.hide() : noItemsLabel.show());
             $.each(data.content, function(idx, item) {
