@@ -76,6 +76,7 @@
  0.72 lfill and format functions improved, basing on tests
  0.73 extra update event calls removed
  0.74 onAppInit callback was added
+ 0.75 setTimeout checker for dependency in dev mode
 */
 
 (function() {
@@ -1385,6 +1386,9 @@
             _bindUi(prefix, root, devMode, appUiFactory);
           }
           jiant.logInfo("UI bound in " + (new Date().getMilliseconds() - startedAt) + "ms");
+          devMode && setTimeout(function() {
+            awaitingDepends.length > 0 && logError("Attention!! Some depends are not resolved", awaitingDepends);
+          }, 10000);
         }
 
         function bind(obj1, obj2) {
@@ -1474,7 +1478,7 @@
         }
 
         function version() {
-          return 74;
+          return 75;
         }
 
         return {
