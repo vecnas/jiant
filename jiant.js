@@ -77,11 +77,11 @@
  0.73 extra update event calls removed
  0.74 onAppInit callback was added
  0.75 setTimeout checker for dependency in dev mode
+ 0.76 formatDateUsa added, produces MM/DD/YYYY date presentation
 */
 
 (function() {
   var
-
       DefaultUiFactory = function() {
 
         function view(prefix, viewId) {
@@ -154,6 +154,11 @@
         function formatDate(millis) {
           var dt = toDate(millis);
           return dt == null ? "" : lfill(dt.getFullYear()) + "-" + lfill(dt.getMonth()) + "-" + lfill(dt.getDate());
+        }
+
+        function formatDateUsa(millis) {
+          var dt = toDate(millis);
+          return dt == null ? "" : lfill(dt.getMonth()) + "/" + lfill(dt.getDate()) + "/" + lfill(dt.getFullYear());
         }
 
         function formatTime(millis) {
@@ -1514,6 +1519,7 @@
           version: version,
 
           formatDate: formatDate,
+          formatDateUsa: formatDateUsa,
           formatTime: formatTime,
           formatTimeSeconds: formatTimeSeconds,
           lfill: lfill,
