@@ -1483,7 +1483,7 @@
         }
 
         function version() {
-          return 75;
+          return 76;
         }
 
         return {
