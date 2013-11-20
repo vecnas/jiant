@@ -79,6 +79,7 @@
  0.75 setTimeout checker for dependency in dev mode
  0.76 formatDateUsa added, produces MM/DD/YYYY date presentation
  0.77 INCOMPATIBLE MODELS CHANGE! findByXXX returns single element (may be null), and new listByXXX methods return array
+ 0.78 .on(cb) handler for model fields gets one more parameter, oldVal: cb(obj, val, oldVal), for convenience
 */
 
 (function() {
@@ -925,16 +926,17 @@
                   return obj[fieldName];
                 } else {
                   if (forceEvent || (obj[fieldName] !== val && forceEvent !== false)) {
+                    var oldVal = obj[fieldName];
                     obj[fieldName] = val;
                     debugEvents("fire event: " + eventName);
                     jiant.DEBUG_MODE.events && (! eventsUsed[eventName]) && (eventsUsed[eventName] = 1);
-                    obj._innerData.trigger(eventName, [obj, val]);
-                    obj != spec && spec._innerData.trigger(eventName, [obj, val]);
+                    obj._innerData.trigger(eventName, [obj, val, oldVal]);
+                    obj != spec && spec._innerData.trigger(eventName, [obj, val, oldVal]);
 //              jiant.logInfo(fieldName, obj[fieldName], val, obj != spec);
                     if (! dontFireUpdate) {
                       debugEvents("fire event: " + globalChangeEventName);
                       jiant.DEBUG_MODE.events && (! eventsUsed[globalChangeEventName]) && (eventsUsed[globalChangeEventName] = 1);
-                      eventBus.trigger(globalChangeEventName, [obj, fname, val]);
+                      eventBus.trigger(globalChangeEventName, [obj, fname, val, oldVal]);
                     }
                   } else {
                     obj[fieldName] = val;
@@ -1498,7 +1500,7 @@
         }
 
         function version() {
-          return 77;
+          return 78;
         }
 
         return {
