@@ -78,6 +78,7 @@
  0.74 onAppInit callback was added
  0.75 setTimeout checker for dependency in dev mode
  0.76 formatDateUsa added, produces MM/DD/YYYY date presentation
+ 0.77 INCOMPATIBLE MODELS CHANGE! findByXXX returns single element (may be null), and new listByXXX methods return array
 */
 
 (function() {
@@ -888,8 +889,22 @@
                   var fieldName = name.substring(0, 1).toLowerCase() + name.substring(1);
                   retVal = filter(retVal, fieldName, outerArgs[idx]);
                 });
+                return retVal[0];
+              }
+            } else if (fname.indexOf("listBy") == 0 && fname.length > 6) {
+              var arr = fname.substring(6).split("And");
+              obj[fname] = function() {
+                var retVal = storage,
+                    outerArgs = arguments;
+                function filter(arr, fieldName, val) {
+                  return $.grep(arr, function(item) {return val == undefined || item[fieldName]() == val});
+                }
+                $.each(arr, function(idx, name) {
+                  var fieldName = name.substring(0, 1).toLowerCase() + name.substring(1);
+                  retVal = filter(retVal, fieldName, outerArgs[idx]);
+                });
                 return retVal;
-              };
+              }
             } else if (fname.indexOf("set") == 0 && fname.length > 3) {
               var arr = fname.substring(3).split("And");
               obj[fname] = function() {
@@ -1483,7 +1498,7 @@
         }
 
         function version() {
-          return 76;
+          return 77;
         }
 
         return {
