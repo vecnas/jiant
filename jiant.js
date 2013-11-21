@@ -610,7 +610,7 @@
             if ($.inArray(tp, types) >= 0) {
               elem.val(val);
             } else if (tp == "checkbox") {
-              elem.prop("checked", val);
+              elem.prop("checked", val ? true : false);
             } else if (tp == "radio") {
               $.each(elem, function(idx, subelem) {
                 $(subelem).prop("checked", subelem.value == val);
