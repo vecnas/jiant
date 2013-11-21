@@ -80,6 +80,8 @@
  0.76 formatDateUsa added, produces MM/DD/YYYY date presentation
  0.77 INCOMPATIBLE MODELS CHANGE! findByXXX returns single element (may be null), and new listByXXX methods return array
  0.78 .on(cb) handler for model fields gets one more parameter, oldVal: cb(obj, val, oldVal), for convenience
+ 0.79 .off(hndlr) added for all model properties, it accepts handler, returned by .on method. Also propagate 
+ unsubscribes from previous model when bound to new, inputInt() change value by up/down arrows now trigger change event
 */
 
 (function() {
@@ -231,9 +233,11 @@
           input.keydown(function(event) {
             if (event.keyCode == jiant.key.down && input.val() > 0) {
               input.val(input.val() - 1);
+              input.trigger("change");
               return false;
             } else if (event.keyCode == jiant.key.up) {
               input.val(parseInt(input.val()) + 1);
+              input.trigger("change");
               return false;
             } else if (event.keyCode == jiant.key.backspace || event.keyCode == jiant.key.del
                 || event.keyCode == jiant.key.end || event.keyCode == jiant.key.left || event.keyCode == jiant.key.right
@@ -250,9 +254,11 @@
           input.keydown(function(event) {
             if (event.keyCode == jiant.key.down && input.val() > 0) {
               input.val(input.val() - 1);
+              input.trigger("change");
               return false;
             } else if (event.keyCode == jiant.key.up) {
               input.val(parseInt(input.val()) + 1);
+              input.trigger("change");
               return false;
             } else if (event.keyCode == jiant.key.dot) {
               return (input.val().indexOf(".") < 0) && input.val().length > 0;
@@ -557,7 +563,7 @@
           $.each(spec, function (key, elem) {
             map[key] = elem;
           });
-          return function(data, subscribe4updates) {
+          var fn = function(data, subscribe4updates) {
             debugData("Propagating " + viewId + " with data", data);
             subscribe4updates = (subscribe4updates == undefined) ? true : subscribe4updates;
             $.each(map, function (key, elem) {
@@ -567,16 +573,20 @@
                 if ($.isFunction(val)) {
                   getRenderer(spec, key)(data, elem, val(), false, obj);
                   if (subscribe4updates && $.isFunction(val.on)) {
-                    val.on(function(obj, newVal) {
-                      getRenderer(spec, key)(data, elem, newVal, true, obj);
-                    });
+                    if (fn[key]) {
+                      var off = fn[key][0];
+                      off && off(fn[key][1]);
+                    }
+                    var handler = val.on(function(obj, newVal) {getRenderer(spec, key)(data, elem, newVal, true, obj)});
+                    fn[key] = [val.off, handler];
                   }
                 } else {
                   getRenderer(spec, key)(data, elem, val, false, obj);
                 }
               }
             });
-          }
+          };
+          return fn;
         }
 
         function getRenderer(spec, key) {
@@ -713,37 +723,40 @@
             }
           };
           obj[fname].asap = fn;
-          obj[fname].asaa = fn;
         }
 
-        function assignOnHandler(obj, eventName, fname, eventObject) {
+        function assignOnOffHandlers(obj, eventName, fname, eventObject) {
           eventObject = eventObject ? eventObject : obj._innerData;
-          var fn = function(cb) {
-            var trace;
-            if (jiant.DEBUG_MODE.events) {
-              debug("assigning event handler to " + eventName);
-              eventsUsed[eventName] && debug(" !!! Event handler assigned after fire occured, possible error, for event " + eventName);
-              trace = getStackTrace();
-            }
-            if (fname) {
-              obj[fname].listenersCount++;
-            } else {
-              obj.listenersCount++;
-            }
-            eventObject.on(eventName, function () {
-              debugEvents("called event handler: " + eventName + ", registered at " + trace);
-              var args = $.makeArray(arguments);
-              args.splice(0, 1);
-//        args.splice(0, 2);
-              cb && cb.apply(cb, args);
-            })
-          };
+          var fn = function (cb) {
+                var trace;
+                if (jiant.DEBUG_MODE.events) {
+                  debug("assigning event handler to " + eventName);
+                  eventsUsed[eventName] && debug(" !!! Event handler assigned after fire occured, possible error, for event " + eventName);
+                  trace = getStackTrace();
+                }
+                (fname ? obj[fname] : obj).listenersCount++;
+                var handler = function () {
+                  debugEvents("called event handler: " + eventName + ", registered at " + trace);
+                  var args = $.makeArray(arguments);
+                  args.splice(0, 1);
+                  //        args.splice(0, 2);
+                  cb && cb.apply(cb, args);
+                };
+                eventObject.on(eventName, handler);
+                return handler
+              },
+              fnOff = function (handler) {
+                (fname ? obj[fname] : obj).listenersCount--;
+                var res = eventObject.off(eventName, handler);
+              };
           if (fname) {
             obj[fname].on = fn;
+            obj[fname].off = fnOff;
             obj[fname].listenersCount = 0;
             assignAsapHandler(obj, eventName, fname);
           } else {
             obj.on = fn;
+            obj.off = fnOff;
             obj.listenersCount = 0;
           }
         }
@@ -778,7 +791,7 @@
                 return storage;
               };
             } else if (fname == "on") {
-              assignOnHandler(obj, globalChangeEventName, undefined, eventBus);
+              assignOnOffHandlers(obj, globalChangeEventName, undefined, eventBus);
             } else if (fname == "update") {
               obj[fname] = function(objFrom) {
                 var smthChanged = false;
@@ -804,7 +817,7 @@
                   eventBus.trigger(globalChangeEventName, [obj, fname]);
                 }
               };
-              assignOnHandler(obj, eventName, fname);
+              assignOnOffHandlers(obj, eventName, fname);
             } else if (fname == "updateAll") {
               obj[fname] = function(arr, removeMissing, matcherCb) {
                 debugData("Called updateAll on model " + name + " with data", arr);
@@ -832,7 +845,7 @@
                 });
                 obj.addAll(toAdd);
               };
-              assignOnHandler(obj, eventName, fname);
+              assignOnOffHandlers(obj, eventName, fname);
             } else if (fname == "addAll" || fname == "add") {
               obj[fname] = function(arr) {
                 debugData("Called " + fname + " on model " + name + " with data", arr);
@@ -862,7 +875,7 @@
                 });
                 return newArr;
               };
-              assignOnHandler(obj, eventName, fname);
+              assignOnOffHandlers(obj, eventName, fname);
             } else if (fname == "remove") {
               obj[fname] = function(elem) {
                 var prevLen = storage.length;
@@ -870,14 +883,14 @@
                 if (storage.length != prevLen) {
                   debugEvents("fire event: " + eventName);
                   jiant.DEBUG_MODE.events && (! eventsUsed[eventName]) && (eventsUsed[eventName] = 1);
-                  obj._innerData.trigger(eventName, elem);
+                  obj._innerData.trigger(eventName, [elem]);
                   debugEvents("fire event: " + globalChangeEventName);
                   jiant.DEBUG_MODE.events && (! eventsUsed[globalChangeEventName]) && (eventsUsed[globalChangeEventName] = 1);
                   eventBus.trigger(globalChangeEventName, [elem, fname]);
                 }
                 return elem;
               };
-              assignOnHandler(obj, eventName, fname);
+              assignOnOffHandlers(obj, eventName, fname);
             } else if (fname.indexOf("findBy") == 0 && fname.length > 6) {
               var arr = fname.substring(6).split("And");
               obj[fname] = function() {
@@ -944,7 +957,7 @@
                   return obj[fieldName];
                 }
               };
-              assignOnHandler(obj, eventName, fname);
+              assignOnOffHandlers(obj, eventName, fname);
             }
           });
         }
@@ -1500,7 +1513,7 @@
         }
 
         function version() {
-          return 78;
+          return 79;
         }
 
         return {
