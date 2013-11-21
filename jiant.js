@@ -82,6 +82,7 @@
  0.78 .on(cb) handler for model fields gets one more parameter, oldVal: cb(obj, val, oldVal), for convenience
  0.79 .off(hndlr) added for all model properties, it accepts handler, returned by .on method. Also propagate 
  unsubscribes from previous model when bound to new, inputInt() change value by up/down arrows now trigger change event
+ 0.80: input type=checkbox now propagated, customRenderer last parameter fixed
 */
 
 (function() {
@@ -558,7 +559,7 @@
           return $.inArray(key, words) >= 0;
         }
 
-        function makePropagationFunction(viewId, spec, obj) {
+        function makePropagationFunction(viewId, spec, obj, viewOrTm) {
           var map = {};
           $.each(spec, function (key, elem) {
             map[key] = elem;
@@ -571,17 +572,17 @@
                 var val = data[key];
                 elem = obj[key];
                 if ($.isFunction(val)) {
-                  getRenderer(spec, key)(data, elem, val(), false, obj);
+                  getRenderer(spec, key)(data, elem, val(), false, viewOrTm);
                   if (subscribe4updates && $.isFunction(val.on)) {
                     if (fn[key]) {
                       var off = fn[key][0];
                       off && off(fn[key][1]);
                     }
-                    var handler = val.on(function(obj, newVal) {getRenderer(spec, key)(data, elem, newVal, true, obj)});
+                    var handler = val.on(function(obj, newVal) {getRenderer(spec, key)(data, elem, newVal, true, viewOrTm)});
                     fn[key] = [val.off, handler];
                   }
                 } else {
-                  getRenderer(spec, key)(data, elem, val, false, obj);
+                  getRenderer(spec, key)(data, elem, val, false, viewOrTm);
                 }
               }
             });
@@ -608,6 +609,8 @@
                 tp = el.attr("type");
             if ($.inArray(tp, types) >= 0) {
               elem.val(val);
+            } else if (tp == "checkbox") {
+              elem.prop("checked", val);
             } else if (tp == "radio") {
               $.each(elem, function(idx, subelem) {
                 $(subelem).prop("checked", subelem.value == val);
@@ -628,7 +631,7 @@
             var viewOk = ensureExists(prefix, appRoot.dirtyList, view, prefix + viewId);
             viewOk && _bindContent(appRoot, root[viewId], viewId, viewContent, view, prefix);
             ensureSafeExtend(root[viewId], view);
-            root[viewId].propagate = makePropagationFunction(viewId, viewContent, viewContent);
+            root[viewId].propagate = makePropagationFunction(viewId, viewContent, viewContent, root[viewId]);
             $.extend(root[viewId], view);
             maybeAddDevHook(view, viewId, undefined);
           });
@@ -690,7 +693,7 @@
                 }
               });
               retVal.splice(0, 1); // remove first comment
-              retVal.propagate = makePropagationFunction(tmId, tmContent, retVal);
+              retVal.propagate = makePropagationFunction(tmId, tmContent, retVal, root[tmId]);
               data && retVal.propagate(data);
               return retVal;
             };
@@ -1513,7 +1516,7 @@
         }
 
         function version() {
-          return 79;
+          return 80;
         }
 
         return {
