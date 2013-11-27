@@ -84,6 +84,7 @@
  unsubscribes from previous model when bound to new, inputInt() change value by up/down arrows now trigger change event
  0.80: input type=checkbox now propagated, customRenderer last parameter fixed
  0.81: per application states supported, mix of multiple stateful applications supported
+ 0.82: formatDateUsa fix
 */
 
 (function() {
@@ -165,7 +166,7 @@
 
         function formatDateUsa(millis) {
           var dt = toDate(millis);
-          return dt == null ? "" : lfill(dt.getMonth()) + "/" + lfill(dt.getDate()) + "/" + lfill(dt.getFullYear());
+          return dt == null ? "" : lfill(dt.getMonth()+1) + "/" + lfill(dt.getDate()) + "/" + lfill(dt.getFullYear());
         }
 
         function formatTime(millis) {
@@ -1560,7 +1561,7 @@
         }
 
         function version() {
-          return 81;
+          return 82;
         }
 
         return {
