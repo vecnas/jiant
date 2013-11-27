@@ -83,6 +83,7 @@
  0.79 .off(hndlr) added for all model properties, it accepts handler, returned by .on method. Also propagate 
  unsubscribes from previous model when bound to new, inputInt() change value by up/down arrows now trigger change event
  0.80: input type=checkbox now propagated, customRenderer last parameter fixed
+ 0.81: per application states supported, mix of multiple stateful applications supported
 */
 
 (function() {
@@ -142,6 +143,7 @@
             errString,
 
             lastStates = {},
+            lastEncodedStates = {},
             loadedLogics = {},
             awaitingDepends = {},
             eventBus = $({}),
@@ -1060,7 +1062,7 @@
           }
           $.each(states, function(name, stateSpec) {
             logInfo("binding state: " + appId + name);
-            stateSpec.go = go(name, stateSpec.root, stateExternalBase);
+            stateSpec.go = go(name, stateSpec.root, stateExternalBase, appId);
             stateSpec.start = function(cb) {
               var trace;
               if (jiant.DEBUG_MODE.states) {
@@ -1074,7 +1076,7 @@
                 args.splice(0, 1);
                 cb && cb.apply(cb, args);
               });
-              var current = parseState();
+              var current = parseState(appId);
               if (uiBoundRoot[appId] && ((name == "" && current.now.length == 0) || (current.now[0] == name))) {
                 var params = current.now;
                 params.splice(0, 1);
@@ -1098,11 +1100,13 @@
           });
           $(window).hashchange(function () {
             var state = location.hash.substring(1),
-                parsed = parseState(),
+                parsed = parseState(appId),
                 stateId = parsed.now[0],
-                handler = states[stateId],
-                params = parsed.now;
-            jiant.logInfo(appId + ": " + state);
+                params = parsed.now,
+                smthChanged = (lastEncodedStates[appId] != getAppState(appId));
+            if (! smthChanged) {
+              return;
+            }
             params.splice(0, 1);
             $.each(params, function(idx, p) {
               if (p == "undefined") {
@@ -1114,17 +1118,20 @@
               eventBus.trigger(appId + "state_" + lastStates[appId] + "_end");
             }
             lastStates[appId] = stateId;
+            lastEncodedStates[appId] = getAppState(appId);
             stateId = (stateId ? stateId : "");
             debugStates("trigger state start: " + appId + stateId);
             jiant.DEBUG_MODE.states && (! statesUsed[appId + stateId]) && (statesUsed[appId + stateId] = 1);
+//            jiant.logInfo(lastEncodedStates[appId] + " params are ", params);
             eventBus.trigger(appId + "state_" + stateId + "_start", params);
           });
-          lastStates[appId] = parseState().now[0];
+          lastStates[appId] = parseState(appId).now[0];
+          lastEncodedStates[appId] = getAppState(appId);
         }
 
-        function go(stateId, root, stateExternalBase) {
+        function go(stateId, root, stateExternalBase, appId) {
           return function() {
-            var parsed = parseState(),
+            var parsed = parseState(appId),
                 prevState = parsed.now;
             parsed.now = [stateId];
             debugData("Going to state " + stateId + " with data", arguments);
@@ -1153,43 +1160,79 @@
                 parsed.root[idx] = pack(param);
               });
             }
-            setState(parsed, stateExternalBase);
+            setState(parsed, stateExternalBase, appId);
           };
         }
 
-        function goRoot() {
-          var parsed = parseState();
-          parsed.now = [];
-          $.each(parsed.root, function(idx, param) {
-            parsed.now.push(pack(param));
-            parsed.root[idx] = pack(param);
+        function goRoot(appId) {
+          function _go(appId) {
+            var parsed = parseState(appId);
+            parsed.now = [];
+            $.each(parsed.root, function(idx, param) {
+              parsed.now.push(pack(param));
+              parsed.root[idx] = pack(param);
+            });
+            setState(parsed, undefined, appId); // external base not used
+          }
+          appId && _go(appId);
+          !appId && $.each(getStates(), function(appId, state) {
+            _go(appId);
           });
-          setState(parsed, undefined); // external base not used
         }
 
-        function setState(parsed, stateExternalBase) {
-          var s = "now=" + parsed.now + "|root=" + parsed.root;
+        function setState(parsed, stateExternalBase, appId) {
+          var states = getStates(),
+              result = "";
+          var s = parsed.now + "|" + parsed.root;
+          $.each(states, function(stateAppId, state) {
+            if (appId == stateAppId) {
+              result += (stateAppId + "=" + s + "=");
+            } else {
+              result += (stateAppId + "=" + state + "=");
+            }
+          });
+          if (! states[appId]) {
+            result += (appId + "=" + s + "=");
+          }
           var extBase = (stateExternalBase || stateExternalBase == "") ? stateExternalBase : jiant.STATE_EXTERNAL_BASE;
-          if (extBase) {
-            window.location.assign(extBase + "#" + s);
+//          jiant.logInfo("setting state: " + result);
+          window.location.assign((extBase ? extBase : "") + "#" + result);
+        }
+
+        function getStates() {
+          var state = location.hash.substring(1),
+              data = state.split("="),
+              retVal = {};
+//          jiant.logInfo("parsing state: " + state);
+          $.each(data, function(idx, elem) {
+            (idx % 2 == 0) && elem && data[idx + 1] != undefined && (retVal[elem] = data[idx + 1]);
+//            (idx % 2 == 0) && elem && data[idx + 1] != undefined && jiant.logInfo("state parsed: " + elem + " === " + data[idx+1]);
+          });
+          return retVal;
+        }
+
+        function getAppState(appId) {
+          if (appId) {
+            var s = getStates()[appId];
+            return s == undefined ? "" : s;
           } else {
-            location.hash = "#" + s;
+            var retVal = "";
+            $.each(getStates(), function(key, val) {
+              retVal = val;
+              return false;
+            });
+            return retVal;
           }
         }
 
-        function parseState() {
-          var state = location.hash.substring(1);
-          var arr = state.split("|");
-          var parsed = {};
+        function parseState(appId) {
+          var state = getAppState(appId),
+              arr = state.split("|"),
+              parsed = {now: [], root: []};
           $.each(arr, function(idx, item) {
-            var itemArr = item.split("="),
-                args = [];
-            if (itemArr.length >= 2) {
-              args = itemArr[1].split(",");
-            }
-            parsed[itemArr[0]] = [];
-            $.each(args, function(idx, arg) {
-              parsed[itemArr[0]].push(unpack(arg));
+            var args = item.split(",");
+            $.each(args, function(idxInner, arg) {
+              parsed[idx == 0 ? "now" : "root"].push(unpack(arg));
             });
           });
           parsed.now = parsed.now || [];
@@ -1205,7 +1248,8 @@
               "{" : ";4",
               "}" : ";5",
               ":" : ";6",
-              "#" : ";7"
+              "#" : ";7",
+              "'" : ";7"
             }, reverseMap = {},
             replacementRegex = /;|,|=|\||\{|\}|:|#/gi,
             reverseRegex = /;;|;1|;2|;3|;4|;5|;6|;7/gi;
@@ -1245,8 +1289,8 @@
           }
         }
 
-        function getCurrentState() {
-          var parsed = parseState();
+        function getCurrentState(appId) {
+          var parsed = parseState(appId);
           return parsed.now[0] ? parsed.now[0] : "";
         }
 
@@ -1516,7 +1560,7 @@
         }
 
         function version() {
-          return 80;
+          return 81;
         }
 
         return {
