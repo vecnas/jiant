@@ -85,6 +85,7 @@
  0.80: input type=checkbox now propagated, customRenderer last parameter fixed
  0.81: per application states supported, mix of multiple stateful applications supported
  0.82: formatDateUsa fix
+ 0.83: per application states - initial wasn't fired fix
 */
 
 (function() {
@@ -1105,6 +1106,7 @@
                 stateId = parsed.now[0],
                 params = parsed.now,
                 smthChanged = (lastEncodedStates[appId] != getAppState(appId));
+//            jiant.logError(smthChanged, lastEncodedStates[appId], getAppState(appId));
             if (! smthChanged) {
               return;
             }
@@ -1127,7 +1129,7 @@
             eventBus.trigger(appId + "state_" + stateId + "_start", params);
           });
           lastStates[appId] = parseState(appId).now[0];
-          lastEncodedStates[appId] = getAppState(appId);
+//          lastEncodedStates[appId] = getAppState(appId);
         }
 
         function go(stateId, root, stateExternalBase, appId) {
@@ -1561,7 +1563,7 @@
         }
 
         function version() {
-          return 82;
+          return 83;
         }
 
         return {
