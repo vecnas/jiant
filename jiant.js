@@ -86,6 +86,7 @@
  0.81: per application states supported, mix of multiple stateful applications supported
  0.82: formatDateUsa fix
  0.83: per application states - initial wasn't fired fix
+ 0.84: asMap for models
 */
 
 (function() {
@@ -938,6 +939,16 @@
                 obj.update(newVals);
                 return newVals;
               }
+            } else if (fname == "asMap") {
+              obj[fname] = function () {
+                var result = {};
+                $.each(obj, function (key, val) {
+                  if (key.indexOf(fldPrefix) == 0) {
+                    result[key.substr(fldPrefix.length)] = val;
+                  }
+                });
+                return result;
+              }
             } else if (isEmptyFunction(funcSpec) || spec._innerData[fname]) {
               spec._innerData[fname] = true;
               obj[fname] = function(val, forceEvent, dontFireUpdate) {
@@ -1563,7 +1574,7 @@
         }
 
         function version() {
-          return 83;
+          return 84;
         }
 
         return {
