@@ -2,7 +2,7 @@
 <html>
 <head>
   <meta charset="utf-8">
-  <title>Jiant test. BindUi</title>
+  <title>Jiant test. Models</title>
   <link rel="stylesheet" href="http://code.jquery.com/qunit/qunit-1.12.0.css">
 </head>
 <body>
@@ -10,14 +10,14 @@
   <div id="qunit-fixture"></div>
   <script src="http://code.jquery.com/qunit/qunit-1.12.0.js"></script>
   <script src="http://cdnjs.cloudflare.com/ajax/libs/jquery/1.10.2/jquery.min.js"></script>
-  <script src="../jiant.js"></script>
+  <script src="../js/jiant.js"></script>
 
   <script>
 
     module("models");
 
     test("singleton update handlers test", function() {
-      expect(13);
+      expect(14);
       var tstApp = {
         id: "jiantTestModels",
         models: {
@@ -25,13 +25,24 @@
             on: function(obj, val) {},
             update: function(data) {},
             id: function(val) {},
-            fld: function(val) {}
+            fld: function(val) {},
+            onoff: function(val) {}
           }
         }
       };
-      jiant.bindUi(tstApp);
+      jiant.bindUi(tstApp, true);
       jiant.onUiBound(tstApp, function($, app) {
         var tst = app.models.tst;
+
+        function onOff(obj, val) {
+          ok(1, "onOff triggered, val: " + val);
+        }
+
+        var hndlr = tst.onoff.on(onOff);
+        tst.onoff(1);
+        tst.onoff.off(hndlr);
+        tst.onoff(2);
+
         tst.on(function(obj, val) {
           ok(1, "tst.on triggered");
         });
