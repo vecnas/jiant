@@ -87,6 +87,7 @@
  0.82: formatDateUsa fix
  0.83: per application states - initial wasn't fired fix
  0.84: asMap for models
+ 0.85: jiant.refreshState() fixed after been broken by 0.81
 */
 
 (function() {
@@ -1111,13 +1112,12 @@
               });
             };
           });
-          $(window).hashchange(function () {
+          $(window).hashchange(function (event, enforce) {
             var state = location.hash.substring(1),
                 parsed = parseState(appId),
                 stateId = parsed.now[0],
                 params = parsed.now,
-                smthChanged = (lastEncodedStates[appId] != getAppState(appId));
-//            jiant.logError(smthChanged, lastEncodedStates[appId], getAppState(appId));
+                smthChanged = enforce || (lastEncodedStates[appId] != getAppState(appId));
             if (! smthChanged) {
               return;
             }
@@ -1309,7 +1309,7 @@
         }
 
         function refreshState() {
-          $(window).hashchange && $(window).hashchange();
+          $(window).hashchange && $(window).trigger("hashchange", true);
         }
 
 // ------------ ajax staff ----------------
