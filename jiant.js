@@ -80,7 +80,7 @@
  0.76 formatDateUsa added, produces MM/DD/YYYY date presentation
  0.77 INCOMPATIBLE MODELS CHANGE! findByXXX returns single element (may be null), and new listByXXX methods return array
  0.78 .on(cb) handler for model fields gets one more parameter, oldVal: cb(obj, val, oldVal), for convenience
- 0.79 .off(hndlr) added for all model properties, it accepts handler, returned by .on method. Also propagate 
+ 0.79 .off(hndlr) added for all model properties, it accepts handler, returned by .on method. Also propagate
  unsubscribes from previous model when bound to new, inputInt() change value by up/down arrows now trigger change event
  0.80: input type=checkbox now propagated, customRenderer last parameter fixed
  0.81: per application states supported, mix of multiple stateful applications supported
@@ -88,6 +88,7 @@
  0.83: per application states - initial wasn't fired fix
  0.84: asMap for models
  0.85: jiant.refreshState() fixed after been broken by 0.81
+ 0.86: hashchange() directly called after state set, to resolve hashchange async behaviour
 */
 
 (function() {
@@ -1211,6 +1212,7 @@
           var extBase = (stateExternalBase || stateExternalBase == "") ? stateExternalBase : jiant.STATE_EXTERNAL_BASE;
 //          jiant.logInfo("setting state: " + result);
           window.location.assign((extBase ? extBase : "") + "#" + result);
+          $(window).hashchange();
         }
 
         function getStates() {
@@ -1574,7 +1576,7 @@
         }
 
         function version() {
-          return 84;
+          return 86;
         }
 
         return {
