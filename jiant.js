@@ -89,6 +89,7 @@
  0.84: asMap for models
  0.85: jiant.refreshState() fixed after been broken by 0.81
  0.86: hashchange() directly called after state set, to resolve hashchange async behaviour
+ 0.87: multiple apps onUiBound: onUiBound([app1Id, app2Id...], depsList, function($, app1, app2...))
 */
 
 (function() {
@@ -1031,7 +1032,8 @@
           var awaiters = awaitingDepends[appId][name];
           delete awaitingDepends[appId][name];
           awaiters && $.each(awaiters, function(idx, cb) {
-            handleBound(appId, cb);
+            eventBus.trigger(dependencyResolvedEventName(appId, name));
+//            handleBound(appId, cb);
           });
         }
 
@@ -1458,11 +1460,10 @@
           maybeShort(root, "logic", "l") && _bindLogic(root.logic, appId);
           jiant.DEV_MODE && !bindingsResult && alert("Some elements not bound to HTML properly, check console" + errString);
           uiBoundRoot[appId] = root;
-          var uiBoundEvent = appId + "jiant_uiBound_" + appId;
+          jiant.logInfo(root);
           var appInitEvent = appId + "onAppInit" + appId;
           eventBus.trigger(appInitEvent);
-          $.when.apply($, onInitAppActions).done(function() {eventBus.trigger(uiBoundEvent)});
-//    refreshState();
+          $.when.apply($, onInitAppActions).done(function() {eventBus.trigger(appBoundEventName(appId))});
         }
 
         function bindUi(prefix, root, devMode, viewsUrl, injectId) {
@@ -1494,54 +1495,84 @@
         }
 
         // onUiBound(cb);
-        // onUiBound(depList, cb);
+        // onUiBound(depList, cb); - INVALID, treated as onUiBound(appIdArr, cb);
+        // onUiBound(appIdArr, cb);
+        // onUiBound(appIdArr, depList, cb);
         // onUiBound(appId, cb);
         // onUiBound(appId, depList, cb)
-        function onUiBound(appId, dependenciesList, cb) {
+        function onUiBound(appIdArr, dependenciesList, cb) {
           if (! cb && ! dependenciesList) {
             jiant.logError("!!! Registering anonymous logic without application id. Not recommended since 0.20");
-            cb = appId;
-            appId = "no_app_id";
+            cb = appIdArr;
+            appIdArr = ["no_app_id"];
           } else if (! cb) {
             cb = dependenciesList;
-            if ($.isArray(appId)) {
-              jiant.logError("!!! Registering anonymous logic without application id. Not recommended since 0.20");
-              cb = appId;
-              dependenciesList = appId;
-              appId = "no_app_id";
-            } else {
-              dependenciesList = [];
+            dependenciesList = [];
+          }
+          if (! $.isArray(appIdArr)) {
+            appIdArr = [appIdArr];
+          }
+          if (appIdArr.length > 1 && $.isArray(dependenciesList) && dependenciesList.length > 0) {
+            $.each(dependenciesList, function(idx, arr) {
+              if (!$.isArray(arr)) {
+                jiant.logError("Used multiple applications onUiBound and supplied wrong dependency list, use multi-array, " +
+                    "like [[app1DepList], [app2DepList]]");
+              }
+            })
+          } else if (appIdArr.length == 1 && dependenciesList.length) {
+            dependenciesList = [dependenciesList];
+          }
+          $.each(appIdArr, function(idx, appId) {
+            if ($.isPlainObject(appId)) {
+              appId = appId.id;
+              appIdArr[idx] = appId;
             }
-          }
-          if ($.isPlainObject(appId)) {
-            appId = appId.id;
-          }
-          (! awaitingDepends[appId]) && (awaitingDepends[appId] = {});
-          (! loadedLogics[appId]) && (loadedLogics[appId] = {});
-          dependenciesList && $.each(dependenciesList, function(idx, depName) {
-            (!awaitingDepends[appId][depName]) && (awaitingDepends[appId][depName] = []);
-            (!loadedLogics[appId][depName]) && awaitingDepends[appId][depName].push(cb);
+            (! awaitingDepends[appId]) && (awaitingDepends[appId] = {});
+            (! loadedLogics[appId]) && (loadedLogics[appId] = {});
+            dependenciesList[idx] && $.each(dependenciesList[idx], function(idx, depName) {
+              (!awaitingDepends[appId][depName]) && (awaitingDepends[appId][depName] = []);
+              (!loadedLogics[appId][depName]) && awaitingDepends[appId][depName].push(cb);
+            });
           });
-          handleBound(appId, cb);
+          handleBoundArr(appIdArr, cb);
         }
 
-        function handleBound(appId, cb) {
-          var allDependsResolved = true;
-          $.each(awaitingDepends[appId], function(depName, cbArr) {
-            allDependsResolved = allDependsResolved && ($.inArray(cb, cbArr) < 0);
-            return allDependsResolved;
+        function handleBoundArr(appIdArr, cb) {
+          var allBound = true;
+          $.each(appIdArr, function(idx, appId) {
+            if (! uiBoundRoot[appId]) {
+              eventBus.one(appBoundEventName(appId), function() {
+                handleBoundArr(appIdArr, cb);
+              });
+              allBound = false;
+              return false;
+            }
           });
-          if (! allDependsResolved) {
-            return;
-          }
-          if (uiBoundRoot[appId]) {
-            cb && cb($, uiBoundRoot[appId]);
-          } else {
-            var eventId = appId + "jiant_uiBound_" + appId;
-            eventBus.on(eventId, function() {
-              cb && cb($, uiBoundRoot[appId]);
+          if (allBound) {
+            var allDependsResolved = true, params = [$];
+            $.each(appIdArr, function(idx, appId) {
+              $.each(awaitingDepends[appId], function(depName, cbArr) {
+                allDependsResolved = allDependsResolved && ($.inArray(cb, cbArr) < 0);
+                !allDependsResolved && eventBus.one(dependencyResolvedEventName(appId, depName), function() {
+                  handleBoundArr(appIdArr, cb);
+                });
+                return allDependsResolved;
+              });
+              if (! allDependsResolved) {
+                return false;
+              }
+              params.push(uiBoundRoot[appId]);
             });
+            allDependsResolved && cb.apply(cb, params);
           }
+        }
+
+        function appBoundEventName(appId) {
+          return appId + "jiant_uiBound_" + appId;
+        }
+
+        function dependencyResolvedEventName(appId, depName) {
+          return appId + "jiant_dependency_resolved_" + depName;
         }
 
         function onAppInit(appId, cb) {
@@ -1576,7 +1607,7 @@
         }
 
         function version() {
-          return 86;
+          return 87;
         }
 
         return {
