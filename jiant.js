@@ -91,7 +91,8 @@
  0.86: hashchange() directly called after state set, to resolve hashchange async behaviour
  0.87: multiple apps onUiBound: onUiBound([app1Id, app2Id...], depsList, function($, app1, app2...))
  0.88: customRenderer for templates - last param changed to parse result, not specification reference
-*/
+ 0.89: time to bind UI now properly reported in console instead of previous random number
+ */
 
 (function() {
   var
@@ -1468,7 +1469,7 @@
         }
 
         function bindUi(prefix, root, devMode, viewsUrl, injectId) {
-          var startedAt = new Date().getMilliseconds();
+          var startedAt = new Date().getTime();
           if ($.isPlainObject(prefix)) { // no prefix syntax
             injectId = viewsUrl;
             viewsUrl = devMode;
@@ -1485,7 +1486,7 @@
           } else {
             _bindUi(prefix, root, devMode, appUiFactory);
           }
-          jiant.logInfo("UI bound in " + (new Date().getMilliseconds() - startedAt) + "ms");
+          jiant.logInfo("UI bound in " + (new Date().getTime() - startedAt) + "ms");
           devMode && setTimeout(function() {
             awaitingDepends.length > 0 && logError("Attention!! Some depends are not resolved", awaitingDepends);
           }, 10000);
@@ -1608,7 +1609,7 @@
         }
 
         function version() {
-          return 88;
+          return 89;
         }
 
         return {
