@@ -90,6 +90,7 @@
  0.85: jiant.refreshState() fixed after been broken by 0.81
  0.86: hashchange() directly called after state set, to resolve hashchange async behaviour
  0.87: multiple apps onUiBound: onUiBound([app1Id, app2Id...], depsList, function($, app1, app2...))
+ 0.88: customRenderer for templates - last param changed to parse result, not specification reference
 */
 
 (function() {
@@ -701,7 +702,7 @@
                 }
               });
               retVal.splice(0, 1); // remove first comment
-              retVal.propagate = makePropagationFunction(tmId, tmContent, retVal, root[tmId]);
+              retVal.propagate = makePropagationFunction(tmId, tmContent, retVal, retVal);
               data && retVal.propagate(data);
               return retVal;
             };
@@ -1607,7 +1608,7 @@
         }
 
         function version() {
-          return 87;
+          return 88;
         }
 
         return {
