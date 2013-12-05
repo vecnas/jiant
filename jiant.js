@@ -163,7 +163,7 @@
             eventsUsed = {};
 
         function randomIntBetween(from, to) {
-          return Math.floor((Math.random()*(from - to + 1)) + from);
+          return Math.floor((Math.random()*(to - from + 1)) + from);
         }
         function toDate(val) {
           var num = Number(val);
