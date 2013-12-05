@@ -92,6 +92,7 @@
  0.87: multiple apps onUiBound: onUiBound([app1Id, app2Id...], depsList, function($, app1, app2...))
  0.88: customRenderer for templates - last param changed to parse result, not specification reference
  0.89: time to bind UI now properly reported in console instead of previous random number
+ 0.90: randomIntBetween(from, to) function added
  */
 
 (function() {
@@ -161,6 +162,9 @@
             statesUsed = {},
             eventsUsed = {};
 
+        function randomIntBetween(from, to) {
+          return Math.floor((Math.random()*(from - to + 1)) + from);
+        }
         function toDate(val) {
           var num = Number(val);
           return ((num === 0 && val !== 0 && val !== "0") || isNaN(num)) ? null : new Date(num);
@@ -1609,7 +1613,7 @@
         }
 
         function version() {
-          return 89;
+          return 90
         }
 
         return {
@@ -1648,6 +1652,7 @@
           formatDateUsa: formatDateUsa,
           formatTime: formatTime,
           formatTimeSeconds: formatTimeSeconds,
+          randomIntBetween: randomIntBetween,
           lfill: lfill,
 
           collection: collection,
