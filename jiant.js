@@ -94,6 +94,7 @@
  0.89: time to bind UI now properly reported in console instead of previous random number
  0.90: randomIntBetween(from, to) function added
  0.91: cross domain bindUi creates container with provided id, if it doesn't exist already
+ 0.92: count of unbound logics printed into console, to hint developer. Internal storage of data in model changed
  */
 
 (function() {
@@ -781,7 +782,8 @@
 
         function bindFunctions(name, spec, obj, appId) {
           var storage = [],
-              fldPrefix = "fld_prefix_";
+              modelStorageField = "_sourceObjectData";
+          obj[modelStorageField] = {};
           if (spec.updateAll && spec.id) {
             if (! spec.update) spec.update = function(val) {};
             if (! spec.findById) spec.findById = function(val) {};
@@ -825,6 +827,7 @@
                   obj[key](obj[key](), true, true);
                 });
                 debugData("Called update on model " + name + " with data", objFrom);
+                obj[modelStorageField] = objFrom;
                 if (smthChanged) {
                   debugEvents("fire event: " + eventName);
                   jiant.DEBUG_MODE.events && (! eventsUsed[eventName]) && (eventsUsed[eventName] = 1);
@@ -876,7 +879,6 @@
                   bindFunctions(name, spec, newObj, appId);
                   $.each(item, function(name, param) {
                     newObj[name] && newObj[name](param);
-//              newObj[fldPrefix + name] = param;
                   });
                 }
                 $.each(arr, function(idx, item) {
@@ -951,38 +953,30 @@
               }
             } else if (fname == "asMap") {
               obj[fname] = function () {
-                var result = {};
-                $.each(obj, function (key, val) {
-                  if (key.indexOf(fldPrefix) == 0) {
-                    result[key.substr(fldPrefix.length)] = val;
-                  }
-                });
-                return result;
+                return obj[modelStorageField];
               }
             } else if (isEmptyFunction(funcSpec) || spec._innerData[fname]) {
               spec._innerData[fname] = true;
               obj[fname] = function(val, forceEvent, dontFireUpdate) {
-                var fieldName = fldPrefix + fname;
                 if (arguments.length == 0) {
-                  return obj[fieldName];
+                  return obj[modelStorageField][fname];
                 } else {
-                  if (forceEvent || (obj[fieldName] !== val && forceEvent !== false)) {
-                    var oldVal = obj[fieldName];
-                    obj[fieldName] = val;
+                  if (forceEvent || (obj[modelStorageField][fname] !== val && forceEvent !== false)) {
+                    var oldVal = obj[modelStorageField][fname];
+                    obj[modelStorageField][fname] = val;
                     debugEvents("fire event: " + eventName);
                     jiant.DEBUG_MODE.events && (! eventsUsed[eventName]) && (eventsUsed[eventName] = 1);
                     obj._innerData.trigger(eventName, [obj, val, oldVal]);
                     obj != spec && spec._innerData.trigger(eventName, [obj, val, oldVal]);
-//              jiant.logInfo(fieldName, obj[fieldName], val, obj != spec);
                     if (! dontFireUpdate) {
                       debugEvents("fire event: " + globalChangeEventName);
                       jiant.DEBUG_MODE.events && (! eventsUsed[globalChangeEventName]) && (eventsUsed[globalChangeEventName] = 1);
                       eventBus.trigger(globalChangeEventName, [obj, fname, val, oldVal]);
                     }
                   } else {
-                    obj[fieldName] = val;
+                    obj[modelStorageField][fname] = val;
                   }
-                  return obj[fieldName];
+                  return obj[modelStorageField][fname];
                 }
               };
               assignOnOffHandlers(obj, eventName, fname);
@@ -1017,7 +1011,6 @@
                 });
               });
               spec.implement = function(obj) {
-                jiant.logInfo("implementation assigned to " + name);
                 $.each(spec, function(fname, fnbody) {
                   if (fname != "implement") {
                     if (! obj[fname]) {
@@ -1030,6 +1023,9 @@
                 awakeAwaitingDepends(appId, name);
                 (! loadedLogics[appId]) && (loadedLogics[appId] = {});
                 loadedLogics[appId][name] = 1;
+                var len = 0;
+                $.each(awaitingDepends[appId], function() {len++});
+                jiant.logInfo("implementation assigned to " + name + ", remaining unbound logics count: " + len + (len == 0 ? ", all logics loaded OK!" : ""));
               };
             }
           });
@@ -1494,7 +1490,7 @@
             } else {
               injectionPoint = $("body");
             }
-            injectionPoint.load(viewsUrl, {}, function() {
+            injectionPoint.load(viewsUrl, {}, function () {
               _bindUi(prefix, root, devMode, appUiFactory);
             });
           } else {
@@ -1607,9 +1603,7 @@
           }
         }
 
-        function getAwaitingDepends() {
-          return awaitingDepends;
-        }
+        function getAwaitingDepends() {return awaitingDepends;}
 
         function setUiFactory(factory) {
           var ok = true;
@@ -1622,9 +1616,7 @@
           ok ? uiFactory = factory : 0;
         }
 
-        function version() {
-          return 91
-        }
+        function version() {return 92}
 
         return {
           AJAX_PREFIX: "",
