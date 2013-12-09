@@ -93,6 +93,7 @@
  0.88: customRenderer for templates - last param changed to parse result, not specification reference
  0.89: time to bind UI now properly reported in console instead of previous random number
  0.90: randomIntBetween(from, to) function added
+ 0.91: cross domain bindUi creates container with provided id, if it doesn't exist already
  */
 
 (function() {
@@ -1483,7 +1484,16 @@
           }
           var appUiFactory = root.uiFactory ? root.uiFactory : uiFactory;
           if (viewsUrl) {
-            var injectionPoint = injectId ? $("#" + injectId) : $("body");
+            var injectionPoint;
+            if (injectId) {
+              injectionPoint = $("#" + injectId);
+              if (!injectionPoint[0]) {
+                injectionPoint = $("<div id='" + injectId + "' style='display:none'></div>");
+                $("body").append(injectionPoint);
+              }
+            } else {
+              injectionPoint = $("body");
+            }
             injectionPoint.load(viewsUrl, {}, function() {
               _bindUi(prefix, root, devMode, appUiFactory);
             });
@@ -1613,7 +1623,7 @@
         }
 
         function version() {
-          return 90
+          return 91
         }
 
         return {
