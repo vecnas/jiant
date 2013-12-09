@@ -16,6 +16,7 @@
 // xl.0.12 statefulApp accepts 3rd optional argument: defaultState to go from empty state
 // xl.0.13 saveCtl fix: event object was added
 // xl.0.14 sorting support added to pagedContent
+// xl.0.15 empty container when renderList()
 
 (function() {
 
@@ -23,9 +24,7 @@
 
   var tmpJiantXl = {
 
-    version: function() {
-      return 14;
-    },
+    version: function() {return 15},
 
     ctl2state: function(ctl, state, selectedCssClass) {
       return function() {
@@ -153,6 +152,7 @@
     renderList: function(list, container, tm, perItemCb, noItemsLabel) {
       return function() {
         noItemsLabel && (list.length ? noItemsLabel.hide() : noItemsLabel.show());
+        container.empty();
         $.each(list, function(idx, item) {
           var elem = tm.parseTemplate(item);
           elem.propagate(item, false);
