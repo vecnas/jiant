@@ -95,6 +95,7 @@
  0.90: randomIntBetween(from, to) function added
  0.91: cross domain bindUi creates container with provided id, if it doesn't exist already
  0.92: count of unbound logics printed into console, to hint developer. Internal storage of data in model changed, all() returns copy of storage
+ 0.92.1: fix of setXAndY
  */
 
 (function() {
@@ -831,7 +832,10 @@
                   obj[key](obj[key](), true, true);
                 });
                 debugData("Called update on model " + name + " with data", objFrom);
-                obj[modelStorageField] = objFrom;
+//                $.each(objFrom, function(key, val) {
+//                  if (isOwnProp)
+//                  obj[modelStorageField][key] = val;
+//                });
                 if (smthChanged) {
                   debugEvents("fire event: " + eventName);
                   jiant.DEBUG_MODE.events && (! eventsUsed[eventName]) && (eventsUsed[eventName] = 1);
