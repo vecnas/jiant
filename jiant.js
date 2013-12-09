@@ -94,7 +94,7 @@
  0.89: time to bind UI now properly reported in console instead of previous random number
  0.90: randomIntBetween(from, to) function added
  0.91: cross domain bindUi creates container with provided id, if it doesn't exist already
- 0.92: count of unbound logics printed into console, to hint developer. Internal storage of data in model changed
+ 0.92: count of unbound logics printed into console, to hint developer. Internal storage of data in model changed, all() returns copy of storage
  */
 
 (function() {
@@ -808,7 +808,11 @@
             if (fname == "_innerData") {
             } else if (fname == "all") {
               obj[fname] = function() {
-                return storage;
+                var retVal = [];
+                $.each(storage, function(idx, obj) {
+                  retVal.push(obj);
+                });
+                return retVal;
               };
             } else if (fname == "on") {
               assignOnOffHandlers(obj, globalChangeEventName, undefined, eventBus);
