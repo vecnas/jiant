@@ -96,6 +96,7 @@
  0.91: cross domain bindUi creates container with provided id, if it doesn't exist already
  0.92: count of unbound logics printed into console, to hint developer. Internal storage of data in model changed, all() returns copy of storage
  0.92.1: fix of setXAndY
+ 0.93: info(arr), error(arr) methods added, printing all arguments as single string
  */
 
 (function() {
@@ -327,12 +328,30 @@
           });
         }
 
+        function error() {
+          var s = "";
+          $.each(arguments, function(idx, arg) {
+            s += arg;
+            s += " ";
+          });
+          logError(s);
+        }
+
         function logInfo(s) {
           if (jiant.DEV_MODE && window.console && window.console.info) {
             $.each(arguments, function(idx, arg) {
               window.console.info(arg);
             });
           }
+        }
+
+        function info() {
+          var s = "";
+          $.each(arguments, function(idx, arg) {
+            s += arg;
+            s += " ";
+          });
+          logInfo(s);
         }
 
         function debugData(s, obj) {
@@ -1624,7 +1643,7 @@
           ok ? uiFactory = factory : 0;
         }
 
-        function version() {return 92}
+        function version() {return 93}
 
         return {
           AJAX_PREFIX: "",
@@ -1654,6 +1673,8 @@
           handleErrorFn: defaultAjaxErrorsHandle,
           logInfo: logInfo,
           logError: logError,
+          info: info,
+          error: error,
           parseTemplate: function(text, data) {return $(parseTemplate(text, data));},
           parseTemplate2Text: parseTemplate2Text,
           version: version,
