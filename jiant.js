@@ -97,6 +97,7 @@
  0.92: count of unbound logics printed into console, to hint developer. Internal storage of data in model changed, all() returns copy of storage
  0.92.1: fix of setXAndY
  0.93: info(arr), error(arr) methods added, printing all arguments as single string
+ 0.93.1: formatDate fix
  */
 
 (function() {
@@ -176,12 +177,12 @@
 
         function formatDate(millis) {
           var dt = toDate(millis);
-          return dt == null ? "" : lfill(dt.getFullYear()) + "-" + lfill(dt.getMonth()) + "-" + lfill(dt.getDate());
+          return dt == null ? "" : lfill(dt.getFullYear()) + "-" + lfill(dt.getMonth() + 1) + "-" + lfill(dt.getDate());
         }
 
         function formatDateUsa(millis) {
           var dt = toDate(millis);
-          return dt == null ? "" : lfill(dt.getMonth()+1) + "/" + lfill(dt.getDate()) + "/" + lfill(dt.getFullYear());
+          return dt == null ? "" : lfill(dt.getMonth() + 1) + "/" + lfill(dt.getDate()) + "/" + lfill(dt.getFullYear());
         }
 
         function formatTime(millis) {
