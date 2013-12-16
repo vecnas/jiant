@@ -17,6 +17,7 @@
 // xl.0.13 saveCtl fix: event object was added
 // xl.0.14 sorting support added to pagedContent
 // xl.0.15 empty container when renderList()
+// xl.0.16 goProxy(state) param added to ctl2state for custom state.go() parameters support
 
 (function() {
 
@@ -24,12 +25,12 @@
 
   var tmpJiantXl = {
 
-    version: function() {return 15},
+    version: function() {return 16},
 
-    ctl2state: function(ctl, state, selectedCssClass) {
+    ctl2state: function(ctl, state, selectedCssClass, goProxy) {
       return function() {
         ctl.click(function() {
-          state.go();
+          goProxy ? goProxy(state) : state.go();
         });
         selectedCssClass && state.start(function() {
           ctl.addClass(selectedCssClass);
@@ -40,12 +41,12 @@
       };
     },
 
-    nav: function(app, view, suffix, selectedCssClass) {
+    nav: function(app, view, suffix, selectedCssClass, goProxy) {
       return function() {
         suffix = suffix ? suffix : "";
         $.each(app.states, function(stateName, stateSpec) {
           var ctl = view[stateName + suffix];
-          ctl && jiant.xl.ctl2state(ctl, stateSpec, selectedCssClass)();
+          ctl && jiant.xl.ctl2state(ctl, stateSpec, selectedCssClass, goProxy)();
         });
       };
     },
