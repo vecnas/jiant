@@ -98,6 +98,7 @@
  0.92.1: fix of setXAndY
  0.93: info(arr), error(arr) methods added, printing all arguments as single string
  0.93.1: formatDate fix
+ 0.94: refreshState(appId) - optional appId - id or application to refresh state for, all app refreshed if not provided
  */
 
 (function() {
@@ -1146,17 +1147,26 @@
               });
             };
           });
-          $(window).hashchange(function (event, enforce) {
+          $(window).hashchange(makeHashListener(appId));
+          lastStates[appId] = parseState(appId).now[0];
+//          lastEncodedStates[appId] = getAppState(appId);
+        }
+
+        function makeHashListener(appId) {
+          return function (event, enforce, runtimeAppId) {
+            if (runtimeAppId && runtimeAppId != appId) {
+              return;
+            }
             var state = location.hash.substring(1),
                 parsed = parseState(appId),
                 stateId = parsed.now[0],
                 params = parsed.now,
                 smthChanged = enforce || (lastEncodedStates[appId] != getAppState(appId));
-            if (! smthChanged) {
+            if (!smthChanged) {
               return;
             }
             params.splice(0, 1);
-            $.each(params, function(idx, p) {
+            $.each(params, function (idx, p) {
               if (p == "undefined") {
                 params[idx] = undefined;
               }
@@ -1169,12 +1179,10 @@
             lastEncodedStates[appId] = getAppState(appId);
             stateId = (stateId ? stateId : "");
             debugStates("trigger state start: " + appId + stateId);
-            jiant.DEBUG_MODE.states && (! statesUsed[appId + stateId]) && (statesUsed[appId + stateId] = 1);
-//            jiant.logInfo(lastEncodedStates[appId] + " params are ", params);
+            jiant.DEBUG_MODE.states && (!statesUsed[appId + stateId]) && (statesUsed[appId + stateId] = 1);
+            //            jiant.logInfo(lastEncodedStates[appId] + " params are ", params);
             eventBus.trigger(appId + "state_" + stateId + "_start", params);
-          });
-          lastStates[appId] = parseState(appId).now[0];
-//          lastEncodedStates[appId] = getAppState(appId);
+          }
         }
 
         function go(stateId, root, stateExternalBase, appId) {
@@ -1343,8 +1351,8 @@
           return parsed.now[0] ? parsed.now[0] : "";
         }
 
-        function refreshState() {
-          $(window).hashchange && $(window).trigger("hashchange", true);
+        function refreshState(appId) {
+          $(window).hashchange && $(window).trigger("hashchange", [true, extractApplicationId(appId)]);
         }
 
 // ------------ ajax staff ----------------
@@ -1534,6 +1542,10 @@
           $.extend(obj1, obj2);
         }
 
+        function extractApplicationId(appId) {
+          return $.isPlainObject(appId) ? appId.id : appId
+        }
+
         // onUiBound(cb);
         // onUiBound(depList, cb); - INVALID, treated as onUiBound(appIdArr, cb);
         // onUiBound(appIdArr, cb);
@@ -1644,7 +1656,7 @@
           ok ? uiFactory = factory : 0;
         }
 
-        function version() {return 93}
+        function version() {return 94}
 
         return {
           AJAX_PREFIX: "",
