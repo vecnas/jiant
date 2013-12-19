@@ -18,6 +18,7 @@
 // xl.0.14 sorting support added to pagedContent
 // xl.0.15 empty container when renderList()
 // xl.0.16 goProxy(state) param added to ctl2state for custom state.go() parameters support
+// xl.0.17 remove hiding views for statefulViews
 
 (function() {
 
@@ -25,7 +26,7 @@
 
   var tmpJiantXl = {
 
-    version: function() {return 16},
+    version: function() {return 17},
 
     ctl2state: function(ctl, state, selectedCssClass, goProxy) {
       return function() {
@@ -70,11 +71,6 @@
               views.hide();
             }
           });
-        }
-        if ($.isArray(views)) {
-          $.each(views, function(idx, view) {view.hide();});
-        } else {
-          views.hide();
         }
         if ($.isArray(states)) {
           $.each(states, function(idx, state) {
