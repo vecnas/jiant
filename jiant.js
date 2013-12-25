@@ -99,6 +99,7 @@
  0.93: info(arr), error(arr) methods added, printing all arguments as single string
  0.93.1: formatDate fix
  0.94: refreshState(appId) - optional appId - id or application to refresh state for, all app refreshed if not provided
+ 0.95: initial states double update fixed, removed comment
  */
 
 (function() {
@@ -1149,7 +1150,7 @@
           });
           $(window).hashchange(makeHashListener(appId));
           lastStates[appId] = parseState(appId).now[0];
-//          lastEncodedStates[appId] = getAppState(appId);
+          lastEncodedStates[appId] = getAppState(appId);
         }
 
         function makeHashListener(appId) {
@@ -1656,7 +1657,7 @@
           ok ? uiFactory = factory : 0;
         }
 
-        function version() {return 94}
+        function version() {return 95}
 
         return {
           AJAX_PREFIX: "",
