@@ -100,6 +100,7 @@
  0.93.1: formatDate fix
  0.94: refreshState(appId) - optional appId - id or application to refresh state for, all app refreshed if not provided
  0.95: initial states double update fixed, removed comment
+ 0.96: formatMoney(amount, grpDelim) added
  */
 
 (function() {
@@ -175,6 +176,21 @@
         function toDate(val) {
           var num = Number(val);
           return ((num === 0 && val !== 0 && val !== "0") || isNaN(num)) ? null : new Date(num);
+        }
+
+        function formatMoney(amount, grpDelim) {
+          grpDelim = grpDelim !== undefined ? grpDelim : ",";
+          var num = parseInt(amount);
+          if (isNaN(num)) {
+            return "";
+          } else if (num == 0) {
+            return "0";
+          }
+          var ret = "" + Math.abs(num);
+          for (var idx = ret.length; idx > 0; idx -= 3) {
+            ret = ret.substring(0, idx) + (idx < ret.length ? grpDelim : "") + ret.substring(idx);
+          }
+          return (num < 0 ? "-" : "") + ret;
         }
 
         function formatDate(millis) {
@@ -1657,7 +1673,7 @@
           ok ? uiFactory = factory : 0;
         }
 
-        function version() {return 95}
+        function version() {return 96}
 
         return {
           AJAX_PREFIX: "",
@@ -1695,6 +1711,7 @@
 
           formatDate: formatDate,
           formatDateUsa: formatDateUsa,
+          formatMoney: formatMoney,
           formatTime: formatTime,
           formatTimeSeconds: formatTimeSeconds,
           randomIntBetween: randomIntBetween,

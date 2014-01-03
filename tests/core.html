@@ -10,7 +10,7 @@
   <div id="qunit-fixture"></div>
   <script src="http://code.jquery.com/qunit/qunit-1.12.0.js"></script>
   <script src="http://cdnjs.cloudflare.com/ajax/libs/jquery/1.10.2/jquery.min.js"></script>
-  <script src="../js/jiant.js"></script>
+  <script src="../jiant.js"></script>
 
   <script>
 
@@ -36,15 +36,25 @@
     });
 
     test("format", function() {
-      expect(18);
+      expect(28);
       var dt = new Date(2012, 10, 26, 9, 45, 8, 655);
-      equal(jiant.formatDate(dt), "2012-10-26", "format date, date argument");
+      equal(jiant.formatMoney(), "", "format money, no argument");
+      equal(jiant.formatMoney(null), "", "format money, null argument");
+      equal(jiant.formatMoney("abc"), "", "format money, string argument");
+      equal(jiant.formatMoney(0), "0", "format money, 0 argument");
+      equal(jiant.formatMoney(-100), "-100", "format money, -100 argument");
+      equal(jiant.formatMoney(100), "100", "format money, 100 argument");
+      equal(jiant.formatMoney("1000"), "1,000", "format money, 1000 as string argument");
+      equal(jiant.formatMoney(231200), "231,200", "format money, 231200 argument");
+      equal(jiant.formatMoney(231200, "."), "231.200", "format money, 231200 and '.' arguments");
+      equal(jiant.formatMoney(1234567891200), "1,234,567,891,200", "format money, 1200 argument");
+      equal(jiant.formatDate(dt), "2012-11-26", "format date, date argument");
       equal(jiant.formatTime(dt), "09:45", "format time, date argument");
       equal(jiant.formatTimeSeconds(dt), "09:45:08", "format time with seconds, date argument");
-      equal(jiant.formatDate(dt.getTime()), "2012-10-26", "format date, number argument");
+      equal(jiant.formatDate(dt.getTime()), "2012-11-26", "format date, number argument");
       equal(jiant.formatTime(dt.getTime()), "09:45", "format time, number argument");
       equal(jiant.formatTimeSeconds(dt.getTime()), "09:45:08", "format time with seconds, number argument");
-      equal(jiant.formatDate("1353897908655"), "2012-10-26", "format date, number as string argument");
+      equal(jiant.formatDate("1353897908655"), "2012-11-26", "format date, number as string argument");
       equal(jiant.formatTime("1353897908655"), "09:45", "format time, number as string argument");
       equal(jiant.formatTimeSeconds("1353897908655"), "09:45:08", "format time with seconds, number as string argument");
       equal(jiant.formatDate(null), "", "format date, null argument");
