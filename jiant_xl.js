@@ -21,6 +21,7 @@
  xl.0.16 goProxy(state) param added to ctl2state for custom state.go() parameters support
  xl.0.17 remove hiding views for statefulViews
 */
+
 (function() {
 
   var confirmedActionBsSelectedFn;
