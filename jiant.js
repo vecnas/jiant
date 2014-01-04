@@ -101,7 +101,8 @@
  0.94: refreshState(appId) - optional appId - id or application to refresh state for, all app refreshed if not provided
  0.95: initial states double update fixed, removed comment
  0.96: formatMoney(amount, grpDelim) added
- */
+ 0.96.1: minification warning removed
+*/
 
 (function() {
   var
@@ -1670,7 +1671,7 @@
               ok = false;
             }
           });
-          ok ? uiFactory = factory : 0;
+          ok && (uiFactory = factory);
         }
 
         function version() {return 96}

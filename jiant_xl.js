@@ -1,25 +1,26 @@
-// 0.33 based, added bindList
-// 0.42 based, minor fix in bindList
-// 0.44 based, nav, stateful views
-// 0.46 based, pagedContent
-// xl.0.01 renderList(list, container, tm, perItemCb) added, perItemCb(item, elem)
-// xl.0.02 propagate call added to pagedContent
-// xl.0.03 noItems optional parameter added to pagedContent, renderList; version() added
-// xl.0.04 onCompleteCb optional parameters added to pagedContent
-// xl.0.05 confirmedActionBs(ctl, confirmDialogView, dialogOkCtl, actionFn) added
-// xl.0.06 saveCtl(ctl, saveFn, markerElemOptional, markerTextOptional) added
-// xl.0.07 confirmedActionBs accepts one more optional parameter - preCb - called just before showing confirmation
-// xl.0.08 bindList(model, container, template, viewFieldSetterName) accepts both template or callback as 3rd parameter, usage: template(obj)
-// xl.0.09 confirmedActionBs multiple targets bug fixed
-// xl.0.10 statefulViews autohides bound views on initialization
-// xl.0.11 pagedContent notification about wrong arguments
-// xl.0.12 statefulApp accepts 3rd optional argument: defaultState to go from empty state
-// xl.0.13 saveCtl fix: event object was added
-// xl.0.14 sorting support added to pagedContent
-// xl.0.15 empty container when renderList()
-// xl.0.16 goProxy(state) param added to ctl2state for custom state.go() parameters support
-// xl.0.17 remove hiding views for statefulViews
-
+/*
+ 0.33 based, added bindList
+ 0.42 based, minor fix in bindList
+ 0.44 based, nav, stateful views
+ 0.46 based, pagedContent
+ xl.0.01 renderList(list, container, tm, perItemCb) added, perItemCb(item, elem)
+ xl.0.02 propagate call added to pagedContent
+ xl.0.03 noItems optional parameter added to pagedContent, renderList; version() added
+ xl.0.04 onCompleteCb optional parameters added to pagedContent
+ xl.0.05 confirmedActionBs(ctl, confirmDialogView, dialogOkCtl, actionFn) added
+ xl.0.06 saveCtl(ctl, saveFn, markerElemOptional, markerTextOptional) added
+ xl.0.07 confirmedActionBs accepts one more optional parameter - preCb - called just before showing confirmation
+ xl.0.08 bindList(model, container, template, viewFieldSetterName) accepts both template or callback as 3rd parameter, usage: template(obj)
+ xl.0.09 confirmedActionBs multiple targets bug fixed
+ xl.0.10 statefulViews autohides bound views on initialization
+ xl.0.11 pagedContent notification about wrong arguments
+ xl.0.12 statefulApp accepts 3rd optional argument: defaultState to go from empty state
+ xl.0.13 saveCtl fix: event object was added
+ xl.0.14 sorting support added to pagedContent
+ xl.0.15 empty container when renderList()
+ xl.0.16 goProxy(state) param added to ctl2state for custom state.go() parameters support
+ xl.0.17 remove hiding views for statefulViews
+*/
 (function() {
 
   var confirmedActionBsSelectedFn;
