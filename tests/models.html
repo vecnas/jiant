@@ -16,6 +16,38 @@
 
     module("models");
 
+    test("remove functionality", function() {
+      var tstApp = {
+        id: "jiantTestRemove",
+        models: {
+          tst: {
+            all: function(obj, val) {},
+            updateAll: function(data) {},
+            remove: function(obj) {},
+            findById: function(id) {},
+
+            id: function(val) {}
+          }
+        }
+      };
+      jiant.bindUi(tstApp, true);
+
+      jiant.onUiBound(tstApp, function($, app) {
+        expect(1);
+        var t = app.models.tst;
+        t.updateAll({id: 12});
+        jiant.info("-----------");
+        jiant.logInfo("all after adding 12: ", t.all());
+        var obj = t.findById(12);
+        jiant.logInfo("findBy 12: ", obj);
+        t.remove(obj);
+        jiant.logInfo("all after remove: ", t.all());
+        equal(t.findById(12), undefined, "findBy 12 after remove");
+        jiant.info("-----------");
+      });
+
+    });
+
     test("singleton update handlers test", function() {
       expect(14);
       var tstApp = {
