@@ -20,6 +20,7 @@
  xl.0.15 empty container when renderList()
  xl.0.16 goProxy(state) param added to ctl2state for custom state.go() parameters support
  xl.0.17 remove hiding views for statefulViews
+ xl.0.18 pager is optional for pagedContent
 */
 
 (function() {
@@ -117,7 +118,7 @@
     pagedContent: function(state, ajax, container, pager, template, perItemCb, noItemsLabel, onCompleteCb, useSorting) {
       return function() {
 
-        pager.onValueChange(function(event, pageNum) {
+        pager && pager.onValueChange(function(event, pageNum) {
           state.go(pageNum, undefined);
         });
 
@@ -140,7 +141,7 @@
               container.append(row);
               perItemCb && perItemCb(item, row);
             });
-            pager.updatePager(data);
+            pager && pager.updatePager(data);
             onCompleteCb && onCompleteCb(data);
           });
         });
