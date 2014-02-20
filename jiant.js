@@ -103,6 +103,7 @@
  0.96: formatMoney(amount, grpDelim) added
  0.96.1: minification warning removed
  0.97: addAll not called for empty arguments, addAll(null) is no more equals addAll([null])
+ 0.97.1: right pad dot supported by input float
  */
 
 (function() {
@@ -300,7 +301,7 @@
             input.val(parseInt(input.val()) + 1);
             input.trigger("change");
             return false;
-          } else if (event.keyCode == jiant.key.dot) {
+          } else if (event.keyCode == jiant.key.dot || event.keyCode == jiant.key.dotExtra) {
             return (input.val().indexOf(".") < 0) && input.val().length > 0;
           } else if (event.keyCode == jiant.key.backspace || event.keyCode == jiant.key.del
             || event.keyCode == jiant.key.end || event.keyCode == jiant.key.left || event.keyCode == jiant.key.right
@@ -1750,7 +1751,7 @@
         tabs: tabs,
 
         key: {left: 37, up: 38, right: 39, down: 40, del: 46, backspace: 8, tab: 9, end: 35, home: 36, enter: 13, ctrl: 17,
-          escape: 27, dot: 190, comma: 188,
+          escape: 27, dot: 190, dotExtra: 110, comma: 188,
           a: 65, c: 67, u: 85, w: 87, space: 32, 1: 49, 2: 50, 3: 51, 4: 52, 5: 53, 6: 54}
 
       };
