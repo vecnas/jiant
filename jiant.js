@@ -104,6 +104,7 @@
  0.96.1: minification warning removed
  0.97: addAll not called for empty arguments, addAll(null) is no more equals addAll([null])
  0.97.1: right pad dot supported by input float
+ 0.98: pager adopted to bootstrap 3
  */
 
 (function() {
@@ -400,7 +401,7 @@
       function setupPager(uiElem) {
         var pagerBus = $({}),
           root = $("<ul></ul>");
-        uiElem.addClass("pagination");
+        root.addClass("pagination");
         uiElem.append(root);
         uiElem.onValueChange = function(callback) {
           pagerBus.on("ValueChange", callback);
@@ -411,7 +412,8 @@
           var from = Math.max(0, page.number - jiant.PAGER_RADIUS / 2),
             to = Math.min(page.number + jiant.PAGER_RADIUS / 2, page.totalPages);
           if (from > 0) {
-            addPageCtl(1, "").find("a").css("margin-right", "20px");
+            addPageCtl(1, "");
+            addPageCtl(-1, "disabled emptyPlaceholder");
           }
           for (var i = from; i < to; i++) {
             var cls = "";
@@ -421,13 +423,15 @@
             addPageCtl(i + 1, cls);
           }
           if (to < page.totalPages - 1) {
-            addPageCtl(page.totalPages, "").find("a").css("margin-left", "20px");
+            addPageCtl(-1, "disabled emptyPlaceholder");
+            addPageCtl(page.totalPages, "");
           }
         };
         function addPageCtl(value, ctlClass) {
-          var ctl = $(parseTemplate($("<b><li class='!!ctlClass!!' style='cursor: pointer;'><a>!!label!!</a></li></b>"), {label: value, ctlClass: ctlClass}));
+          var ctl = $(parseTemplate($("<b><li class='!!ctlClass!!' style='cursor: pointer;'><a>!!label!!</a></li></b>"),
+              {label: value != -1 ? value : "...", ctlClass: ctlClass}));
           root.append(ctl);
-          ctl.click(function() {
+          value != -1 && ctl.click(function() {
             pagerBus.trigger("ValueChange", value);
           });
           return ctl;
@@ -435,8 +439,8 @@
       }
 
       function setupContainerPaged(uiElem) {
-        var prev = $("<div>&lt;&lt;</div>"),
-          next = $("<div>&gt;&gt;</div>"),
+        var prev = $("<div>&laquo;</div>"),
+          next = $("<div>&raquo;</div>"),
           container = $("<div></div>"),
           pageSize = 8,
           offset = 0;
@@ -1685,7 +1689,7 @@
         ok && (uiFactory = factory);
       }
 
-      function version() {return 97}
+      function version() {return 98}
 
       return {
         AJAX_PREFIX: "",
