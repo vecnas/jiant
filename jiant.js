@@ -105,6 +105,7 @@
  0.97: addAll not called for empty arguments, addAll(null) is no more equals addAll([null])
  0.97.1: right pad dot supported by input float
  0.98: pager adopted to bootstrap 3
+ 0.98.1: model.update(obj, treatMissingAsNulls) accepts second parameter - enforce all missing fields to be set to null - update({}, true)
  */
 
 (function() {
@@ -863,9 +864,12 @@
           } else if (fname == "on") {
             assignOnOffHandlers(obj, globalChangeEventName, undefined, eventBus);
           } else if (fname == "update") {
-            obj[fname] = function(objFrom) {
+            obj[fname] = function(objFrom, treatMissingAsNulls) {
               var smthChanged = false;
               var toTrigger = {};
+              treatMissingAsNulls && $.each(obj[modelStorageField], function(key, val) {
+                objFrom[key] == undefined && (objFrom[key] = null);
+              });
               $.each(objFrom, function(key, val) {
                 if (obj[key] && $.isFunction(obj[key]) && obj[key]() != val) {
                   obj[key](val, false);
