@@ -21,6 +21,7 @@
  xl.0.16 goProxy(state) param added to ctl2state for custom state.go() parameters support
  xl.0.17 remove hiding views for statefulViews
  xl.0.18 pager is optional for pagedContent
+ xl.0.19 bindList tracks obj.remove() too
 */
 
 (function() {
@@ -29,7 +30,7 @@
 
   var tmpJiantXl = {
 
-    version: function() {return 17},
+    version: function() {return 19},
 
     ctl2state: function(ctl, state, selectedCssClass, goProxy) {
       return function() {
@@ -112,6 +113,9 @@
           });
         });
         model.add && model.add.on(renderObj);
+        model.remove && model.remove.on(function(obj) {
+          obj.view().remove();
+        });
       };
     },
 
