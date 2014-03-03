@@ -106,6 +106,7 @@
  0.97.1: right pad dot supported by input float
  0.98: pager adopted to bootstrap 3
  0.98.1: model.update(obj, treatMissingAsNulls) accepts second parameter - enforce all missing fields to be set to null - update({}, true)
+ 0.99: external shared modules via declare(moduleName, {func0: function() {..}, func1: ...}), then could be used as app.logic.moduleName.func0, etc
  */
 
 (function() {
@@ -168,6 +169,7 @@
         lastEncodedStates = {},
         loadedLogics = {},
         awaitingDepends = {},
+        externalModules = {},
         eventBus = $({}),
         uiBoundRoot = {},
         onInitAppActions = [],
@@ -1089,12 +1091,38 @@
               awakeAwaitingDepends(appId, name);
               (! loadedLogics[appId]) && (loadedLogics[appId] = {});
               loadedLogics[appId][name] = 1;
-              var len = 0;
-              $.each(awaitingDepends[appId], function() {len++});
-              jiant.logInfo("implementation assigned to " + name + ", remaining unbound logics count: " + len + (len == 0 ? ", all logics loaded OK!" : ""));
+              logUnboundCount(appId);
             };
           }
         });
+      }
+
+      function logUnboundCount(appId) {
+        var len = 0;
+        $.each(awaitingDepends[appId], function() {len++});
+        jiant.logInfo("implementation assigned to " + name + ", remaining unbound logics count: " + len
+          + (len == 0 ? ", all logics loaded OK!" : ""));
+      }
+
+      function declare(name, obj) {
+        externalModules[name] = obj;
+        $.each(awaitingDepends, function(appId, depList) {
+          checkForExternalAwaiters(appId, name);
+        });
+      }
+
+      function checkForExternalAwaiters(appId, name) {
+        var obj = externalModules[name];
+        if (obj && awaitingDepends[appId][name]) {
+          uiBoundRoot[appId].logic || (uiBoundRoot[appId].logic = {});
+          uiBoundRoot[appId].logic[name] || (uiBoundRoot[appId].logic[name] = {});
+          $.each(obj, function(fname, fspec) {
+            uiBoundRoot[appId].logic[name][fname] = fspec;
+          });
+          awakeAwaitingDepends(appId, name);
+          loadedLogics[appId][name] = 1;
+          logUnboundCount(appId);
+        }
       }
 
       function awakeAwaitingDepends(appId, name) {
@@ -1693,7 +1721,7 @@
         ok && (uiFactory = factory);
       }
 
-      function version() {return 98}
+      function version() {return 99}
 
       return {
         AJAX_PREFIX: "",
@@ -1712,6 +1740,7 @@
 
         bind: bind,
         bindUi: bindUi,
+        declare: declare,
         goRoot: goRoot,
         goState: goState,
         onUiBound: onUiBound,
