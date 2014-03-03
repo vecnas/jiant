@@ -107,6 +107,7 @@
  0.98: pager adopted to bootstrap 3
  0.98.1: model.update(obj, treatMissingAsNulls) accepts second parameter - enforce all missing fields to be set to null - update({}, true)
  0.99: external shared modules via declare(moduleName, {func0: function() {..}, func1: ...}), then could be used as app.logic.moduleName.func0, etc
+ 1.00: some visualization fun, call jiant.visualize() in console to see graph of app structure. Have graph.js located near jiant.js
  */
 
 (function() {
@@ -509,7 +510,9 @@
 // ------------ views ----------------
 
       function _bindContent(appRoot, viewRoot, viewId, viewContent, viewElem, prefix) {
+        var viewSpec = {};
         $.each(viewContent, function (componentId, componentContent) {
+          viewSpec[componentId] = componentId;
           if (componentId != "appPrefix") {
             if (viewRoot[componentId] == jiant.lookup) {
               jiant.logInfo("    loookup element, no checks/bindings: " + componentId);
@@ -525,6 +528,7 @@
             }
           }
         });
+        viewRoot._jiantSpec = viewSpec;
       }
 
       function ensureSafeExtend(spec, jqObject) {
@@ -1433,6 +1437,7 @@
           var params = getParamNames(funcSpec);
           params && params.length > 0 ? params.splice(params.length - 1, 1) : params = [];
           root[uri] = makeAjaxPerformer(ajaxPrefix, ajaxSuffix, uri, params, $.isFunction(root[uri]) ? root[uri]() : undefined, crossDomain);
+          root[uri]._jiantSpec = params;
         });
       }
 
@@ -1721,7 +1726,16 @@
         ok && (uiFactory = factory);
       }
 
-      function version() {return 99}
+      function visualize() {
+        var id = "jiant_gr_vis";
+        if (! $("id")[0]) {
+          $("body").append('<div style="border: 1px solid green; width: 100%; height: 100%; position: absolute; left: 0; top: 0">' +
+            '<canvas id="' + id + '" width="' + $(window).width() + '" height="' + $(window).height() + '"></canvas></div>');
+          $("head").append('<script type="text/javascript" src="graph.js"> </script>');
+        }
+      }
+
+      function version() {return 100}
 
       return {
         AJAX_PREFIX: "",
@@ -1748,6 +1762,7 @@
         refreshState: refreshState,
         getCurrentState: getCurrentState,
         setUiFactory: setUiFactory,
+        visualize: visualize,
 
         handleErrorFn: defaultAjaxErrorsHandle,
         logInfo: logInfo,
