@@ -108,6 +108,7 @@
  0.98.1: model.update(obj, treatMissingAsNulls) accepts second parameter - enforce all missing fields to be set to null - update({}, true)
  0.99: external shared modules via declare(moduleName, {func0: function() {..}, func1: ...}), then could be used as app.logic.moduleName.func0, etc
  1.00: some visualization fun, call jiant.visualize() in console to see graph of app structure. Have graph.js, arbor.js located near jiant.js
+ 1.01: inter-states parameters fix
  */
 
 (function() {
@@ -1264,14 +1265,16 @@
             if (arg != undefined) {
               parsed.now.push(pack(arg));
             } else if (prevState[0] == stateId && prevState[idx + 1] != undefined) {
+              info("reusing pref param: " + prevState[idx + 1]);
               parsed.now.push(pack(prevState[idx + 1]));
             } else {
               parsed.now.push(pack(arg));
             }
           });
-          if (prevState) {
+          if (prevState && prevState[0] == stateId) {
             var argLen = arguments.length;
             while (argLen < prevState.length - 1) {
+              info("pushing prevState param: " + prevState[argLen]);
               parsed.now.push(pack(prevState[++argLen]));
             }
           }
@@ -1737,7 +1740,7 @@
         }
       }
 
-      function version() {return 100}
+      function version() {return 101}
 
       return {
         AJAX_PREFIX: "",
