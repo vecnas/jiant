@@ -16,38 +16,6 @@
 
     module("models");
 
-    test("remove functionality", function() {
-      var tstApp = {
-        id: "jiantTestRemove",
-        models: {
-          tst: {
-            all: function(obj, val) {},
-            updateAll: function(data) {},
-            remove: function(obj) {},
-            findById: function(id) {},
-
-            id: function(val) {}
-          }
-        }
-      };
-      jiant.bindUi(tstApp, true);
-
-      jiant.onUiBound(tstApp, function($, app) {
-        expect(1);
-        var t = app.models.tst;
-        t.updateAll({id: 12});
-        jiant.info("-----------");
-        jiant.logInfo("all after adding 12: ", t.all());
-        var obj = t.findById(12);
-        jiant.logInfo("findBy 12: ", obj);
-        t.remove(obj);
-        jiant.logInfo("all after remove: ", t.all());
-        equal(t.findById(12), undefined, "findBy 12 after remove");
-        jiant.info("-----------");
-      });
-
-    });
-
     test("singleton update handlers test", function() {
       expect(14);
       var tstApp = {
@@ -97,71 +65,6 @@
       });
     });
 
-    test("asMap for singleton models", function() {
-      expect(6);
-      var tstApp2 = {
-        id: "jiantTestSingletonModels",
-        models: {
-          tst: {
-            on: function(obj, val) {},
-            update: function(data) {},			
-            asMap: function() {},
-            id: function(val) {},
-            fld: function(val) {},
-            onoff: function(val) {}
-          }
-        }
-      };
-      jiant.bindUi(tstApp2, true);
-      jiant.onUiBound(tstApp2, function($, app) {
-        var tst = app.models.tst;
-        var empty = tst.asMap();
-
-        equal(empty.id, undefined, "id of plain");
-        equal(empty.fld, undefined, "fld of plain");
-
-        tst.update({id: "23", fld: "val"});
-        equal(tst.id(), "23", "model.id value after .update(fld, val) call");
-        equal(tst.fld(), "val", "model.fld value after .update(fld, val) call");
-
-        var plain = tst.asMap();
-        equal(plain.id, 23, "id of plain");
-        equal(plain.fld, "val", "fld of plain");
-      });
-    });
-
-    test("asMap for member from collection models", function() {
-      expect(4);
-      var tstApp3 = {
-        id: "jiantTestCollectionModels",
-        models: {
-          tst: {
-            addAll: function(data) {},
-            updateAll: function(data) {},			
-            all: function() {},			
-            asMap: function() {},
-            id: function(val) {},
-            fld: function(val) {},
-            onoff: function(val) {}
-          }
-        }
-      };
-      jiant.bindUi(tstApp3, true);
-      jiant.onUiBound(tstApp3, function($, app) {
-        var tst = app.models.tst;
-
-        app.models.tst.addAll([{id: "22", fld: "val22"}, {id: "33", fld: "val33"}]);
-        equal(app.models.tst.all().length, 2, "size of collection");
-
-        var obj22 = app.models.tst.findById(22);
-        equal(obj22.fld(), "val22", "model.fld value after .update(fld, val) call");
-
-        var plain = obj22.asMap();
-        equal(plain.id, 22, "id of plain");
-        equal(plain.fld, "val22", "fld of plain");
-      });
-    });
-   
   </script>
 
 </body>
