@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Jiant test. Refresh state</title>
+  <link rel="stylesheet" href="http://code.jquery.com/qunit/qunit-1.12.0.css">
+</head>
+<body>
+  <div id="qunit"></div>
+  <div id="qunit-fixture"></div>
+  <script src="http://code.jquery.com/qunit/qunit-1.12.0.js"></script>
+  <script src="http://cdnjs.cloudflare.com/ajax/libs/jquery/1.10.2/jquery.min.js"></script>
+  <script src="../jquery.hashchange.js"></script>
+  <script src="../jiant.js"></script>
+
+  <script>
+
+    module("refresh state");
+
+    var tstApp = {
+      id: "jiantTestRefreshState",
+      states: {
+        "": {
+          go: function() {},
+          start: function(cb) {},
+          end: function(cb) {}
+        },
+
+        nonRoot1: {
+          go: function() {},
+          start: function(cb) {},
+          end: function(cb) {}
+        },
+
+        params1: {
+          go: function(param) {},
+          start: function(cb) {},
+          end: function(cb) {}
+        },
+
+        root1: {
+          go: function() {},
+          start: function(cb) {},
+          end: function(cb) {},
+          root: 1
+        }
+      }
+    };
+
+    asyncTest("refresh state test", function() {
+      expect(3);
+      jiant.bindUi(tstApp, true);
+      jiant.onUiBound(tstApp, function($, app) {
+        ok(1, "bound 1");
+        $.each(app.states, function(stateId, state) {
+          state.start(function(p) {
+            ok(1, "app1 started state: " + stateId + " with param " + p);
+          });
+          state.end(function(p) {
+            ok(1, "app1 ended state: " + stateId + " with param " + p);
+          });
+        });
+        jiant.refreshState();
+        start();
+      });
+    });
+
+  </script>
+
+</body>
+</html>
