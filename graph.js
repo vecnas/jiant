@@ -1,4 +1,6 @@
-function j_vis_gr($, app) {
+jiant.declare("jiantVisualizer", {
+    visualize: 
+    function($, app) {
 
   var Renderer = function(canvas){
       var canvas = $(canvas).get(0)
@@ -214,3 +216,5 @@ function j_vis_gr($, app) {
     return func._jiantSpec;
   }
 }
+
+  });
