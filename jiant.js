@@ -109,6 +109,7 @@
  0.99: external shared modules via declare(moduleName, {func0: function() {..}, func1: ...}), then could be used as app.logic.moduleName.func0, etc
  1.00: some visualization fun, call jiant.visualize() in console to see graph of app structure. Have graph.js, arbor.js located near jiant.js
  1.01: inter-states parameters fix
+ 1.02: remote reference to visualize() deps, visualize() improvements
  */
 
 (function() {
@@ -434,7 +435,7 @@
         };
         function addPageCtl(value, ctlClass) {
           var ctl = $(parseTemplate($("<b><li class='!!ctlClass!!' style='cursor: pointer;'><a>!!label!!</a></li></b>"),
-              {label: value != -1 ? value : "...", ctlClass: ctlClass}));
+            {label: value != -1 ? value : "...", ctlClass: ctlClass}));
           root.append(ctl);
           value != -1 && ctl.click(function() {
             pagerBus.trigger("ValueChange", value);
@@ -1729,18 +1730,23 @@
         ok && (uiFactory = factory);
       }
 
-      function visualize() {
+      function visualize(appId) {
         var id = "jiant_gr_vis";
         if (! $("id")[0]) {
           $("body").append('<div style="border: 1px solid green; width: 100%; height: 100%; position: absolute; left: 0; top: 0">' +
             '<canvas id="' + id + '" width="' + $(window).width() + '" height="' + $(window).height() + '"></canvas></div>');
-          $("head").append('<script type="text/javascript" src="arbor.js"> </script>');
-          $("head").append('<script type="text/javascript" src="arbor-tween.js"> </script>');
-          $("head").append('<script type="text/javascript" src="graph.js"> </script>');
+          appId || $.each(uiBoundRoot, function(key, val) {
+            appId = key;
+            return false;
+          });
+          $("head").append('<script type="text/javascript" src="https://raw.github.com/vecnas/jiant/master/graph.js"> </script>');
+          jiant.onUiBound(appId, ["jiantVisualizer"], function($, app) {
+            app.logic.jiantVisualizer.visualize($, app);
+          });
         }
       }
 
-      function version() {return 101}
+      function version() {return 102}
 
       return {
         AJAX_PREFIX: "",
