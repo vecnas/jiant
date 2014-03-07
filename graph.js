@@ -35,7 +35,7 @@
     }
   })
 
-})(this.jQuery)
+})(this.jQuery);
 
 (function($){
 
@@ -59,7 +59,7 @@
     }
   })
 
-})(this.jQuery)
+})(this.jQuery);
 
 jiant.declare("jiantVisualizer", {
     visualize: 
