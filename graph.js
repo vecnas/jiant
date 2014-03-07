@@ -1,4 +1,4 @@
-jiant.onUiBound(helloJiant, function($, app) {
+function j_vis_gr($, app) {
 
   var Renderer = function(canvas){
       var canvas = $(canvas).get(0)
@@ -213,4 +213,4 @@ jiant.onUiBound(helloJiant, function($, app) {
 //    return funStr.slice(funStr.indexOf('(')+1, funStr.indexOf(')')).match(/([^\s,]+)/g);
     return func._jiantSpec;
   }
-});
+}
