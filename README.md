@@ -14,3 +14,5 @@ Jiant is more of philosophy how to develop application, not particular technical
 Documentation website on Jiant: http://sites.google.com/site/jiantscript/
 
 Website updated to Jiant version 1.00
+
+Документация на русском языке: http://vecnas.github.io
