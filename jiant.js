@@ -110,6 +110,7 @@
  1.00: some visualization fun, call jiant.visualize() in console to see graph of app structure. Have graph.js, arbor.js located near jiant.js
  1.01: inter-states parameters fix
  1.02: remote reference to visualize() deps, visualize() improvements
+ 1.03: state groups for sharing parameters between different states
  */
 
 (function() {
@@ -1265,14 +1266,14 @@
           $.each(arguments, function(idx, arg) {
             if (arg != undefined) {
               parsed.now.push(pack(arg));
-            } else if (prevState[0] == stateId && prevState[idx + 1] != undefined) {
+            } else if ((prevState[0] == stateId || isSameStatesGroup(appId, prevState[0], stateId)) && prevState[idx + 1] != undefined) {
               info("reusing pref param: " + prevState[idx + 1]);
               parsed.now.push(pack(prevState[idx + 1]));
             } else {
               parsed.now.push(pack(arg));
             }
           });
-          if (prevState && prevState[0] == stateId) {
+          if (prevState && (prevState[0] == stateId || isSameStatesGroup(appId, prevState[0], stateId))) {
             var argLen = arguments.length;
             while (argLen < prevState.length - 1) {
               info("pushing prevState param: " + prevState[argLen]);
@@ -1291,6 +1292,12 @@
           }
           setState(parsed, stateExternalBase, appId);
         };
+      }
+
+      function isSameStatesGroup(appId, state0, state1) {
+        var statesRoot = uiBoundRoot[appId].states;
+        return (statesRoot[state0].statesGroup !== undefined
+          && statesRoot[state0].statesGroup === statesRoot[state1].statesGroup);
       }
 
       function goRoot(appId) {
@@ -1746,7 +1753,7 @@
         }
       }
 
-      function version() {return 102}
+      function version() {return 103}
 
       return {
         AJAX_PREFIX: "",
