@@ -111,6 +111,7 @@
  1.01: inter-states parameters fix
  1.02: remote reference to visualize() deps, visualize() improvements
  1.03: state groups for sharing parameters between different states
+ 1.04: external libs load via declare(name, url)
  */
 
 (function() {
@@ -1098,24 +1099,34 @@
               awakeAwaitingDepends(appId, name);
               (! loadedLogics[appId]) && (loadedLogics[appId] = {});
               loadedLogics[appId][name] = 1;
-              logUnboundCount(appId);
+              logUnboundCount(appId, name);
             };
           }
         });
       }
 
-      function logUnboundCount(appId) {
+      function logUnboundCount(appId, name) {
         var len = 0;
         $.each(awaitingDepends[appId], function() {len++});
         jiant.logInfo("implementation assigned to " + name + ", remaining unbound logics count: " + len
           + (len == 0 ? ", all logics loaded OK!" : ""));
       }
 
-      function declare(name, obj) {
-        externalModules[name] = obj;
-        $.each(awaitingDepends, function(appId, depList) {
-          checkForExternalAwaiters(appId, name);
-        });
+      function declare(name, objOrUrl) {
+        var lib = typeof objOrUrl === "string";
+        function handle() {
+          externalModules[name] = lib ? {} : objOrUrl;
+          $.each(awaitingDepends, function(appId, depList) {
+            checkForExternalAwaiters(appId, name);
+          });
+        }
+        lib ? $.ajax({
+          url: objOrUrl,
+          cache: true,
+          crossDomain: true,
+          dataType: "script",
+          success: handle
+        }) : handle();
       }
 
       function checkForExternalAwaiters(appId, name) {
@@ -1128,7 +1139,7 @@
           });
           awakeAwaitingDepends(appId, name);
           loadedLogics[appId][name] = 1;
-          logUnboundCount(appId);
+          logUnboundCount(appId, name);
         }
       }
 
@@ -1753,7 +1764,7 @@
         }
       }
 
-      function version() {return 103}
+      function version() {return 104}
 
       return {
         AJAX_PREFIX: "",
