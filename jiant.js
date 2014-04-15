@@ -112,6 +112,7 @@
  1.02: remote reference to visualize() deps, visualize() improvements
  1.03: state groups for sharing parameters between different states
  1.04: external libs load via declare(name, url)
+ 1.04.1: extra check for external libs load
  */
 
 (function() {
@@ -1131,7 +1132,7 @@
 
       function checkForExternalAwaiters(appId, name) {
         var obj = externalModules[name];
-        if (obj && awaitingDepends[appId][name]) {
+        if (obj && awaitingDepends[appId][name] && uiBoundRoot[appId]) {
           uiBoundRoot[appId].logic || (uiBoundRoot[appId].logic = {});
           uiBoundRoot[appId].logic[name] || (uiBoundRoot[appId].logic[name] = {});
           $.each(obj, function(fname, fspec) {
