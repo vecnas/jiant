@@ -114,6 +114,7 @@
  1.04: external libs load via declare(name, url)
  1.04.1: extra check for external libs load
  1.04.2: external modules load before application existence fixed
+ 1.05: one more async scenario covered for external libs load
  */
 
 (function() {
@@ -1594,6 +1595,10 @@
         jiant.DEV_MODE && !bindingsResult && alert("Some elements not bound to HTML properly, check console" + errString);
         uiBoundRoot[appId] = root;
         jiant.logInfo(root);
+        loadedLogics[appId] || (loadedLogics[appId] = {});
+        $.each(externalModules, function(name, impl) {
+          loadedLogics[appId][name] || (loadedLogics[appId][name] = externalModules[name]);
+        });
         var appInitEvent = appId + "onAppInit" + appId;
         eventBus.trigger(appInitEvent);
         $.when.apply($, onInitAppActions).done(function() {eventBus.trigger(appBoundEventName(appId))});
@@ -1665,8 +1670,10 @@
                 "like [[app1DepList], [app2DepList]]");
             }
           })
-        } else if (appIdArr.length == 1 && dependenciesList.length) {
+        } else if (appIdArr.length == 1 && dependenciesList && dependenciesList.length) {
           dependenciesList = [dependenciesList];
+        } else if (! dependenciesList) {
+          dependenciesList = [];
         }
         $.each(appIdArr, function(idx, appId) {
           if ($.isPlainObject(appId)) {
@@ -1768,7 +1775,9 @@
         }
       }
 
-      function version() {return 104}
+      function version() {
+        return 105;
+      }
 
       return {
         AJAX_PREFIX: "",
