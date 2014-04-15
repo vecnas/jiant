@@ -113,6 +113,7 @@
  1.03: state groups for sharing parameters between different states
  1.04: external libs load via declare(name, url)
  1.04.1: extra check for external libs load
+ 1.04.2: external modules load before application existence fixed
  */
 
 (function() {
@@ -1676,7 +1677,7 @@
           (! loadedLogics[appId]) && (loadedLogics[appId] = {});
           dependenciesList[idx] && $.each(dependenciesList[idx], function(idx, depName) {
             (!awaitingDepends[appId][depName]) && (awaitingDepends[appId][depName] = []);
-            (!loadedLogics[appId][depName]) && awaitingDepends[appId][depName].push(cb);
+            (!loadedLogics[appId][depName]) && (!externalModules[depName]) && awaitingDepends[appId][depName].push(cb);
           });
         });
         handleBoundArr(appIdArr, cb);
@@ -1736,7 +1737,9 @@
         }
       }
 
-      function getAwaitingDepends() {return awaitingDepends;}
+      function getAwaitingDepends() {
+        return awaitingDepends;
+      }
 
       function setUiFactory(factory) {
         var ok = true;
