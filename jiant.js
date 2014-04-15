@@ -1147,6 +1147,9 @@
       }
 
       function awakeAwaitingDepends(appId, name) {
+        if (! awaitingDepends[appId] || ! awaitingDepends[appId][name]) {
+          return;
+        }
         var awaiters = awaitingDepends[appId][name];
         delete awaitingDepends[appId][name];
         awaiters && $.each(awaiters, function(idx, cb) {
@@ -1598,6 +1601,7 @@
         loadedLogics[appId] || (loadedLogics[appId] = {});
         $.each(externalModules, function(name, impl) {
           loadedLogics[appId][name] || (loadedLogics[appId][name] = externalModules[name]);
+          awakeAwaitingDepends(appId, name);
         });
         var appInitEvent = appId + "onAppInit" + appId;
         eventBus.trigger(appInitEvent);
