@@ -115,6 +115,7 @@
  1.04.1: extra check for external libs load
  1.04.2: external modules load before application existence fixed
  1.05: one more async scenario covered for external libs load
+ 1.06: loadLibs(arr, cb, devMode) added, infop(), printp() added, accept !! as substitution value - infop("!! example", "My") produces "My example"
  */
 
 (function() {
@@ -356,36 +357,59 @@
         };
       }
 
-      function logError(error) {
-        $.each(arguments, function(idx, arg) {
-          window.console && window.console.error && window.console.error(arg);
+      function printp(method, args) {
+        var s = args[0] + "";
+        $.each(args, function(idx, arg) {
+          if (idx > 0) {
+            var pos = s.indexOf("!!");
+            if (pos >= 0) {
+              s = s.substring(0, pos) + arg + s.substring(pos + 2);
+            } else {
+              s += " ";
+              s += arg;
+            }
+          }
         });
+        method(s);
       }
 
-      function error() {
+      function printShort(method, args) {
         var s = "";
-        $.each(arguments, function(idx, arg) {
+        $.each(args, function(idx, arg) {
           s += arg;
           s += " ";
         });
-        logError(s);
+        method(s);
+      }
+
+      function print(method, args) {
+        window.console && window.console[method] && $.each(args, function(idx, arg) {
+          window.console[method](arg);
+        });
+      }
+
+      function logError() {
+        print("error", arguments);
       }
 
       function logInfo(s) {
-        if (jiant.DEV_MODE && window.console && window.console.info) {
-          $.each(arguments, function(idx, arg) {
-            window.console.info(arg);
-          });
-        }
+        jiant.DEV_MODE && print("info", arguments);
+      }
+
+      function error() {
+        printShort(logError, arguments);
       }
 
       function info() {
-        var s = "";
-        $.each(arguments, function(idx, arg) {
-          s += arg;
-          s += " ";
-        });
-        logInfo(s);
+        printShort(logInfo, arguments);
+      }
+
+      function errorp() {
+        printp(logError, arguments);
+      }
+
+      function infop() {
+        printp(logInfo, arguments);
       }
 
       function debugData(s, obj) {
@@ -1115,14 +1139,28 @@
           + (len == 0 ? ", all logics loaded OK!" : ""));
       }
 
+      function loadLibs(arr, cb, devMode) {
+        var pseudoDeps = [];
+        $.each(arr, function(idx, url) {
+          var pseudoName = "ext" + new Date().getMilliseconds() + Math.random();
+          pseudoDeps.push(pseudoName);
+          declare(pseudoName, url);
+        });
+        var pseudoAppName = "app" + new Date().getMilliseconds() + Math.random();
+        jiant.onUiBound(pseudoAppName, pseudoDeps, cb);
+        jiant.bindUi({id: pseudoAppName}, devMode);
+      }
+
       function declare(name, objOrUrl) {
         var lib = typeof objOrUrl === "string";
         function handle() {
+          lib && jiant.info("Loaded external library " + objOrUrl);
           externalModules[name] = lib ? {} : objOrUrl;
           $.each(awaitingDepends, function(appId, depList) {
             checkForExternalAwaiters(appId, name);
           });
         }
+        lib && jiant.info("Start loading external library " + objOrUrl);
         lib ? $.ajax({
           url: objOrUrl,
           cache: true,
@@ -1780,7 +1818,7 @@
       }
 
       function version() {
-        return 105;
+        return 106;
       }
 
       return {
@@ -1801,6 +1839,7 @@
         bind: bind,
         bindUi: bindUi,
         declare: declare,
+        loadLibs: loadLibs,
         goRoot: goRoot,
         goState: goState,
         onUiBound: onUiBound,
@@ -1815,6 +1854,8 @@
         logError: logError,
         info: info,
         error: error,
+        infop: infop,
+        errorp: errorp,
         parseTemplate: function(text, data) {return $(parseTemplate(text, data));},
         parseTemplate2Text: parseTemplate2Text,
         version: version,
