@@ -22,6 +22,7 @@
  xl.0.17 remove hiding views for statefulViews
  xl.0.18 pager is optional for pagedContent
  xl.0.19 bindList tracks obj.remove() too
+ xl.0.20 bindList - removed duplicated propagate, could be incompatible with old code (depends on usage)
 */
 
 (function() {
@@ -99,12 +100,12 @@
 
     bindList: function(model, container, template, viewFieldSetterName) {
       function renderObj(obj) {
-        var tm = $.isFunction(template) ? template(obj) : template;
-        var view = tm.parseTemplate({id: $.isFunction(obj.id) ? obj.id() : obj.id});
+        var tm = $.isFunction(template) ? template(obj) : template,
+          view = tm.parseTemplate(obj);
+//          view = tm.parseTemplate({id: $.isFunction(obj.id) ? obj.id() : obj.id});
         container.append(view);
         viewFieldSetterName && $.isFunction(obj[viewFieldSetterName]) && obj[viewFieldSetterName](view);
-        view.propagate(obj);
-        container.refreshTabs && container.refreshTabs();
+//        container.refreshTabs && container.refreshTabs();
       }
       return function() {
         model.addAll && model.addAll.on(function(arr) {
