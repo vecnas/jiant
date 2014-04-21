@@ -115,7 +115,8 @@
  1.04.1: extra check for external libs load
  1.04.2: external modules load before application existence fixed
  1.05: one more async scenario covered for external libs load
- 1.06: loadLibs(arr, cb, devMode) added, infop(), printp() added, accept !! as substitution value - infop("!! example", "My") produces "My example"
+ 1.06: loadLibs(arr, cb, devMode) added, infop(), errorp() added, accept !! as substitution value - infop("!! example", "My") produces "My example"
+ 1.07: added functions valInt()/valFloat(), valMin(val), valMax(val) to inputInt and inputFloat elements, added nlabel label type for coming intl
  */
 
 (function() {
@@ -156,6 +157,7 @@
         inputFloat = {},
         inputDate = {},
         label = {},
+        nlabel = {},
         meta = {},
         lookup = function(selector) {},
         on = function(cb) {},
@@ -283,35 +285,63 @@
         return "!!! ERROR: " + err.toString() + " !!!";
       }
 
+      function fit(val, min, max) {
+        val = isNaN(min) ? val : parseFloat(val) < min ? min : val;
+        val = isNaN(max) ? val : parseFloat(val) > max ? max : val;
+        return "" + val;
+      }
+
       function setupInputInt(input) {
         input.keydown(function(event) {
           if (event.keyCode == jiant.key.down && input.val() > 0) {
-            input.val(input.val() - 1);
+            input.val(fit(input.valInt() - 1, input.j_valMin, input.j_valMax));
             input.trigger("change");
             return false;
           } else if (event.keyCode == jiant.key.up) {
-            input.val(parseInt(input.val()) + 1);
+            input.val(fit(input.valInt() + 1, input.j_valMin, input.j_valMax));
             input.trigger("change");
             return false;
           } else if (event.keyCode == jiant.key.backspace || event.keyCode == jiant.key.del
             || event.keyCode == jiant.key.end || event.keyCode == jiant.key.left || event.keyCode == jiant.key.right
             || event.keyCode == jiant.key.home || event.keyCode == jiant.key.tab || event.keyCode == jiant.key.enter) {
+            input.val(fit(input.valInt(), input.j_valMin, input.j_valMax));
           } else if (event.shiftKey || (event.keyCode < 48 || event.keyCode > 57) && (event.keyCode < 96 || event.keyCode > 105 )) {
             event.preventDefault();
             return false;
+          } else {
+            jiant.logInfo(event, input.valInt());
+            input.val(fit(input.valInt(), input.j_valMin, input.j_valMax));
           }
           return true;
         });
+        input.change(function(event) {
+          input.val(fit(input.valInt(), input.j_valMin, input.j_valMax));
+          return false;
+        });
+        input.valInt = function() {
+          var val = parseInt(input.val());
+          return isNaN(val) ? 0 : val;
+        };
+        input.valMax = function(val) {
+          input.j_valMax = val;
+          input.attr("max", val);
+          input.val(fit(input.valInt(), input.j_valMin, input.j_valMax));
+        };
+        input.valMin = function(val) {
+          input.j_valMin = val;
+          input.attr("min", val);
+          input.val(fit(input.valInt(), input.j_valMin, input.j_valMax));
+        }
       }
 
       function setupInputFloat(input) {
         input.keydown(function(event) {
           if (event.keyCode == jiant.key.down && input.val() > 0) {
-            input.val(input.val() - 1);
+            input.val(fit(input.valFloat() - 1, input.j_valMin, input.j_valMax));
             input.trigger("change");
             return false;
           } else if (event.keyCode == jiant.key.up) {
-            input.val(parseInt(input.val()) + 1);
+            input.val(fit(input.valFloat() + 1, input.j_valMin, input.j_valMax));
             input.trigger("change");
             return false;
           } else if (event.keyCode == jiant.key.dot || event.keyCode == jiant.key.dotExtra) {
@@ -319,12 +349,34 @@
           } else if (event.keyCode == jiant.key.backspace || event.keyCode == jiant.key.del
             || event.keyCode == jiant.key.end || event.keyCode == jiant.key.left || event.keyCode == jiant.key.right
             || event.keyCode == jiant.key.home || event.keyCode == jiant.key.tab || event.keyCode == jiant.key.enter) {
+            input.val(fit(input.valFloat(), input.j_valMin, input.j_valMax));
           } else if (event.shiftKey || (event.keyCode < 48 || event.keyCode > 57) && (event.keyCode < 96 || event.keyCode > 105 )) {
             event.preventDefault();
             return false;
+          } else {
+            input.val(fit(input.val(), input.j_valMin, input.j_valMax));
           }
           return true;
         });
+//        input.change(function(event) {
+//          input.val(fit(input.valFloat(), input.j_valMin, input.j_valMax));
+//          return false;
+//        });
+        input.valFloat = function() {
+          var val = parseFloat(input.val());
+          jiant.infop("!! parsed: !! ", input.val(), val);
+          return isNaN(val) ? 0 : val;
+        };
+        input.valMax = function(val) {
+          input.j_valMax = val;
+          input.attr("max", val);
+          input.val(fit(input.valFloat(), input.j_valMin, input.j_valMax));
+        };
+        input.valMin = function(val) {
+          input.j_valMin = val;
+          input.attr("min", val);
+          input.val(fit(input.valFloat(), input.j_valMin, input.j_valMax));
+        }
       }
 
       function setupForm(appRoot, elem, key, name) {
@@ -1818,7 +1870,7 @@
       }
 
       function version() {
-        return 106;
+        return 107;
       }
 
       return {
@@ -1881,6 +1933,7 @@
         inputInt: inputInt,
         inputFloat: inputFloat,
         label: label,
+        nlabel: label,
         meta: meta,
         lookup: lookup,
         on: on,
