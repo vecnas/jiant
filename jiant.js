@@ -117,6 +117,7 @@
  1.05: one more async scenario covered for external libs load
  1.06: loadLibs(arr, cb, devMode) added, infop(), errorp() added, accept !! as substitution value - infop("!! example", "My") produces "My example"
  1.07: added functions valInt()/valFloat(), valMin(val), valMax(val) to inputInt and inputFloat elements, added nlabel label type for coming intl
+ 1.08: base intl functionality implemented - autogeneration of translation functions, next - nlabel, missing translations reporting, multiple json sources
  */
 
 (function() {
@@ -1161,13 +1162,21 @@
             }
           } else {
             $.each(spec, function(fname, fnbody) {
-              isEmptyFunction(fnbody) && (spec[fname] = function() {
-                jiant.logError("Logic function app.logics." + name + "." + fname + " called before implemented!");
-              });
+              if ($.isFunction(fnbody)) {
+                var params = getParamNames(fnbody);
+                if (isEmptyFunction(fnbody)) {
+                  spec[fname] = function() {
+                    jiant.logError("Logic function app.logics." + name + "." + fname + " called before implemented!");
+                  };
+                  spec[fname].empty = true;
+                }
+                spec[fname].params = params;
+                spec[fname].spec = true;
+              }
             });
             spec.implement = function(obj) {
               $.each(spec, function(fname, fnbody) {
-                if (fname != "implement") {
+                if ($.isFunction(fnbody) && fname != "implement") {
                   if (! obj[fname]) {
                     jiant.logError("Logic function " + fname + " is not implemented by declared implementation");
                   } else {
@@ -1180,6 +1189,9 @@
               loadedLogics[appId][name] = 1;
               logUnboundCount(appId, name);
             };
+            if (name == "intl") {
+              loadIntl(spec);
+            }
           }
         });
       }
@@ -1193,6 +1205,9 @@
 
       function loadLibs(arr, cb, devMode) {
         var pseudoDeps = [];
+        if (!$.isArray(arr)) {
+          arr = [arr];
+        }
         $.each(arr, function(idx, url) {
           var pseudoName = "ext" + new Date().getMilliseconds() + Math.random();
           pseudoDeps.push(pseudoName);
@@ -1627,6 +1642,58 @@
         logError(errorDetails);
       }
 
+// ------------ internationalization, texts ------------
+
+      function _bindIntl(root, intl, appId) {
+        if (intl) {
+          if (root.logic.intl) {
+            jiant.logError("Both logic.intl and app.intl declared, skipping app.intl");
+          } else {
+            root.logic.intl = intl;
+          }
+        }
+      }
+
+      function loadIntl(intlRoot) {
+        jiant.logInfo("Loading intl: ", intlRoot);
+        if (! intlRoot.url) {
+          error("Intl data url(s) not provided, internationalization will not be loaded");
+        }
+        $.getJSON(intlRoot.url, function(data) {
+          var implSpec = {};
+          $.each(intlRoot, function(fname, fspec) {
+            if (fspec.spec) {
+              implSpec[fname] = implementIntlFunction(fname, fspec, data);
+//              info("intl implementation assigned to ", fname);
+            }
+          });
+          intlRoot.implement(implSpec);
+        });
+      }
+
+      function implementIntlFunction(fname, fspec, data) {
+        if (fname == "t") {
+//          info("intl: using t algorithm");
+          return function(val) {return data[val]}
+        } else if (fspec.empty) {
+//          logInfo(fspec.params);
+          if (! fspec.params) {
+            var fixedVal = data[fname];
+//            info("intl: using empty-noparams algorithm");
+            return function() {return fixedVal}
+          } else {
+//            info("intl: using empty-params algorithm");
+            return function(param) {
+//              info(fname + param);
+              return data[fname + param];
+            }
+          }
+        } else {
+//          info("intl: using provided-impl algorithm");
+          return fspec;
+        }
+      }
+
 // ------------ base staff ----------------
 
       function maybeSetDevModeFromQueryString() {
@@ -1684,7 +1751,9 @@
         maybeShort(root, "events", "e") && _bindEvents(root.events, appId);
         maybeShort(root, "states", "s") && _bindStates(root.states, root.stateExternalBase, appId);
         maybeShort(root, "models", "m") && _bindModels(root.models, appId);
-        maybeShort(root, "logic", "l") && _bindLogic(root.logic, appId);
+        maybeShort(root, "logic", "l");
+        maybeShort(root, "intl", "i") && _bindIntl(root, root.intl, appId);
+        _bindLogic(root.logic, appId);
         jiant.DEV_MODE && !bindingsResult && alert("Some elements not bound to HTML properly, check console" + errString);
         uiBoundRoot[appId] = root;
         jiant.logInfo(root);
@@ -1870,7 +1939,7 @@
       }
 
       function version() {
-        return 107;
+        return 108;
       }
 
       return {
