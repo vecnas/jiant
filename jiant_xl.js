@@ -23,6 +23,7 @@
  xl.0.18 pager is optional for pagedContent
  xl.0.19 bindList tracks obj.remove() too
  xl.0.20 bindList - removed duplicated propagate, could be incompatible with old code (depends on usage)
+ xl.0.21 renderList perItemCb accepts 3rd argument - index of element
 */
 
 (function() {
@@ -162,7 +163,7 @@
           var elem = tm.parseTemplate(item);
           elem.propagate(item, false);
           container.append(elem);
-          perItemCb && perItemCb(item, elem);
+          perItemCb && perItemCb(item, elem, idx);
         });
       }
     },
