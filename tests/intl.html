@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Jiant test. Intl</title>
+  <link rel="stylesheet" href="http://code.jquery.com/qunit/qunit-1.12.0.css">
+</head>
+<body>
+  <div id="qunit"></div>
+  <div id="qunit-fixture"></div>
+  <script src="http://code.jquery.com/qunit/qunit-1.12.0.js"></script>
+  <script src="http://cdnjs.cloudflare.com/ajax/libs/jquery/1.10.2/jquery.min.js"></script>
+  <script src="../js/jiant.js"></script>
+
+  <script>
+
+    module("Internationalization and text resources");
+
+    asyncTest("onUiBound", function() {
+      expect(8);
+
+      var intlTest = {
+        id: "intlTest",
+        intl: {
+          url: "intlData.json",
+          t: function(val) {}, // val =
+          someText: function() {}, // someText =
+          otherText: function() {}, // otherText =
+          prefixed_: function(suffix) {}, // prefixed.suffix =
+          customPrefix: function(suffix) { return intlTest.intl.t("custom." + suffix)} // custom.suffix =
+        }
+      };
+      jiant.bindUi(intlTest, true);
+      jiant.onUiBound(intlTest, ["intl"], function($, app) {
+        equal(app.intl.t("someKey"), "Some key for t()");
+        equal(app.intl.t("prefixed_text1"), "Prefixed text 1");
+        equal(app.intl.someText(), "Me some text");
+        equal(app.intl.otherText(), "Tottaly another text");
+        equal(app.intl.prefixed_("text1"), "Prefixed text 1");
+        equal(app.intl.prefixed_("text2"), "Prefixed 2");
+        equal(app.intl.customPrefix("text3"), "Custom prefixed text 3");
+        equal(app.intl.customPrefix("text2"), "Custom prefixed 2");
+        start();
+      });
+    });
+
+  </script>
+
+</body>
+</html>
