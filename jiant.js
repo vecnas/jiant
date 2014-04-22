@@ -118,6 +118,7 @@
  1.06: loadLibs(arr, cb, devMode) added, infop(), errorp() added, accept !! as substitution value - infop("!! example", "My") produces "My example"
  1.07: added functions valInt()/valFloat(), valMin(val), valMax(val) to inputInt and inputFloat elements, added nlabel label type for coming intl
  1.08: base intl functionality implemented - autogeneration of translation functions, next - nlabel, missing translations reporting, multiple json sources
+ 1.09: jiant.nlabel support; valMax, valMin renamed to setMax, setMin to designate they're setters; added error() for not found translations
  */
 
 (function() {
@@ -310,7 +311,6 @@
             event.preventDefault();
             return false;
           } else {
-            jiant.logInfo(event, input.valInt());
             input.val(fit(input.valInt(), input.j_valMin, input.j_valMax));
           }
           return true;
@@ -323,12 +323,12 @@
           var val = parseInt(input.val());
           return isNaN(val) ? 0 : val;
         };
-        input.valMax = function(val) {
+        input.setMax = function(val) {
           input.j_valMax = val;
           input.attr("max", val);
           input.val(fit(input.valInt(), input.j_valMin, input.j_valMax));
         };
-        input.valMin = function(val) {
+        input.setMin = function(val) {
           input.j_valMin = val;
           input.attr("min", val);
           input.val(fit(input.valInt(), input.j_valMin, input.j_valMax));
@@ -359,21 +359,16 @@
           }
           return true;
         });
-//        input.change(function(event) {
-//          input.val(fit(input.valFloat(), input.j_valMin, input.j_valMax));
-//          return false;
-//        });
         input.valFloat = function() {
           var val = parseFloat(input.val());
-          jiant.infop("!! parsed: !! ", input.val(), val);
           return isNaN(val) ? 0 : val;
         };
-        input.valMax = function(val) {
+        input.setMax = function(val) {
           input.j_valMax = val;
           input.attr("max", val);
           input.val(fit(input.valFloat(), input.j_valMin, input.j_valMax));
         };
-        input.valMin = function(val) {
+        input.setMin = function(val) {
           input.j_valMin = val;
           input.attr("min", val);
           input.val(fit(input.valFloat(), input.j_valMin, input.j_valMax));
@@ -598,15 +593,17 @@
         $.each(viewContent, function (componentId, componentContent) {
           viewSpec[componentId] = componentId;
           if (componentId != "appPrefix") {
-            if (viewRoot[componentId] == jiant.lookup) {
+            if (viewRoot[componentId] === jiant.lookup) {
               jiant.logInfo("    loookup element, no checks/bindings: " + componentId);
               viewRoot[componentId] = function() {return viewElem.find("." + prefix + componentId);};
-            } else if (viewRoot[componentId] == jiant.meta) {
+            } else if (viewRoot[componentId] === jiant.meta) {
               //skipping, app meta info
             } else {
-              var uiElem = uiFactory.viewComponent(viewElem, viewId, prefix, componentId, componentContent);
+              var isNlabel = viewRoot[componentId] === jiant.nlabel,
+                  uiElem = uiFactory.viewComponent(viewElem, viewId, prefix, componentId, componentContent);
               ensureExists(prefix, appRoot.dirtyList, uiElem, prefix + viewId, prefix + componentId);
               viewRoot[componentId] = uiElem;
+              isNlabel && setupIntlProxies(appRoot, viewRoot[componentId]);
               setupExtras(appRoot, uiElem, componentContent, viewId, componentId);
               //        logInfo("    bound UI for: " + componentId);
             }
@@ -821,7 +818,7 @@
           var tm = appUiFactory.template(prefix, tmId, tmContent);
           $.each(tmContent, function (componentId, elemType) {
             if (componentId != "appPrefix") {
-              if (tmContent[componentId] == jiant.lookup) {
+              if (elemType === jiant.lookup) {
                 jiant.logInfo("    loookup element, no checks/bindings: " + componentId);
                 tmContent[componentId] = function() {return tmContent.find("." + prefix + componentId);};
               } else if (tmContent[componentId] == jiant.meta) {
@@ -841,6 +838,7 @@
             $.each(tmContent, function (elem, elemType) {
               if (elem != "parseTemplate" && elem != "parseTemplate2Text" && elem != "appPrefix") {
                 retVal[elem] = $.merge(retVal.filter("." + prefix + elem), retVal.find("." + prefix + elem));
+                elemType === jiant.nlabel && setupIntlProxies(appRoot, retVal[elem]);
                 setupExtras(appRoot, retVal[elem], root[tmId][elem], tmId, elem);
                 maybeAddDevHook(retVal[elem], tmId, elem);
               }
@@ -1644,6 +1642,31 @@
 
 // ------------ internationalization, texts ------------
 
+      function intlProxy(appRoot, elem, fname) {
+        if (! appRoot.logic.intl) {
+          error("nlabel used, but no intl declared, degrading nlabel to label");
+          return;
+        }
+        var prev = elem[fname];
+        elem[fname] = function(val) {
+          if (val == undefined) {
+            return prev.call(elem);
+          } else {
+            if (loadedLogics[appRoot.id] && loadedLogics[appRoot.id].intl) {
+              prev.call(elem, appRoot.logic.intl.t(val));
+            } else {
+              prev.call(elem, val);
+              onUiBound(appRoot, ["intl"], function() {prev.call(elem, appRoot.logic.intl.t(val));});
+            }
+          }
+        }
+      }
+
+      function setupIntlProxies(appRoot, elem) {
+        intlProxy(appRoot, elem, "html");
+        intlProxy(appRoot, elem, "text");
+      }
+
       function _bindIntl(root, intl, appId) {
         if (intl) {
           if (root.logic.intl) {
@@ -1657,8 +1680,12 @@
       function loadIntl(intlRoot) {
         jiant.logInfo("Loading intl: ", intlRoot);
         if (! intlRoot.url) {
-          error("Intl data url(s) not provided, internationalization will not be loaded");
+          error("Intl data url not provided, internationalization will not be loaded");
+          return;
         }
+        intlRoot.t = function(val) {};
+        intlRoot.t.spec = true;
+        intlRoot.t.empty = true;
         $.getJSON(intlRoot.url, function(data) {
           var implSpec = {};
           $.each(intlRoot, function(fname, fspec) {
@@ -1671,25 +1698,30 @@
         });
       }
 
+      function prepareTranslation(key, val) {
+        if (val || val == "") {
+          return val;
+        }
+        jiant.error("Not found translation for key: ", key);
+        return key;
+      }
+
       function implementIntlFunction(fname, fspec, data) {
         if (fname == "t") {
-//          info("intl: using t algorithm");
-          return function(val) {return data[val]}
+          return function(key) {
+            return prepareTranslation(key, data[key]);
+          }
         } else if (fspec.empty) {
-//          logInfo(fspec.params);
           if (! fspec.params) {
-            var fixedVal = data[fname];
-//            info("intl: using empty-noparams algorithm");
-            return function() {return fixedVal}
+            return function() {
+              return prepareTranslation(fname, data[fname]);
+            }
           } else {
-//            info("intl: using empty-params algorithm");
             return function(param) {
-//              info(fname + param);
-              return data[fname + param];
+              return prepareTranslation(fname + param, data[fname + param]);
             }
           }
         } else {
-//          info("intl: using provided-impl algorithm");
           return fspec;
         }
       }
@@ -1745,14 +1777,15 @@
           jiant.logError("Application '" + appId + "' already loaded, skipping multiple bind call");
           return;
         }
+        maybeShort(root, "logic", "l");
+        maybeShort(root, "intl", "i") && _bindIntl(root, root.intl, appId);
+        // views after intl because of nlabel proxies
         maybeShort(root, "views", "v") && _bindViews(prefix, root.views, root, appUiFactory);
         maybeShort(root, "templates", "t") && _bindTemplates(prefix, root.templates, root, appUiFactory);
         maybeShort(root, "ajax", "a") && _bindAjax(root.ajax, root.ajaxPrefix, root.ajaxSuffix, root.crossDomain);
         maybeShort(root, "events", "e") && _bindEvents(root.events, appId);
         maybeShort(root, "states", "s") && _bindStates(root.states, root.stateExternalBase, appId);
         maybeShort(root, "models", "m") && _bindModels(root.models, appId);
-        maybeShort(root, "logic", "l");
-        maybeShort(root, "intl", "i") && _bindIntl(root, root.intl, appId);
         _bindLogic(root.logic, appId);
         jiant.DEV_MODE && !bindingsResult && alert("Some elements not bound to HTML properly, check console" + errString);
         uiBoundRoot[appId] = root;
@@ -1939,7 +1972,7 @@
       }
 
       function version() {
-        return 108;
+        return 109;
       }
 
       return {
