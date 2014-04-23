@@ -120,6 +120,7 @@
  1.08: base intl functionality implemented - autogeneration of translation functions, next - nlabel, missing translations reporting, multiple json sources
  1.09: jiant.nlabel support; valMax, valMin renamed to setMax, setMin to designate they're setters; added error() for not found translations
  1.10: cssMarker control type added - with attached customRenderer, adds/removes class on element: ctlName_fieldValue
+ 1.11: visualize() via loadLibs, async logics load - more scenarious supported
  */
 
 (function() {
@@ -1238,6 +1239,9 @@
           lib && jiant.info("Loaded external library " + objOrUrl);
           externalModules[name] = lib ? {} : objOrUrl;
           $.each(awaitingDepends, function(appId, depList) {
+            copyLogic(appId, name);
+          });
+          $.each(awaitingDepends, function(appId, depList) {
             checkForExternalAwaiters(appId, name);
           });
         }
@@ -1251,7 +1255,7 @@
         }) : handle();
       }
 
-      function checkForExternalAwaiters(appId, name) {
+      function copyLogic(appId, name) {
         var obj = externalModules[name];
         if (obj && awaitingDepends[appId][name] && uiBoundRoot[appId]) {
           uiBoundRoot[appId].logic || (uiBoundRoot[appId].logic = {});
@@ -1259,6 +1263,12 @@
           $.each(obj, function(fname, fspec) {
             uiBoundRoot[appId].logic[name][fname] = fspec;
           });
+        }
+      }
+
+      function checkForExternalAwaiters(appId, name) {
+        var obj = externalModules[name];
+        if (obj && awaitingDepends[appId][name] && uiBoundRoot[appId]) {
           awakeAwaitingDepends(appId, name);
           loadedLogics[appId][name] = 1;
           logUnboundCount(appId, name);
@@ -1896,7 +1906,11 @@
           (! loadedLogics[appId]) && (loadedLogics[appId] = {});
           dependenciesList[idx] && $.each(dependenciesList[idx], function(idx, depName) {
             (!awaitingDepends[appId][depName]) && (awaitingDepends[appId][depName] = []);
-            (!loadedLogics[appId][depName]) && (!externalModules[depName]) && awaitingDepends[appId][depName].push(cb);
+            if ((!loadedLogics[appId][depName]) && externalModules[depName]) {
+              copyLogic(appId, depName);
+              checkForExternalAwaiters(appId, depName);
+            }
+            (!loadedLogics[appId][depName]) && awaitingDepends[appId][depName].push(cb);
           });
         });
         handleBoundArr(appIdArr, cb);
@@ -1972,23 +1986,19 @@
       }
 
       function visualize(appId) {
-        var id = "jiant_gr_vis";
-        if (! $("id")[0]) {
-          $("body").append('<div style="border: 1px solid green; width: 100%; height: 100%; position: absolute; left: 0; top: 0">' +
-            '<canvas id="' + id + '" width="' + $(window).width() + '" height="' + $(window).height() + '"></canvas></div>');
+        loadLibs(["https://raw.github.com/vecnas/jiant/master/graph.js"], function() {
           appId || $.each(uiBoundRoot, function(key, val) {
             appId = key;
             return false;
           });
-          $("head").append('<script type="text/javascript" src="https://raw.github.com/vecnas/jiant/master/graph.js"> </script>');
           jiant.onUiBound(appId, ["jiantVisualizer"], function($, app) {
             app.logic.jiantVisualizer.visualize($, app);
           });
-        }
+        }, true);
       }
 
       function version() {
-        return 110;
+        return 111;
       }
 
       return {
