@@ -198,6 +198,7 @@ jiant.declare("jiantVisualizer", {
     "views" : "B59",
     "templates" : "#297",
     "logic" : "#73E"};
+    arbor.etc.arbor_path("https://raw.github.com/vecnas/jiant/master/");
   var sys = arbor.ParticleSystem(1000, 600, 0.5);
   sys.parameters({gravity:true});
   sys.renderer = Renderer("#jiant_gr_vis");
