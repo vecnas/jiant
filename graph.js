@@ -1,10 +1,10 @@
-function() {
-var id = "jiant_gr_vis";
-if (! $("id")[0]) {
-  $("body").append('<div style="border: 1px solid green; width: 100%; height: 100%; position: absolute; left: 0; top: 0">' +
-    '<canvas id="' + id + '" width="' + $(window).width() + '" height="' + $(window).height() + '"></canvas></div>');
-}
-}()
+(function($) {
+  var id = "jiant_gr_vis";
+  if (! $("id")[0]) {
+    $("body").append('<div style="border: 1px solid green; width: 100%; height: 100%; position: absolute; left: 0; top: 0">' +
+      '<canvas id="' + id + '" width="' + $(window).width() + '" height="' + $(window).height() + '"></canvas></div>');
+  }
+})($);
 
 (function($){
 
