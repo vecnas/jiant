@@ -119,6 +119,7 @@
  1.07: added functions valInt()/valFloat(), valMin(val), valMax(val) to inputInt and inputFloat elements, added nlabel label type for coming intl
  1.08: base intl functionality implemented - autogeneration of translation functions, next - nlabel, missing translations reporting, multiple json sources
  1.09: jiant.nlabel support; valMax, valMin renamed to setMax, setMin to designate they're setters; added error() for not found translations
+ 1.10: cssMarker control type added - with attached customRenderer, adds/removes class on element: ctlName_fieldValue
  */
 
 (function() {
@@ -161,6 +162,7 @@
         label = {},
         nlabel = {},
         meta = {},
+        cssMarker = {},
         lookup = function(selector) {},
         on = function(cb) {},
         goState = function(params, preserveOmitted) {},
@@ -598,6 +600,13 @@
               viewRoot[componentId] = function() {return viewElem.find("." + prefix + componentId);};
             } else if (viewRoot[componentId] === jiant.meta) {
               //skipping, app meta info
+            } else if (viewRoot[componentId] === jiant.cssMarker) {
+              viewRoot[componentId].customRenderer = function(obj, elem, val, isUpdate, viewOrTemplate) {
+                var cls = componentId + "_" + val;
+                viewOrTemplate.j_prevMarkerClass && viewOrTemplate.removeClass(viewOrTemplate.j_prevMarkerClass);
+                viewOrTemplate.j_prevMarkerClass = cls;
+                viewOrTemplate.addClass(cls);
+              };
             } else {
               var isNlabel = viewRoot[componentId] === jiant.nlabel,
                   uiElem = uiFactory.viewComponent(viewElem, viewId, prefix, componentId, componentContent);
@@ -748,7 +757,7 @@
         }
       }
 
-      function updateViewElement(obj, elem, val, idUpdate, viewOrTemplate) {
+      function updateViewElement(obj, elem, val, isUpdate, viewOrTemplate) {
         if (! elem || ! elem[0]) {
           return;
         }
@@ -821,8 +830,15 @@
               if (elemType === jiant.lookup) {
                 jiant.logInfo("    loookup element, no checks/bindings: " + componentId);
                 tmContent[componentId] = function() {return tmContent.find("." + prefix + componentId);};
-              } else if (tmContent[componentId] == jiant.meta) {
+              } else if (elemType === jiant.meta) {
                 //skipping, app meta info
+              } else if (elemType === jiant.cssMarker) {
+                tmContent[componentId].customRenderer = function(obj, elem, val, isUpdate, viewOrTemplate) {
+                  var cls = componentId + "_" + val;
+                  viewOrTemplate.j_prevMarkerClass && viewOrTemplate.removeClass(viewOrTemplate.j_prevMarkerClass);
+                  viewOrTemplate.j_prevMarkerClass = cls;
+                  viewOrTemplate.addClass(cls);
+                };
               } else {
                 var comp = appUiFactory.viewComponent(tm, tmId, prefix, componentId, elemType);
                 ensureExists(prefix, appRoot.dirtyList, comp, prefix + tmId, prefix + componentId);
@@ -1972,7 +1988,7 @@
       }
 
       function version() {
-        return 109;
+        return 110;
       }
 
       return {
@@ -2037,6 +2053,7 @@
         label: label,
         nlabel: label,
         meta: meta,
+        cssMarker: cssMarker,
         lookup: lookup,
         on: on,
         pager: pager,
