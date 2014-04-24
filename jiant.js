@@ -244,7 +244,7 @@
       }
 
       function pick(marker) {
-        var now = new Date().getMilliseconds();
+        var now = new Date().getTime();
         if (pickTime) {
           info((marker ? marker : "Picked: ") + (now - pickTime));
         }
@@ -1234,11 +1234,11 @@
           arr = [arr];
         }
         $.each(arr, function(idx, url) {
-          var pseudoName = "ext" + new Date().getMilliseconds() + Math.random();
+          var pseudoName = "ext" + new Date().getTime() + Math.random();
           pseudoDeps.push(pseudoName);
           declare(pseudoName, url);
         });
-        var pseudoAppName = "app" + new Date().getMilliseconds() + Math.random();
+        var pseudoAppName = "app" + new Date().getTime() + Math.random();
         jiant.onUiBound(pseudoAppName, pseudoDeps, cb);
         jiant.bindUi({id: pseudoAppName}, devMode);
       }
@@ -1645,10 +1645,10 @@
           var pfx = (ajaxPrefix || ajaxPrefix == "") ? ajaxPrefix : jiant.AJAX_PREFIX,
               sfx = (ajaxSuffix || ajaxSuffix == "") ? ajaxSuffix : jiant.AJAX_SUFFIX,
               url = hardUrl ? hardUrl : pfx + uri + sfx,
-              time = new Date().getMilliseconds();
+              time = new Date().getTime();
           logInfo("    AJAX call. " + uri + " to server url: " + url);
           var settings = {data: callData, traditional: true, success: function(data) {
-            logInfo("               " + uri + " executed in " + (new Date().getMilliseconds() - time));
+            logInfo("               " + uri + " executed in " + (new Date().getTime() - time));
             if (callback) {
               try {
                 data = $.parseJSON(data);
