@@ -121,6 +121,7 @@
  1.09: jiant.nlabel support; valMax, valMin renamed to setMax, setMin to designate they're setters; added error() for not found translations
  1.10: cssMarker control type added - with attached customRenderer, adds/removes class on element: ctlName_fieldValue
  1.11: visualize() via loadLibs, async logics load - more scenarious supported
+ 1.12: pick(marker) added for time measure, added ajax duration to ajax info print
  */
 
 (function() {
@@ -181,6 +182,7 @@
         bindingsResult = true,
         errString,
 
+        pickTime,
         lastStates = {},
         lastEncodedStates = {},
         loadedLogics = {},
@@ -239,6 +241,14 @@
       function lfill(val) {
         val = "" + val;
         return val.length == 0 ? "00" : val.length == 1 ? "0" + val : val;
+      }
+
+      function pick(marker) {
+        var now = new Date().getMilliseconds();
+        if (pickTime) {
+          info((marker ? marker : "Picked: ") + (now - pickTime));
+        }
+        pickTime = now;
       }
 
       function msieDom2Html(elem) {
@@ -1632,11 +1642,13 @@
           if (! callData["antiCache3721"]) {
             callData["antiCache3721"] = new Date().getTime();
           }
-          var pfx = (ajaxPrefix || ajaxPrefix == "") ? ajaxPrefix : jiant.AJAX_PREFIX;
-          var sfx = (ajaxSuffix || ajaxSuffix == "") ? ajaxSuffix : jiant.AJAX_SUFFIX;
-          var url = hardUrl ? hardUrl : pfx + uri + sfx;
+          var pfx = (ajaxPrefix || ajaxPrefix == "") ? ajaxPrefix : jiant.AJAX_PREFIX,
+              sfx = (ajaxSuffix || ajaxSuffix == "") ? ajaxSuffix : jiant.AJAX_SUFFIX,
+              url = hardUrl ? hardUrl : pfx + uri + sfx,
+              time = new Date().getMilliseconds();
           logInfo("    AJAX call. " + uri + " to server url: " + url);
           var settings = {data: callData, traditional: true, success: function(data) {
+            logInfo("               " + uri + " executed in " + (new Date().getMilliseconds() - time));
             if (callback) {
               try {
                 data = $.parseJSON(data);
@@ -1998,7 +2010,7 @@
       }
 
       function version() {
-        return 111;
+        return 112;
       }
 
       return {
@@ -2047,6 +2059,7 @@
         formatTimeSeconds: formatTimeSeconds,
         randomIntBetween: randomIntBetween,
         lfill: lfill,
+        pick: pick,
 
         collection: collection,
         container: container,
