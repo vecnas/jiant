@@ -122,6 +122,7 @@
  1.10: cssMarker control type added - with attached customRenderer, adds/removes class on element: ctlName_fieldValue
  1.11: visualize() via loadLibs, async logics load - more scenarious supported
  1.12: pick(marker) added for time measure, added ajax duration to ajax info print
+ 1.13: jiant.nlabel fix - referred to label
  */
 
 (function() {
@@ -619,7 +620,7 @@
                 viewOrTemplate.addClass(cls);
               };
             } else {
-              var isNlabel = viewRoot[componentId] === jiant.nlabel,
+              var isNlabel = viewRoot[componentId] === nlabel,
                   uiElem = uiFactory.viewComponent(viewElem, viewId, prefix, componentId, componentContent);
               ensureExists(prefix, appRoot.dirtyList, uiElem, prefix + viewId, prefix + componentId);
               viewRoot[componentId] = uiElem;
@@ -865,7 +866,7 @@
             $.each(tmContent, function (elem, elemType) {
               if (elem != "parseTemplate" && elem != "parseTemplate2Text" && elem != "appPrefix") {
                 retVal[elem] = $.merge(retVal.filter("." + prefix + elem), retVal.find("." + prefix + elem));
-                elemType === jiant.nlabel && setupIntlProxies(appRoot, retVal[elem]);
+                elemType === nlabel && setupIntlProxies(appRoot, retVal[elem]);
                 setupExtras(appRoot, retVal[elem], root[tmId][elem], tmId, elem);
                 maybeAddDevHook(retVal[elem], tmId, elem);
               }
@@ -2010,7 +2011,7 @@
       }
 
       function version() {
-        return 112;
+        return 113;
       }
 
       return {
@@ -2074,7 +2075,7 @@
         inputInt: inputInt,
         inputFloat: inputFloat,
         label: label,
-        nlabel: label,
+        nlabel: nlabel,
         meta: meta,
         cssMarker: cssMarker,
         lookup: lookup,
