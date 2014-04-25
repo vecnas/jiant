@@ -123,6 +123,7 @@
  1.11: visualize() via loadLibs, async logics load - more scenarious supported
  1.12: pick(marker) added for time measure, added ajax duration to ajax info print
  1.13: jiant.nlabel fix - referred to label
+ 1.13.1: pick() text tuned
  */
 
 (function() {
@@ -247,7 +248,7 @@
       function pick(marker) {
         var now = new Date().getTime();
         if (pickTime) {
-          info((marker ? marker : "Picked: ") + (now - pickTime));
+          info((marker ? marker : "jiant.pick:") + " " + (now - pickTime) + "ms");
         }
         pickTime = now;
       }
