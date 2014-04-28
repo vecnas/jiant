@@ -1,5 +1,6 @@
 /*
  1.15: reverse binding via propagate(.., .., true) - for .val elements
+ 1.15.1: model function fields extracted for ajax call
 */
 (function() {
   var
@@ -848,6 +849,9 @@
             }
           });
         }
+        if (! spec.asMap) {
+          spec.asMap = function() {};
+        }
         obj._innerData = $({});
         $.each(spec, function(fname, funcSpec) {
           var eventName = name + "_" + fname + "_event",
@@ -1497,6 +1501,8 @@
       function parseForAjaxCall(root, path, actual) {
         if ($.isArray(actual)) {
           root[path] = actual;
+        } else if ($.isFunction(actual) && $.isFunction(actual.on)) { // model
+          root[path] = actual();
         } else if ($.isPlainObject(actual)) {
           $.each(actual, function(key, value) {
             parseForAjaxCall(root, key, value);
