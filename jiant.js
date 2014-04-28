@@ -124,6 +124,7 @@
  1.12: pick(marker) added for time measure, added ajax duration to ajax info print
  1.13: jiant.nlabel fix - referred to label
  1.13.1: pick() text tuned
+ 1.14: states params fix - "undefined" is always undefined
  */
 
 (function() {
@@ -1454,7 +1455,7 @@
 
       function isSameStatesGroup(appId, state0, state1) {
         var statesRoot = uiBoundRoot[appId].states;
-        return (statesRoot[state0].statesGroup !== undefined
+        return (statesRoot[state0] && statesRoot[state1] && statesRoot[state0].statesGroup !== undefined
           && statesRoot[state0].statesGroup === statesRoot[state1].statesGroup);
       }
 
@@ -1509,7 +1510,7 @@
       function getAppState(appId) {
         if (appId) {
           var s = getStates()[appId];
-          return s == undefined ? "" : s;
+          return s === undefined ? "" : s;
         } else {
           var retVal = "";
           $.each(getStates(), function(key, val) {
@@ -1580,7 +1581,7 @@
           });
           return retVal;
         } else {
-          return s;
+          return s === "undefined" ? undefined : s;
         }
       }
 
@@ -2012,7 +2013,7 @@
       }
 
       function version() {
-        return 113;
+        return 114;
       }
 
       return {
