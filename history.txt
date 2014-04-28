@@ -1,0 +1,126 @@
+0.01 : ajax alpha, views, templates
+0.02 : event bus
+0.03 : ajax with callback and errHandler per call
+0.04 : bind plugin
+0.05 : states
+0.06 : onUiBound event for anonymous plugins, empty hash state
+0.07 : crossdomain views load, setupForm check for form, pager update
+0.08 : broken for some ie cases, templates IE attribute quotes workaround from http:weblogs.asp.net/alexeigorkov/archive/2010/03/16/lazy-html-attributes-wrapping-in-internet-explorer.aspx
+0.09 : broken for some ie cases, templates IE redone, to avoid bug with "a=!!val!!" situation, isMSIE flag added
+0.10 : templates IE one more redone, attributes DOM manipulation, for templates parse, parse template starting with plain text by adding comment, template controls binding
+0.11: ajax url override for ajax calls via returning value from specification function
+0.12: return from submitForm, template parse results binding changed to merge of filter and find to support no-root templates, added propagate(data) function to views
+0.13: comment node removed from template parse results
+0.14: events[name].listenersCount++;
+0.15: parseInt for inputInt value arrow up
+0.16: state parameters - undefined replacement by current value properly, inputDate added, works when datepicker available, formatDate, formatTime added
+0.17: propagate "0" and "" passed as valid values
+0.18: default state "end" not triggered - fixed
+0.19: DEBUG_MODE added, state start vs trigger check in debug mode, event usage check in debug mode
+0.20: appId introduced
+0.21: root state not packed, go back not packed - fixed, propagate added to parseTemplate results
+0.22: onUiBound accepts both app and app.id as first param
+0.23: model initial auto-implementation added for method names "add", "remove", "setXXX", "getXXX", "findByXXX"; .xl added
+0.24: model modified, "set"/"get" replaced by single method xxx(optional_param), in jquery style, added global "on" event for any model change. incompatible with 0.23
+0.25: radio button handled properly in propagate function
+0.26: jiant.STATE_EXTERNAL_BASE added for navigation to another page in frames of state change, fixed multiple apps on a page mixing
+0.27: predefined model functions not created automatically more
+0.28: ajaxPrefix, ajaxSuffix, stateExternalBase per application for multi-app support
+0.28.1: minor fix for "" comparison
+0.29: refreshState() workaround for used History plugin timeout, states tuning, per app cross domain via flag for multiple app cross/noncross domain mix, form influenced by ajax pre/suff
+0.30: cross domain settings for submitForm
+0.31: addAll() method added to model with auto-wrap for all source object properties
+0.32: propagate() fixed for templates, propagate(model) with auto data binding added, customRenderer(elem, value, isUpdate) for view/template controls
+0.33: refreshTabs added to jiant.tabs, logInfo prints any amount of arguments
+0.34: override unsafe extended properties with user jiant specified
+0.35: customRenderer accepts 4 parameters: bound object, bound view, new field value, is update
+0.36: models.on fixed - fired for target object only, models.update() added
+0.37: provided implementation for model functions support
+0.38: models.updateAll, models.update.on triggered on addAll, AI on .update.on subscription to spec
+0.39: $.History replaced by $.hashchange usage
+0.40: triggering current state for later registered state handlers, logError accepts any amount of arguments, model events manipulations
+0.41: transact update() of models
+0.42: mixed case field name support by findByXXX, minor fixes
+0.43: default renderer handles missing view elements
+0.44: initial state switch fixed
+0.45: app.dirtyList added, app.appPrefix with new bindUi syntax added
+0.46: lfill made public
+0.47: added asaa/asap synonim functions to models for synchronization by value availability, added jiant.getCurrentState()
+0.48 global model .on() fixed, now works
+0.49 per view/template appPrefix support, for better cross-application integration, added version() function and override by latest version
+0.50 fixed multiple apps events/states intersection, still exists tracking bug with events/statesUsed for multiple apps
+0.51 fix for minor bug in 0.50 - no notification on state end for 2nd application on a page
+0.52 findByXXXAndYYYAndZZZ() support for models, find by several parameters, separated by And
+0.53 setXXXAndYYYAndZZZ(xxx, yyy, zzz) support for models, set several fields
+0.54 custom behaviour injection into model via functions with more than 1 argument and empty body
+0.55 reverted 0.54, added logic support, added shortenings for sections: (v)iews, (m)odels, (t)emplates, (e)vents, (a)jax, (s)tates, (l)ogic
+0.56 parseTemplate executes propagate, customRenderer accepts one more parameter - reference to parse result or view, double bindUi call notify, 0-len params on ajax call fix
+0.57 parseTemplate call without parameters supported
+0.58 dependency load logic via onUiBound parameter, every logic received .implement(obj) method, for implementation declaration, 0.55 logic behaviour cancelled
+0.59 asap() fixed, wrong params when value already set
+0.60 parseTemplate logs error to console on parse failure, inputInt: left/right keys enabled, added dot/comma keys, added inputFloat
+0.61 formatDate() independent from datepicker
+0.62 UiFactory extracted, it is possible to override it
+0.63 UiFactory updated, check for setUiFactory added, removed reporting of missing elements of already missing view
+0.64 UiFactory applied to template components via viewComponent() call
+0.65 parseState pack/unpack fixed (removed old seldom occuring bugs), data objects can be passed as state params from now
+0.66 models.add from now is same as models.addAll, not back compatible, added DEBUG_MODE.data switch,
+updateAll now accepts 3 arguments: updateAll(arr, removeMissing, matcherCb), arr - could be single item or array,
+removeMissing - is to remove missing elements (default false), matcherCb(elem1, elem2) - comparator, default - by id
+0.67 updateAll fixed - addAll() call added for new elements
+0.68 fixed - state.go() ignored set of undefined params to previous state values, when they are on the tail
+0.69 propagate() calls customRenderer() for all view elements with customRenderer assigned
+0.70 model updateAll fixed, removeMissing not used fixed
+0.71 jiant.meta added - field annotated with meta skipped during binding and used by application for metainformation
+0.72 lfill and format functions improved, basing on tests
+0.73 extra update event calls removed
+0.74 onAppInit callback was added
+0.75 setTimeout checker for dependency in dev mode
+0.76 formatDateUsa added, produces MM/DD/YYYY date presentation
+0.77 INCOMPATIBLE MODELS CHANGE! findByXXX returns single element (may be null), and new listByXXX methods return array
+0.78 .on(cb) handler for model fields gets one more parameter, oldVal: cb(obj, val, oldVal), for convenience
+0.79 .off(hndlr) added for all model properties, it accepts handler, returned by .on method. Also propagate
+unsubscribes from previous model when bound to new, inputInt() change value by up/down arrows now trigger change event
+0.80: input type=checkbox now propagated, customRenderer last parameter fixed
+0.81: per application states supported, mix of multiple stateful applications supported
+0.82: formatDateUsa fix
+0.83: per application states - initial wasn't fired fix
+0.84: asMap for models
+0.85: jiant.refreshState() fixed after been broken by 0.81
+0.86: hashchange() directly called after state set, to resolve hashchange async behaviour
+0.87: multiple apps onUiBound: onUiBound([app1Id, app2Id...], depsList, function($, app1, app2...))
+0.88: customRenderer for templates - last param changed to parse result, not specification reference
+0.89: time to bind UI now properly reported in console instead of previous random number
+0.90: randomIntBetween(from, to) function added
+0.91: cross domain bindUi creates container with provided id, if it doesn't exist already
+0.92: count of unbound logics printed into console, to hint developer. Internal storage of data in model changed, all() returns copy of storage
+0.92.1: fix of setXAndY
+0.93: info(arr), error(arr) methods added, printing all arguments as single string
+0.93.1: formatDate fix
+0.94: refreshState(appId) - optional appId - id or application to refresh state for, all app refreshed if not provided
+0.95: initial states double update fixed, removed comment
+0.96: formatMoney(amount, grpDelim) added
+0.96.1: minification warning removed
+0.97: addAll not called for empty arguments, addAll(null) is no more equals addAll([null])
+0.97.1: right pad dot supported by input float
+0.98: pager adopted to bootstrap 3
+0.98.1: model.update(obj, treatMissingAsNulls) accepts second parameter - enforce all missing fields to be set to null - update({}, true)
+0.99: external shared modules via declare(moduleName, {func0: function() {..}, func1: ...}), then could be used as app.logic.moduleName.func0, etc
+1.00: some visualization fun, call jiant.visualize() in console to see graph of app structure. Have graph.js, arbor.js located near jiant.js
+1.01: inter-states parameters fix
+1.02: remote reference to visualize() deps, visualize() improvements
+1.03: state groups for sharing parameters between different states
+1.04: external libs load via declare(name, url)
+1.04.1: extra check for external libs load
+1.04.2: external modules load before application existence fixed
+1.05: one more async scenario covered for external libs load
+1.06: loadLibs(arr, cb, devMode) added, infop(), errorp() added, accept !! as substitution value - infop("!! example", "My") produces "My example"
+1.07: added functions valInt()/valFloat(), valMin(val), valMax(val) to inputInt and inputFloat elements, added nlabel label type for coming intl
+1.08: base intl functionality implemented - autogeneration of translation functions, next - nlabel, missing translations reporting, multiple json sources
+1.09: jiant.nlabel support; valMax, valMin renamed to setMax, setMin to designate they're setters; added error() for not found translations
+1.10: cssMarker control type added - with attached customRenderer, adds/removes class on element: ctlName_fieldValue
+1.11: visualize() via loadLibs, async logics load - more scenarious supported
+1.12: pick(marker) added for time measure, added ajax duration to ajax info print
+1.13: jiant.nlabel fix - referred to label
+1.13.1: pick() text tuned
+1.14: states params fix - "undefined" is always undefined
