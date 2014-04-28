@@ -1,3 +1,6 @@
+/*
+ 1.15: reverse binding via propagate(.., .., true) - for .val elements
+*/
 (function() {
   var
     DefaultUiFactory = function() {
@@ -608,11 +611,11 @@
         $.each(spec, function (key, elem) {
           map[key] = elem;
         });
-        var fn = function(data, subscribe4updates) {
+        var fn = function(data, subscribe4updates, reverseBinding) {
           debugData("Propagating " + viewId + " with data", data);
-          subscribe4updates = (subscribe4updates == undefined) ? true : subscribe4updates;
+          subscribe4updates = (subscribe4updates === undefined) ? true : subscribe4updates;
           $.each(map, function (key, elem) {
-            if (spec[key].customRenderer || (data && data[key] != undefined && data[key] != null && ! isServiceName(key))) {
+            if (spec[key].customRenderer || (data && data[key] !== undefined && data[key] !== null && ! isServiceName(key))) {
               var val = data[key];
               elem = obj[key];
               if ($.isFunction(val)) {
@@ -627,6 +630,9 @@
                 }
               } else {
                 getRenderer(spec, key)(data, elem, val, false, viewOrTm);
+              }
+              if (reverseBinding) {
+                reverseBind(val, elem);
               }
             }
           });
@@ -665,6 +671,12 @@
         } else {
           elem.html(val);
         }
+      }
+
+      function reverseBind(modelFn, elem) {
+        elem.change && elem.val && elem.change(function() {
+          modelFn(elem.val());
+        });
       }
 
       function _bindViews(pfx, root, appRoot, appUiFactory) {
@@ -1884,7 +1896,7 @@
       }
 
       function version() {
-        return 114;
+        return 115;
       }
 
       return {
