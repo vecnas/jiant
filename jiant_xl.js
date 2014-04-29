@@ -141,11 +141,12 @@
           onCompleteCb && onCompleteCb(data);
         });
       }
+      state && state.start(refresh);
+      pager && pager.onValueChange(function(event, pageNum) {
+        state ? state.go(pageNum, undefined) : refresh(pageNum);
+      });
       return function() {
-        pager && pager.onValueChange(function(event, pageNum) {
-          state ? state.go(pageNum, undefined) : refresh(pageNum);
-        });
-        state && state.start(refresh);
+        state || refresh();
       };
     },
 
