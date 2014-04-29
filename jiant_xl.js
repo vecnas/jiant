@@ -24,6 +24,7 @@
  xl.0.19 bindList tracks obj.remove() too
  xl.0.20 bindList - removed duplicated propagate, could be incompatible with old code (depends on usage)
  xl.0.21 renderList perItemCb accepts 3rd argument - index of element
+ xl.0.22: pageableFilterableSortable(state, container, pager, template, ajax, filterModel, perItemCb, noItemsLabel, onCompleteCb) added
 */
 
 (function() {
@@ -32,7 +33,7 @@
 
   var tmpJiantXl = {
 
-    version: function() {return 19},
+    version: function() {return 22},
 
     ctl2state: function(ctl, state, selectedCssClass, goProxy) {
       return function() {
@@ -118,6 +119,33 @@
         model.remove && model.remove.on(function(obj) {
           obj.view().remove();
         });
+      };
+    },
+
+    pageableFilterableSortable: function(state, container, pager, template, ajax, filterModel, perItemCb, noItemsLabel, onCompleteCb) {
+      function refresh(pageNum) {
+        var parsedNum = parseInt(pageNum);
+        parsedNum = isNaN(parsedNum) ? 0 : parsedNum;
+        var pageable = {"page.page": parsedNum};
+        filterModel && filterModel.sort && filterModel.sort() && (pageable["page.sort"] = filterModel.sort());
+        ajax(filterModel, pageable, function(data) {
+          container.empty();
+          noItemsLabel && (data.content.length ? noItemsLabel.hide() : noItemsLabel.show());
+          $.each(data.content, function(idx, item) {
+            var row = template.parseTemplate(item);
+            row.propagate(item, false);
+            container.append(row);
+            perItemCb && perItemCb(item, row);
+          });
+          pager && pager.updatePager(data);
+          onCompleteCb && onCompleteCb(data);
+        });
+      }
+      return function() {
+        pager && pager.onValueChange(function(event, pageNum) {
+          state ? state.go(pageNum, undefined) : refresh(pageNum);
+        });
+        state && state.start(refresh);
       };
     },
 
