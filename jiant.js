@@ -1,6 +1,7 @@
 /*
  1.15: reverse binding via propagate(.., .., true) - for .val elements
  1.15.1: model function fields extracted for ajax call
+ 1.16: empty state "" auto-added, if states declared
 */
 (function() {
   var
@@ -1227,6 +1228,9 @@
           }
           return;
         }
+        if (! states[""]) {
+          states[""] = {};
+        }
         $.each(states, function(name, stateSpec) {
           logInfo("binding state: " + appId + name);
           stateSpec.go = go(name, stateSpec.root, stateExternalBase, appId);
@@ -1902,7 +1906,7 @@
       }
 
       function version() {
-        return 115;
+        return 116;
       }
 
       return {
