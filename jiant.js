@@ -2,6 +2,7 @@
  1.15: reverse binding via propagate(.., .., true) - for .val elements
  1.15.1: model function fields extracted for ajax call
  1.16: empty state "" auto-added, if states declared
+ 1.17: jiant.pager.refreshPage() added to refresh current pager page and trigger all listeners
 */
 (function() {
   var
@@ -375,11 +376,15 @@
 
       function setupPager(uiElem) {
         var pagerBus = $({}),
-          root = $("<ul></ul>");
+            root = $("<ul></ul>"),
+            lastPage = 0;
         root.addClass("pagination");
         uiElem.append(root);
         uiElem.onValueChange = function(callback) {
           pagerBus.on("ValueChange", callback);
+        };
+        uiElem.refreshPage = function() {
+          pagerBus.trigger("ValueChange", lastPage);
         };
         uiElem.updatePager = function(page) {
           debugData("Updating pager", page);
@@ -407,7 +412,8 @@
             {label: value != -1 ? value : "...", ctlClass: ctlClass}));
           root.append(ctl);
           value != -1 && ctl.click(function() {
-            pagerBus.trigger("ValueChange", value);
+            lastPage = value;
+            uiElem.refreshPage();
           });
           return ctl;
         }
@@ -1906,7 +1912,7 @@
       }
 
       function version() {
-        return 116;
+        return 117;
       }
 
       return {
