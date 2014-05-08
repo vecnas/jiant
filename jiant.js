@@ -3,6 +3,7 @@
  1.15.1: model function fields extracted for ajax call
  1.16: empty state "" auto-added, if states declared
  1.17: jiant.pager.refreshPage() added to refresh current pager page and trigger all listeners
+ 1.18: cssMarker tuned, also adds both componentId_value and componentId classes, removes completely for undefined vals
 */
 (function() {
   var
@@ -499,9 +500,13 @@
             } else if (viewRoot[componentId] === jiant.cssMarker) {
               viewRoot[componentId].customRenderer = function(obj, elem, val, isUpdate, viewOrTemplate) {
                 var cls = componentId + "_" + val;
+                viewOrTemplate.removeClass(componentId);
                 viewOrTemplate.j_prevMarkerClass && viewOrTemplate.removeClass(viewOrTemplate.j_prevMarkerClass);
-                viewOrTemplate.j_prevMarkerClass = cls;
-                viewOrTemplate.addClass(cls);
+                if (val !== undefined) {
+                  viewOrTemplate.j_prevMarkerClass = cls;
+                  viewOrTemplate.addClass(componentId);
+                  viewOrTemplate.addClass(cls);
+                }
               };
             } else {
               var isNlabel = viewRoot[componentId] === nlabel,
@@ -740,9 +745,13 @@
               } else if (elemType === jiant.cssMarker) {
                 tmContent[componentId].customRenderer = function(obj, elem, val, isUpdate, viewOrTemplate) {
                   var cls = componentId + "_" + val;
+                  viewOrTemplate.removeClass(componentId);
                   viewOrTemplate.j_prevMarkerClass && viewOrTemplate.removeClass(viewOrTemplate.j_prevMarkerClass);
-                  viewOrTemplate.j_prevMarkerClass = cls;
-                  viewOrTemplate.addClass(cls);
+                  if (val !== undefined) {
+                    viewOrTemplate.j_prevMarkerClass = cls;
+                    viewOrTemplate.addClass(componentId);
+                    viewOrTemplate.addClass(cls);
+                  }
                 };
               } else {
                 var comp = appUiFactory.viewComponent(tm, tmId, prefix, componentId, elemType);
@@ -1912,7 +1921,7 @@
       }
 
       function version() {
-        return 117;
+        return 118;
       }
 
       return {
