@@ -4,6 +4,7 @@
  1.16: empty state "" auto-added, if states declared
  1.17: jiant.pager.refreshPage() added to refresh current pager page and trigger all listeners
  1.18: cssMarker tuned, also adds both componentId_value and componentId classes, removes completely for undefined vals
+ 1.19: model.data() function added, returns source data unchanged, for most lazy data usage with other model benefits
 */
 (function() {
   var
@@ -847,7 +848,8 @@
 
       function bindFunctions(name, spec, obj, appId) {
         var storage = [],
-          modelStorageField = "_sourceObjectData";
+          modelStorageField = "_modelData",
+          dataStorageField = "_sourceData";
         obj[modelStorageField] = {};
         if (spec.updateAll && spec.id) {
           if (! spec.update) spec.update = function(val) {};
@@ -888,6 +890,7 @@
             obj[fname] = function(objFrom, treatMissingAsNulls) {
               var smthChanged = false;
               var toTrigger = {};
+              obj[dataStorageField] = objFrom;
               treatMissingAsNulls && $.each(obj[modelStorageField], function(key, val) {
                 objFrom[key] == undefined && (objFrom[key] = null);
               });
@@ -902,10 +905,6 @@
                 obj[key](obj[key](), true, true);
               });
               debugData("Called update on model " + name + " with data", objFrom);
-//                $.each(objFrom, function(key, val) {
-//                  if (isOwnProp)
-//                  obj[modelStorageField][key] = val;
-//                });
               if (smthChanged) {
                 debugEvents("fire event: " + eventName);
                 jiant.DEBUG_MODE.events && (! eventsUsed[eventName]) && (eventsUsed[eventName] = 1);
@@ -960,6 +959,7 @@
                 var newObj = {};
                 storage.push(newObj);
                 newArr.push(newObj);
+                newObj[dataStorageField] = item;
                 bindFunctions(name, spec, newObj, appId);
                 $.each(item, function(name, param) {
                   newObj[name] && newObj[name](param);
@@ -1039,6 +1039,14 @@
               return newVals;
             }
           } else if (fname == "asMap") {
+            obj[fname] = function () {
+              return obj[modelStorageField];
+            }
+          } else if (fname == "data") {
+            obj[fname] = function () {
+              return obj[dataStorageField];
+            }
+          } else if (fname == "data") {
             obj[fname] = function () {
               return obj[modelStorageField];
             }
@@ -1921,7 +1929,7 @@
       }
 
       function version() {
-        return 118;
+        return 119;
       }
 
       return {
