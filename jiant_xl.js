@@ -26,6 +26,7 @@
  xl.0.21 renderList perItemCb accepts 3rd argument - index of element
  xl.0.22 pageableFilterableSortable(state, container, pager, template, ajax, filterModel, perItemCb, noItemsLabel, onCompleteCb) added
  xl.0.23 pageableFilterableSortableModel(model, ajax, state, pager, filterSortModel) added
+ xl.0.24 double propagate call removed from some functions
 */
 
 (function() {
@@ -34,7 +35,9 @@
 
   var tmpJiantXl = {
 
-    version: function() {return 23},
+    version: function() {
+      return 24
+    },
 
     ctl2state: function(ctl, state, selectedCssClass, goProxy) {
       return function() {
@@ -154,7 +157,6 @@
           noItemsLabel && (data.content.length ? noItemsLabel.hide() : noItemsLabel.show());
           $.each(data.content, function(idx, item) {
             var row = template.parseTemplate(item);
-            row.propagate(item, false);
             container.append(row);
             perItemCb && perItemCb(item, row);
           });
@@ -193,7 +195,6 @@
             noItemsLabel && (data.content.length ? noItemsLabel.hide() : noItemsLabel.show());
             $.each(data.content, function(idx, item) {
               var row = template.parseTemplate(item);
-              row.propagate(item, false);
               container.append(row);
               perItemCb && perItemCb(item, row);
             });
@@ -211,7 +212,6 @@
         container.empty();
         $.each(list, function(idx, item) {
           var elem = tm.parseTemplate(item);
-          elem.propagate(item, false);
           container.append(elem);
           perItemCb && perItemCb(item, elem, idx);
         });
