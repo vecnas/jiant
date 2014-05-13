@@ -5,6 +5,7 @@
  1.17: jiant.pager.refreshPage() added to refresh current pager page and trigger all listeners
  1.18: cssMarker tuned, also adds both componentId_value and componentId classes, removes completely for undefined vals
  1.19: model.data() function added, returns source data unchanged, for most lazy data usage with other model benefits
+ 1.19.1: pager minor behaviour fix
 */
 (function() {
   var
@@ -406,6 +407,8 @@
           }
           if (to < page.totalPages - 1) {
             addPageCtl(-1, "disabled emptyPlaceholder");
+          }
+          if (to < page.totalPages) {
             addPageCtl(page.totalPages, "");
           }
         };
