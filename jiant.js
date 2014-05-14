@@ -6,6 +6,7 @@
  1.18: cssMarker tuned, also adds both componentId_value and componentId classes, removes completely for undefined vals
  1.19: model.data() function added, returns source data unchanged, for most lazy data usage with other model benefits
  1.19.1: pager minor behaviour fix
+ 1.20: model ajax parse fix
 */
 (function() {
   var
@@ -76,7 +77,8 @@
         onInitAppActions = [],
         uiFactory = new DefaultUiFactory(),
         statesUsed = {},
-        eventsUsed = {};
+        eventsUsed = {},
+        modelInnerDataField = "jiant_innerData";
 
       function randomIntBetween(from, to) {
         return Math.floor((Math.random()*(to - from + 1)) + from);
@@ -802,7 +804,7 @@
           if (val != undefined) {
             cb && cb.apply(cb, [obj, val]);
           } else {
-            obj._innerData.one(eventName, function () {
+            obj[modelInnerDataField].one(eventName, function () {
               debugEvents("called event handler: " + eventName + ", registered at " + trace);
               var args = $.makeArray(arguments);
               args.splice(0, 1);
@@ -814,7 +816,7 @@
       }
 
       function assignOnOffHandlers(obj, eventName, fname, eventObject) {
-        eventObject = eventObject ? eventObject : obj._innerData;
+        eventObject = eventObject ? eventObject : obj[modelInnerDataField];
         var fn = function (cb) {
             var trace;
             if (jiant.DEBUG_MODE.events) {
@@ -873,12 +875,12 @@
         if (! spec.asMap) {
           spec.asMap = function() {};
         }
-        obj._innerData = $({});
+        obj[modelInnerDataField] = $({});
         $.each(spec, function(fname, funcSpec) {
           var eventName = name + "_" + fname + "_event",
             globalChangeEventName = appId + name + "_globalevent";
 //      jiant.logInfo("  implementing model function " + fname);
-          if (fname == "_innerData") {
+          if (fname == modelInnerDataField) {
           } else if (fname == "all") {
             obj[fname] = function() {
               var retVal = [];
@@ -911,8 +913,8 @@
               if (smthChanged) {
                 debugEvents("fire event: " + eventName);
                 jiant.DEBUG_MODE.events && (! eventsUsed[eventName]) && (eventsUsed[eventName] = 1);
-                obj._innerData.trigger(eventName, obj);
-                obj != spec && spec._innerData.trigger(eventName, obj);
+                obj[modelInnerDataField].trigger(eventName, obj);
+                obj != spec && spec[modelInnerDataField].trigger(eventName, obj);
                 debugEvents("fire event: " + globalChangeEventName);
                 jiant.DEBUG_MODE.events && (! eventsUsed[globalChangeEventName]) && (eventsUsed[globalChangeEventName] = 1);
                 eventBus.trigger(globalChangeEventName, [obj, fname]);
@@ -973,7 +975,7 @@
               });
               debugEvents("fire event: " + eventName);
               jiant.DEBUG_MODE.events && (! eventsUsed[eventName]) && (eventsUsed[eventName] = 1);
-              obj._innerData.trigger(eventName, [newArr]);
+              obj[modelInnerDataField].trigger(eventName, [newArr]);
               debugEvents("fire event: " + globalChangeEventName);
               jiant.DEBUG_MODE.events && (! eventsUsed[globalChangeEventName]) && (eventsUsed[globalChangeEventName] = 1);
               eventBus.trigger(globalChangeEventName, [newArr, fname]);
@@ -993,7 +995,7 @@
               if (storage.length != prevLen) {
                 debugEvents("fire event: " + eventName);
                 jiant.DEBUG_MODE.events && (! eventsUsed[eventName]) && (eventsUsed[eventName] = 1);
-                obj._innerData.trigger(eventName, [elem]);
+                obj[modelInnerDataField].trigger(eventName, [elem]);
                 debugEvents("fire event: " + globalChangeEventName);
                 jiant.DEBUG_MODE.events && (! eventsUsed[globalChangeEventName]) && (eventsUsed[globalChangeEventName] = 1);
                 eventBus.trigger(globalChangeEventName, [elem, fname]);
@@ -1049,12 +1051,8 @@
             obj[fname] = function () {
               return obj[dataStorageField];
             }
-          } else if (fname == "data") {
-            obj[fname] = function () {
-              return obj[modelStorageField];
-            }
-          } else if (isEmptyFunction(funcSpec) || spec._innerData[fname]) {
-            spec._innerData[fname] = true;
+          } else if (isEmptyFunction(funcSpec) || spec[modelInnerDataField][fname]) {
+            spec[modelInnerDataField][fname] = true;
             obj[fname] = function(val, forceEvent, dontFireUpdate) {
               if (arguments.length == 0) {
                 return obj[modelStorageField][fname];
@@ -1064,8 +1062,8 @@
                   obj[modelStorageField][fname] = val;
                   debugEvents("fire event: " + eventName);
                   jiant.DEBUG_MODE.events && (! eventsUsed[eventName]) && (eventsUsed[eventName] = 1);
-                  obj._innerData.trigger(eventName, [obj, val, oldVal]);
-                  obj != spec && spec._innerData.trigger(eventName, [obj, val, oldVal]);
+                  obj[modelInnerDataField].trigger(eventName, [obj, val, oldVal]);
+                  obj != spec && spec[modelInnerDataField].trigger(eventName, [obj, val, oldVal]);
                   if (! dontFireUpdate) {
                     debugEvents("fire event: " + globalChangeEventName);
                     jiant.DEBUG_MODE.events && (! eventsUsed[globalChangeEventName]) && (eventsUsed[globalChangeEventName] = 1);
@@ -1077,9 +1075,14 @@
                 return obj[modelStorageField][fname];
               }
             };
+            obj[fname].jiant_accessor = 1;
             assignOnOffHandlers(obj, eventName, fname);
           }
         });
+      }
+
+      function isModelAccessor(fn) {
+        return fn.jiant_accessor;
       }
 
       function isEmptyFunction(funcSpec) {
@@ -1535,7 +1538,11 @@
           root[path] = actual();
         } else if ($.isPlainObject(actual)) {
           $.each(actual, function(key, value) {
-            parseForAjaxCall(root, key, value);
+            if (actual[modelInnerDataField]) { // model
+              isModelAccessor(value) && parseForAjaxCall(root, key, value);
+            } else {
+              parseForAjaxCall(root, key, value);
+            }
 //        parseForAjaxCall(root, path + "." + key, value);
           });
         } else {
@@ -1932,7 +1939,7 @@
       }
 
       function version() {
-        return 119;
+        return 120;
       }
 
       return {
