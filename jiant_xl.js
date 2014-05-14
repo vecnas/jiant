@@ -27,6 +27,7 @@
  xl.0.22 pageableFilterableSortable(state, container, pager, template, ajax, filterModel, perItemCb, noItemsLabel, onCompleteCb) added
  xl.0.23 pageableFilterableSortableModel(model, ajax, state, pager, filterSortModel) added
  xl.0.24 double propagate call removed from some functions
+ xl.0.25 pageableFilterableSortableModel some tuning of behaviour
 */
 
 (function() {
@@ -36,7 +37,7 @@
   var tmpJiantXl = {
 
     version: function() {
-      return 24
+      return 25;
     },
 
     ctl2state: function(ctl, state, selectedCssClass, goProxy) {
@@ -127,19 +128,29 @@
     },
 
     pageableFilterableSortableModel: function(model, ajax, state, pager, filterSortModel) {
+      var prevPage;
       function refresh(pageNum) {
         var parsedNum = parseInt(pageNum);
         parsedNum = isNaN(parsedNum) ? 0 : parsedNum;
-        var pageable = {"page.page": parsedNum};
-        filterSortModel && filterSortModel.sort && filterSortModel.sort() && (pageable["page.sort"] = filterSortModel.sort());
-        ajax(filterSortModel, pageable, function(data) {
-          model.updateAll(data.content, true);
-          pager && pager.updatePager(data);
-        });
+        if (parsedNum !== prevPage) {
+          var pageable = {"page.page": parsedNum};
+          filterSortModel && filterSortModel.sort && filterSortModel.sort() && (pageable["page.sort"] = filterSortModel.sort());
+          ajax(filterSortModel, pageable, function(data) {
+            model.updateAll(data.content, true);
+            pager && pager.updatePager(data);
+          });
+          prevPage = parsedNum;
+        }
       }
       state && state.start(refresh);
+      if (filterSortModel && filterSortModel.on) {
+        filterSortModel.on(function() {
+          prevPage = undefined;
+          refresh(0);
+        });
+      }
       pager && pager.onValueChange(function(event, pageNum) {
-        state ? state.go(pageNum, undefined) : refresh(pageNum);
+        state ? state.go(pageNum) : refresh(pageNum);
       });
       return function() {
         state || refresh();
