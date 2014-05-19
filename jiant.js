@@ -7,6 +7,7 @@
  1.19: model.data() function added, returns source data unchanged, for most lazy data usage with other model benefits
  1.19.1: pager minor behaviour fix
  1.20: model ajax parse fix
+ 1.21: collection proxy functions added to models
 */
 (function() {
   var
@@ -854,7 +855,8 @@
       function bindFunctions(name, spec, obj, appId) {
         var storage = [],
           modelStorageField = "_modelData",
-          dataStorageField = "_sourceData";
+          dataStorageField = "_sourceData",
+          collectionFunctions = [];
         obj[modelStorageField] = {};
         if (spec.updateAll && spec.id) {
           if (! spec.update) spec.update = function(val) {};
@@ -887,11 +889,14 @@
               $.each(storage, function(idx, obj) {
                 retVal.push(obj);
               });
+              attachCollectionFunctions(retVal, collectionFunctions);
               return retVal;
             };
           } else if (fname == "on") {
+            collectionFunctions.push(fname);
             assignOnOffHandlers(obj, globalChangeEventName, undefined, eventBus);
           } else if (fname == "update") {
+            collectionFunctions.push(fname);
             obj[fname] = function(objFrom, treatMissingAsNulls) {
               var smthChanged = false;
               var toTrigger = {};
@@ -986,6 +991,7 @@
             };
             assignOnOffHandlers(obj, eventName, fname);
           } else if (fname == "remove") {
+            collectionFunctions.push(fname);
             obj[fname] = function(elem) {
               if (elem == undefined || elem == null) {
                 return
@@ -1029,9 +1035,11 @@
                 var fieldName = name.substring(0, 1).toLowerCase() + name.substring(1);
                 retVal = filter(retVal, fieldName, outerArgs[idx]);
               });
+              attachCollectionFunctions(retVal, collectionFunctions);
               return retVal;
             }
           } else if (fname.indexOf("set") == 0 && fname.length > 3) {
+            collectionFunctions.push(fname);
             var arr = fname.substring(3).split("And");
             obj[fname] = function() {
               var outerArgs = arguments,
@@ -1052,6 +1060,7 @@
               return obj[dataStorageField];
             }
           } else if (isEmptyFunction(funcSpec) || spec[modelInnerDataField][fname]) {
+            collectionFunctions.push(fname);
             spec[modelInnerDataField][fname] = true;
             obj[fname] = function(val, forceEvent, dontFireUpdate) {
               if (arguments.length == 0) {
@@ -1077,6 +1086,19 @@
             };
             obj[fname].jiant_accessor = 1;
             assignOnOffHandlers(obj, eventName, fname);
+          }
+        });
+      }
+
+      function attachCollectionFunctions(arr, collectionFunctions) {
+        $.each(collectionFunctions, function(idx, fn) {
+          arr[fn] = function() {
+            var ret = [],
+                args = arguments;
+            $.each(arr, function(idx, obj) {
+              ret.push(obj[fn].call(args));
+            })
+            return ret;
           }
         });
       }
@@ -1939,7 +1961,7 @@
       }
 
       function version() {
-        return 120;
+        return 121;
       }
 
       return {
