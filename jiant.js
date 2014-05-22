@@ -8,6 +8,7 @@
  1.19.1: pager minor behaviour fix
  1.20: model ajax parse fix
  1.21: collection proxy functions added to models
+ 1.22: collection functions fix - setters didn't work, now ok
 */
 (function() {
   var
@@ -1096,8 +1097,8 @@
             var ret = [],
                 args = arguments;
             $.each(arr, function(idx, obj) {
-              ret.push(obj[fn].call(args));
-            })
+              ret.push(obj[fn].apply(obj, args));
+            });
             return ret;
           }
         });
@@ -1961,7 +1962,7 @@
       }
 
       function version() {
-        return 121;
+        return 122;
       }
 
       return {
