@@ -28,6 +28,7 @@
  xl.0.23 pageableFilterableSortableModel(model, ajax, state, pager, filterSortModel) added
  xl.0.24 double propagate call removed from some functions
  xl.0.25 pageableFilterableSortableModel some tuning of behaviour
+ xl.0.26 pageableFilterableSortableModel removed unnecessary AI
 */
 
 (function() {
@@ -37,7 +38,7 @@
   var tmpJiantXl = {
 
     version: function() {
-      return 25;
+      return 26;
     },
 
     ctl2state: function(ctl, state, selectedCssClass, goProxy) {
@@ -128,24 +129,19 @@
     },
 
     pageableFilterableSortableModel: function(model, ajax, state, pager, filterSortModel) {
-      var prevPage;
       function refresh(pageNum) {
         var parsedNum = parseInt(pageNum);
         parsedNum = isNaN(parsedNum) ? 0 : parsedNum;
-        if (parsedNum !== prevPage) {
-          var pageable = {"page.page": parsedNum};
-          filterSortModel && filterSortModel.sort && filterSortModel.sort() && (pageable["page.sort"] = filterSortModel.sort());
-          ajax(filterSortModel, pageable, function(data) {
-            model.updateAll(data.content, true);
-            pager && pager.updatePager(data);
-          });
-          prevPage = parsedNum;
-        }
+        var pageable = {"page.page": parsedNum};
+        filterSortModel && filterSortModel.sort && filterSortModel.sort() && (pageable["page.sort"] = filterSortModel.sort());
+        ajax(filterSortModel, pageable, function(data) {
+          model.updateAll(data.content, true);
+          pager && pager.updatePager(data);
+        });
       }
       state && state.start(refresh);
       if (filterSortModel && filterSortModel.on) {
         filterSortModel.on(function() {
-          prevPage = undefined;
           refresh(0);
         });
       }
