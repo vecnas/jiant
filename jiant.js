@@ -9,6 +9,7 @@
  1.20: model ajax parse fix
  1.21: collection proxy functions added to models
  1.22: collection functions fix - setters didn't work, now ok
+ 1.23: jiant.data ctl type added for views/templates, saves provided data to data-name attribute, fld: jiant.data, view.fld() === view.attr("data-fld")
 */
 (function() {
   var
@@ -51,6 +52,7 @@
         nlabel = {},
         meta = {},
         cssMarker = {},
+        data = function(val) {},
         lookup = function(selector) {},
         on = function(cb) {},
         goState = function(params, preserveOmitted) {},
@@ -505,6 +507,17 @@
               viewRoot[componentId] = function() {return viewElem.find("." + prefix + componentId);};
             } else if (viewRoot[componentId] === jiant.meta) {
               //skipping, app meta info
+            } else if (viewRoot[componentId] === jiant.data) {
+              viewRoot[componentId] = function(val) {
+                if (arguments.length == 0) {
+                  return viewRoot.attr("data-" + componentId);
+                } else {
+                  return viewRoot.attr("data-" + componentId, val);
+                }
+              };
+              viewRoot[componentId].customRenderer = function(obj, elem, val, isUpdate, viewOrTemplate) {
+                viewRoot[componentId](val);
+              }
             } else if (viewRoot[componentId] === jiant.cssMarker) {
               viewRoot[componentId].customRenderer = function(obj, elem, val, isUpdate, viewOrTemplate) {
                 var cls = componentId + "_" + val;
@@ -750,6 +763,11 @@
                 tmContent[componentId] = function() {return tmContent.find("." + prefix + componentId);};
               } else if (elemType === jiant.meta) {
                 //skipping, app meta info
+              } else if (elemType === jiant.data) {
+                //skipping, data function
+                tmContent[componentId].customRenderer = function(obj, elem, val, isUpdate, viewOrTemplate) {
+                  viewOrTemplate[componentId](val);
+                };
               } else if (elemType === jiant.cssMarker) {
                 tmContent[componentId].customRenderer = function(obj, elem, val, isUpdate, viewOrTemplate) {
                   var cls = componentId + "_" + val;
@@ -774,7 +792,15 @@
           root[tmId].parseTemplate = function(data) {
             var retVal = $("<!-- -->" + parseTemplate(tm, data, tmId)); // add comment to force jQuery to read it as HTML fragment
             $.each(tmContent, function (elem, elemType) {
-              if (elem != "parseTemplate" && elem != "parseTemplate2Text" && elem != "appPrefix") {
+              if (elemType == jiant.data) {
+                retVal[elem] = function(val) {
+                  if (arguments.length == 0) {
+                    return retVal.attr("data-" + elem);
+                  } else {
+                    return retVal.attr("data-" + elem, val);
+                  }
+                };
+              } else if (elem != "parseTemplate" && elem != "parseTemplate2Text" && elem != "appPrefix") {
                 retVal[elem] = $.merge(retVal.filter("." + prefix + elem), retVal.find("." + prefix + elem));
                 elemType === nlabel && setupIntlProxies(appRoot, retVal[elem]);
                 setupExtras(appRoot, retVal[elem], root[tmId][elem], tmId, elem);
@@ -1962,7 +1988,7 @@
       }
 
       function version() {
-        return 122;
+        return 123;
       }
 
       return {
@@ -2029,6 +2055,7 @@
         nlabel: nlabel,
         meta: meta,
         cssMarker: cssMarker,
+        data: data,
         lookup: lookup,
         on: on,
         pager: pager,
