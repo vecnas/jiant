@@ -29,7 +29,8 @@
  xl.0.24 double propagate call removed from some functions
  xl.0.25 pageableFilterableSortableModel some tuning of behaviour
  xl.0.26 pageableFilterableSortableModel removed unnecessary AI
-*/
+ xl.0.27 pseudoSelect() component added
+ */
 
 (function() {
 
@@ -38,7 +39,7 @@
   var tmpJiantXl = {
 
     version: function() {
-      return 26;
+      return 27;
     },
 
     ctl2state: function(ctl, state, selectedCssClass, goProxy) {
@@ -109,7 +110,7 @@
     bindList: function(model, container, template, viewFieldSetterName) {
       function renderObj(obj) {
         var tm = $.isFunction(template) ? template(obj) : template,
-          view = tm.parseTemplate(obj);
+            view = tm.parseTemplate(obj);
 //          view = tm.parseTemplate({id: $.isFunction(obj.id) ? obj.id() : obj.id});
         container.append(view);
         viewFieldSetterName && $.isFunction(obj[viewFieldSetterName]) && obj[viewFieldSetterName](view);
@@ -257,6 +258,31 @@
           }, event);
         });
       };
+    },
+
+    pseudoSelect: function() {
+      function impl() {
+        var selectedElem, selectedVal, selectClass;
+        return {
+          add: function(elem, val) {
+            selectedElem.click(function() {
+              selectedVal = val;
+              if (selectClass) {
+                selectedElem && selectedElem.removeClass(selectClass);
+                elem.addClass(selectClass);
+              }
+              selectedElem = elem;
+            })
+          },
+          selected: function() {
+            return selectedVal;
+          },
+          setSelectClass: function(cls) {
+            selectClass = cls;
+          }
+        };
+      }
+      return new impl();
     },
 
     elementVisibilityByEvent: function(elem, eventsList) {},
