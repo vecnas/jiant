@@ -30,6 +30,7 @@
  xl.0.25 pageableFilterableSortableModel some tuning of behaviour
  xl.0.26 pageableFilterableSortableModel removed unnecessary AI
  xl.0.27 pseudoSelect() component added
+ xl.0.27.1 pseudoSelect() debug
  */
 
 (function() {
@@ -261,11 +262,11 @@
     },
 
     pseudoSelect: function() {
-      function impl() {
+      function Impl() {
         var selectedElem, selectedVal, selectClass;
         return {
           add: function(elem, val) {
-            selectedElem.click(function() {
+            elem.click(function() {
               selectedVal = val;
               if (selectClass) {
                 selectedElem && selectedElem.removeClass(selectClass);
@@ -282,7 +283,7 @@
           }
         };
       }
-      return new impl();
+      return new Impl();
     },
 
     elementVisibilityByEvent: function(elem, eventsList) {},
