@@ -30,7 +30,7 @@
  xl.0.25 pageableFilterableSortableModel some tuning of behaviour
  xl.0.26 pageableFilterableSortableModel removed unnecessary AI
  xl.0.27 pseudoSelect() component added
- xl.0.27.1 pseudoSelect() debug
+ xl.0.28 pseudoSelect: function(arrElems, arrVals, cb, selectedIdx, selectClass) - further development
  */
 
 (function() {
@@ -40,7 +40,7 @@
   var tmpJiantXl = {
 
     version: function() {
-      return 27;
+      return 28;
     },
 
     ctl2state: function(ctl, state, selectedCssClass, goProxy) {
@@ -261,19 +261,23 @@
       };
     },
 
-    pseudoSelect: function() {
+    pseudoSelect: function(arrElems, arrVals, cb, selectedIdx, selectClass) {
       function Impl() {
         var selectedElem, selectedVal, selectClass;
         return {
-          add: function(elem, val) {
+          add: function(elem, val, cb, selected) {
+            elem = $(elem);
             elem.click(function() {
+              var prevElem = selectedElem, prevVal = selectedVal;
               selectedVal = val;
               if (selectClass) {
                 selectedElem && selectedElem.removeClass(selectClass);
                 elem.addClass(selectClass);
               }
               selectedElem = elem;
-            })
+              cb && cb(selectedElem, selectedVal, prevElem, prevVal);
+            });
+            selected && elem.click();
           },
           selected: function() {
             return selectedVal;
@@ -283,7 +287,12 @@
           }
         };
       }
-      return new Impl();
+      var impl = new Impl();
+      impl.setSelectClass(selectClass);
+      arrElems && $.each(arrElems, function(idx, elem) {
+        impl.add($(elem), arrVals && arrVals.length > idx ? arrVals[idx] : null, cb, selectedIdx === idx);
+      });
+      return impl;
     },
 
     elementVisibilityByEvent: function(elem, eventsList) {},
