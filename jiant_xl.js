@@ -31,6 +31,7 @@
  xl.0.26 pageableFilterableSortableModel removed unnecessary AI
  xl.0.27 pseudoSelect() component added
  xl.0.28 pseudoSelect: function(arrElems, arrVals, cb, selectedIdx, selectClass) - further development
+ xl.0.28.1 pseudoSelect.selected(val) supported, without UI sync, only changes selected value
  */
 
 (function() {
@@ -280,6 +281,9 @@
             selected && elem.click();
           },
           selected: function() {
+            if (arguments.length > 0) {
+              selectedVal = arguments[0];
+            }
             return selectedVal;
           },
           setSelectClass: function(cls) {
