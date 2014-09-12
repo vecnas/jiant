@@ -10,6 +10,7 @@
  1.21: collection proxy functions added to models
  1.22: collection functions fix - setters didn't work, now ok
  1.23: jiant.data ctl type added for views/templates, saves provided data to data-name attribute, fld: jiant.data, view.fld() === view.attr("data-fld")
+ 1.24: jiant lifecycle application listeners added, via addListener(listener)/removeListener(listener), logger separated
 */
 (function() {
   var
@@ -34,55 +35,75 @@
       }
     },
 
+    listenerProto = {
+      bindStarted: function(app) {},
+      bindCompleted: function(app) {},
+      boundAjax: function(app, ajaxRoot, uri, ajaxFn) {},
+      boundEvent: function(app, eventsRoot, name, eventImpl) {},
+      boundLogic: function(app, logicsRoot, name, spec) {},
+      boundModel: function(app, modelsRoot, name, modelImpl) {},
+      boundState: function(app, states, name, stateSpec) {},
+      boundTemplate: function(app, tmRoot, tmId, prefix, tm) {},
+      boundView: function(app, viewsRoot, viewId, prefix, view) {},
+      logicImplemented: function(appId, name, unboundCount) {},
+      onUiBoundCalled: function(appIdArr, dependenciesList, cb) {}
+    },
+
     tmpJiant = (function($) {
 
       var collection = {},
-        container = {},
-        containerPaged = {},
-        ctl = {},
-        form = {},
-        fn = function(param) {},
-        grid = {},
-        image = {},
-        input = {},
-        inputInt = {},
-        inputFloat = {},
-        inputDate = {},
-        label = {},
-        nlabel = {},
-        meta = {},
-        cssMarker = {},
-        data = function(val) {},
-        lookup = function(selector) {},
-        on = function(cb) {},
-        goState = function(params, preserveOmitted) {},
-        pager = {},
-        slider = {},
-        stub = function() {
-          var callerName = "not available";
-          if (arguments && arguments.callee && arguments.callee.caller) {
-            callerName = arguments.callee.caller.name;
-          }
-          alert("stub called from function: " + callerName);
-        },
-        tabs = {},
+          container = {},
+          containerPaged = {},
+          ctl = {},
+          form = {},
+          fn = function (param) {
+          },
+          grid = {},
+          image = {},
+          input = {},
+          inputInt = {},
+          inputFloat = {},
+          inputDate = {},
+          label = {},
+          nlabel = {},
+          meta = {},
+          cssMarker = {},
+          data = function (val) {
+          },
+          lookup = function (selector) {
+          },
+          on = function (cb) {
+          },
+          goState = function (params, preserveOmitted) {
+          },
+          pager = {},
+          slider = {},
+          stub = function () {
+            var callerName = "not available";
+            if (arguments && arguments.callee && arguments.callee.caller) {
+              callerName = arguments.callee.caller.name;
+            }
+            alert("stub called from function: " + callerName);
+          },
+          tabs = {},
 
-        bindingsResult = true,
-        errString,
+          bindingsResult = true,
+          errString,
 
-        pickTime,
-        lastStates = {},
-        lastEncodedStates = {},
-        loadedLogics = {},
-        awaitingDepends = {},
-        externalModules = {},
-        eventBus = $({}),
-        uiBoundRoot = {},
-        onInitAppActions = [],
-        uiFactory = new DefaultUiFactory(),
-        statesUsed = {},
-        eventsUsed = {},
-        modelInnerDataField = "jiant_innerData";
+          pickTime,
+          lastStates = {},
+          lastEncodedStates = {},
+          loadedLogics = {},
+          awaitingDepends = {},
+          externalModules = {},
+          eventBus = $({}),
+          uiBoundRoot = {},
+          onInitAppActions = [],
+          uiFactory = new DefaultUiFactory(),
+          statesUsed = {},
+          eventsUsed = {},
+          listeners = [],
+          modelInnerDataField = "jiant_innerData";
 
       function randomIntBetween(from, to) {
         return Math.floor((Math.random()*(to - from + 1)) + from);
@@ -713,17 +734,17 @@
         });
       }
 
-      function _bindViews(pfx, root, appRoot, appUiFactory) {
+      function _bindViews(appRoot, root, pfx, appUiFactory) {
         $.each(root, function(viewId, viewContent) {
-          var prefix = viewContent.appPrefix ? viewContent.appPrefix : (pfx ? pfx : "");
-          jiant.logInfo("binding UI for view: " + viewId + " using prefix " + prefix);
-          var view = appUiFactory.view(prefix, viewId);
-          var viewOk = ensureExists(prefix, appRoot.dirtyList, view, prefix + viewId);
+          var prefix = viewContent.appPrefix ? viewContent.appPrefix : (pfx ? pfx : ""),
+              view = appUiFactory.view(prefix, viewId),
+              viewOk = ensureExists(prefix, appRoot.dirtyList, view, prefix + viewId);
           viewOk && _bindContent(appRoot, root[viewId], viewId, viewContent, view, prefix);
           ensureSafeExtend(root[viewId], view);
           root[viewId].propagate = makePropagationFunction(viewId, viewContent, viewContent, root[viewId]);
           $.extend(root[viewId], view);
           maybeAddDevHook(view, viewId, undefined);
+          $.each(listeners, function(i, l) {l.boundView(appRoot, root, viewId, prefix, root[viewId])});
         });
       }
 
@@ -751,10 +772,9 @@
         return parseTemplate(tm, data);
       }
 
-      function _bindTemplates(pfx, root, appRoot, appUiFactory) {
+      function _bindTemplates(appRoot, root, pfx, appUiFactory) {
         $.each(root, function(tmId, tmContent) {
           var prefix = tmContent.appPrefix ? tmContent.appPrefix : (pfx ? pfx : "");
-          jiant.logInfo("binding UI for template: " + tmId + " using prefix " + prefix);
           var tm = appUiFactory.template(prefix, tmId, tmContent);
           $.each(tmContent, function (componentId, elemType) {
             if (componentId != "appPrefix") {
@@ -815,6 +835,7 @@
           root[tmId].parseTemplate2Text = function(data) {
             return parseTemplate(tm, data);
           };
+          $.each(listeners, function(i, l) {l.boundTemplate(appRoot, root, tmId, prefix, root[tmId])});
         });
       }
 
@@ -1138,18 +1159,17 @@
         return ("" + funcSpec).indexOf("{}") == ("" + funcSpec).length - 2
       }
 
-      function _bindModels(models, appId) {
+      function _bindModels(appRoot, models, appId) {
         $.each(models, function(name, spec) {
-          jiant.logInfo("implementing model " + name);
           bindFunctions(name, spec, spec, appId);
+          $.each(listeners, function(i, l) {l.boundModel(appRoot, models, name, models[name])});
         });
       }
 
 // ------------ logic staff ----------------
 
-      function _bindLogic(logics, appId) {
+      function _bindLogic(appRoot, logics, appId) {
         $.each(logics, function(name, spec) {
-          jiant.logInfo("binding logic " + name);
           if ($.isFunction(spec)) {
             if (isEmptyFunction(spec)) {
               jiant.logError("don't declare empty logic functions, use objects for namespace grouping");
@@ -1187,14 +1207,14 @@
               loadIntl(spec);
             }
           }
+          $.each(listeners, function(i, l) {l.boundLogic(appRoot, logics, name, spec)});
         });
       }
 
       function logUnboundCount(appId, name) {
         var len = 0;
         $.each(awaitingDepends[appId], function() {len++});
-        jiant.logInfo("implementation assigned to " + name + ", remaining unbound logics count: " + len
-          + (len == 0 ? ", all logics loaded OK!" : ""));
+        $.each(listeners, function(i, l) {l.logicImplemented(appId, name, len)});
       }
 
       function loadLibs(arr, cb, devMode) {
@@ -1268,9 +1288,8 @@
 
 // ------------ events staff ----------------
 
-      function _bindEvents(events, appId) {
+      function _bindEvents(appRoot, events, appId) {
         $.each(events, function(name, spec) {
-          logInfo("binding event: " + name);
           events[name].listenersCount = 0;
           events[name].fire = function() {
             debugEvents("fire event: " + name);
@@ -1292,12 +1311,13 @@
               cb && cb.apply(cb, args);
             });
           };
+          $.each(listeners, function(i, l) {l.boundEvent(appRoot, events, name, events[name])});
         });
       }
 
 // ------------ states staff ----------------
 
-      function _bindStates(states, stateExternalBase, appId) {
+      function _bindStates(appRoot, states, stateExternalBase, appId) {
         if (! $(window).hashchange) {
           var err = "No hashchange plugin and states configured. Don't use states or add hashchange plugin (supplied with jiant)";
           jiant.logError(err);
@@ -1310,7 +1330,6 @@
           states[""] = {};
         }
         $.each(states, function(name, stateSpec) {
-          logInfo("binding state: " + appId + name);
           stateSpec.go = go(name, stateSpec.root, stateExternalBase, appId);
           stateSpec.start = function(cb) {
             var trace;
@@ -1346,6 +1365,7 @@
               cb && cb.apply(cb, args);
             });
           };
+          $.each(listeners, function(i, l) {l.boundState(appRoot, states, name, stateSpec)});
         });
         $(window).hashchange(makeHashListener(appId));
         lastStates[appId] = parseState(appId).now[0];
@@ -1570,13 +1590,13 @@
         return funStr.slice(funStr.indexOf('(')+1, funStr.indexOf(')')).match(/([^\s,]+)/g);
       }
 
-      function _bindAjax(root, ajaxPrefix, ajaxSuffix, crossDomain) {
+      function _bindAjax(appRoot, root, ajaxPrefix, ajaxSuffix, crossDomain) {
         $.each(root, function(uri, funcSpec) {
-          logInfo("binding ajax for function: " + uri);
           var params = getParamNames(funcSpec);
           params && params.length > 0 ? params.splice(params.length - 1, 1) : params = [];
           root[uri] = makeAjaxPerformer(ajaxPrefix, ajaxSuffix, uri, params, $.isFunction(root[uri]) ? root[uri]() : undefined, crossDomain);
           root[uri]._jiantSpec = params;
+          $.each(listeners, function(i, l) {l.boundAjax(appRoot, root, uri, root[uri])});
         });
       }
 
@@ -1694,7 +1714,7 @@
       }
 
       function loadIntl(intlRoot) {
-        jiant.logInfo("Loading intl: ", intlRoot);
+//        jiant.logInfo("Loading intl: ", intlRoot);
         if (! intlRoot.url) {
           error("Intl data url not provided, internationalization will not be loaded");
           return;
@@ -1786,8 +1806,6 @@
         var appId = (root.id ? root.id : "no_app_id");
         if (! root.id) {
           jiant.logError("!!! Application id not specified. Not recommended since 0.20. Use 'id' property of application root to specify application id");
-        } else {
-          jiant.logInfo("Loading application, id: " + root.id);
         }
         if (uiBoundRoot[appId]) {
           jiant.logError("Application '" + appId + "' already loaded, skipping multiple bind call");
@@ -1796,13 +1814,13 @@
         maybeShort(root, "logic", "l");
         maybeShort(root, "intl", "i") && _bindIntl(root, root.intl, appId);
         // views after intl because of nlabel proxies
-        maybeShort(root, "views", "v") && _bindViews(prefix, root.views, root, appUiFactory);
-        maybeShort(root, "templates", "t") && _bindTemplates(prefix, root.templates, root, appUiFactory);
-        maybeShort(root, "ajax", "a") && _bindAjax(root.ajax, root.ajaxPrefix, root.ajaxSuffix, root.crossDomain);
-        maybeShort(root, "events", "e") && _bindEvents(root.events, appId);
-        maybeShort(root, "states", "s") && _bindStates(root.states, root.stateExternalBase, appId);
-        maybeShort(root, "models", "m") && _bindModels(root.models, appId);
-        _bindLogic(root.logic, appId);
+        maybeShort(root, "views", "v") && _bindViews(root, root.views, prefix, appUiFactory);
+        maybeShort(root, "templates", "t") && _bindTemplates(root, root.templates, prefix, appUiFactory);
+        maybeShort(root, "ajax", "a") && _bindAjax(root, root.ajax, root.ajaxPrefix, root.ajaxSuffix, root.crossDomain);
+        maybeShort(root, "events", "e") && _bindEvents(root, root.events, appId);
+        maybeShort(root, "states", "s") && _bindStates(root, root.states, root.stateExternalBase, appId);
+        maybeShort(root, "models", "m") && _bindModels(root, root.models, appId);
+        _bindLogic(root, root.logic, appId);
         jiant.DEV_MODE && !bindingsResult && alert("Some elements not bound to HTML properly, check console" + errString);
         uiBoundRoot[appId] = root;
         jiant.logInfo(root);
@@ -1817,7 +1835,6 @@
       }
 
       function bindUi(prefix, root, devMode, viewsUrl, injectId) {
-        var startedAt = new Date().getTime();
         if ($.isPlainObject(prefix)) { // no prefix syntax
           injectId = viewsUrl;
           viewsUrl = devMode;
@@ -1825,6 +1842,7 @@
           root = prefix;
           prefix = root.appPrefix;
         }
+        $.each(listeners, function(i, l) {l.bindStarted(root)});
         var appUiFactory = root.uiFactory ? root.uiFactory : uiFactory;
         if (viewsUrl) {
           var injectionPoint;
@@ -1843,7 +1861,7 @@
         } else {
           _bindUi(prefix, root, devMode, appUiFactory);
         }
-        jiant.logInfo("UI bound in " + (new Date().getTime() - startedAt) + "ms");
+        $.each(listeners, function(i, l) {l.bindCompleted(root)});
         devMode && setTimeout(function() {
           awaitingDepends.length > 0 && logError("Attention!! Some depends are not resolved", awaitingDepends);
         }, 10000);
@@ -1865,7 +1883,7 @@
       // onUiBound(appId, depList, cb)
       function onUiBound(appIdArr, dependenciesList, cb) {
         if (! cb && ! dependenciesList) {
-          jiant.logError("!!! Registering anonymous logic without application id. Not recommended since 0.20");
+          jiant.error("!!! Registering anonymous logic without application id. Not recommended since 0.20");
           cb = appIdArr;
           appIdArr = ["no_app_id"];
         } else if (! cb) {
@@ -1878,7 +1896,7 @@
         if (appIdArr.length > 1 && $.isArray(dependenciesList) && dependenciesList.length > 0) {
           $.each(dependenciesList, function(idx, arr) {
             if (!$.isArray(arr)) {
-              jiant.logError("Used multiple applications onUiBound and supplied wrong dependency list, use multi-array, " +
+              jiant.error("Used multiple applications onUiBound and supplied wrong dependency list, use multi-array, " +
                 "like [[app1DepList], [app2DepList]]");
             }
           })
@@ -1887,6 +1905,7 @@
         } else if (! dependenciesList) {
           dependenciesList = [];
         }
+        $.each(listeners, function(i, l) {l.onUiBoundCalled(appIdArr, dependenciesList, cb)});
         $.each(appIdArr, function(idx, appId) {
           if ($.isPlainObject(appId)) {
             appId = appId.id;
@@ -1987,14 +2006,28 @@
         }, true);
       }
 
+      function addListener(listener) {
+        $.each(listenerProto, function(fname, fnbody) {
+          if (! listener[fname] || !$.isFunction(listener[fname])) {
+            errorp("Listener misses function !!, adding empty replacement", fname);
+            listener[fname] = function() {};
+          }
+        });
+        listeners.push(listener);
+      }
+
+      function removeListener(listener) {
+        listeners.remove(listener);
+      }
+
       function version() {
-        return 123;
+        return 124;
       }
 
       return {
         AJAX_PREFIX: "",
         AJAX_SUFFIX: "",
-        DEV_MODE: false,
+        DEV_MODE: true,
         DEBUG_MODE: {
           states: 0,
           events: 0,
@@ -2038,6 +2071,9 @@
         randomIntBetween: randomIntBetween,
         lfill: lfill,
         pick: pick,
+
+        addListener: addListener,
+        removeListener: removeListener,
 
         collection: collection,
         container: container,
