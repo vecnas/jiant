@@ -12,6 +12,7 @@
  1.23: jiant.data ctl type added for views/templates, saves provided data to data-name attribute, fld: jiant.data, view.fld() === view.attr("data-fld")
  1.24: jiant lifecycle application listeners added, via addListener(listener)/removeListener(listener), logger separated
  1.25: listeners methods used when available, built-in state debuggers extracted to listeners, DEBUG_MODE.states removed
+ 1.26: ajax logging moved to listener, debugAjax.js
 */
 (function() {
   var
@@ -47,6 +48,11 @@
       boundState: function(app, states, name, stateSpec) {},
       boundTemplate: function(app, tmRoot, tmId, prefix, tm) {},
       boundView: function(app, viewsRoot, viewId, prefix, view) {},
+
+      debugAjaxCallStarted: function(app, uri, url, callData) {},
+      debugAjaxCallCompleted: function(app, uri, url, callData, timeMs) {},
+      debugAjaxCallResults: function(app, uri, url, callData, data) {},
+      debugAjaxCallError: function(app, uri, url, callData, timeMs, errorMessage, jqXHR) {},
 
       debugStateEndCallHandler: function(app, name, stateSpec, trace) {},
       debugStateEndRegisterHandler: function(app, name, stateSpec) {},
@@ -1597,7 +1603,7 @@
         $.each(root, function(uri, funcSpec) {
           var params = getParamNames(funcSpec);
           params && params.length > 0 ? params.splice(params.length - 1, 1) : params = [];
-          root[uri] = makeAjaxPerformer(ajaxPrefix, ajaxSuffix, uri, params, $.isFunction(root[uri]) ? root[uri]() : undefined, crossDomain);
+          root[uri] = makeAjaxPerformer(appRoot, ajaxPrefix, ajaxSuffix, uri, params, $.isFunction(root[uri]) ? root[uri]() : undefined, crossDomain);
           root[uri]._jiantSpec = params;
           $.each(listeners, function(i, l) {l.boundAjax && l.boundAjax(appRoot, root, uri, root[uri])});
         });
@@ -1622,7 +1628,7 @@
         }
       }
 
-      function makeAjaxPerformer(ajaxPrefix, ajaxSuffix, uri, params, hardUrl, crossDomain) {
+      function makeAjaxPerformer(appRoot, ajaxPrefix, ajaxSuffix, uri, params, hardUrl, crossDomain) {
         return function() {
           var callData = {},
             callback,
@@ -1647,15 +1653,15 @@
               sfx = (ajaxSuffix || ajaxSuffix == "") ? ajaxSuffix : jiant.AJAX_SUFFIX,
               url = hardUrl ? hardUrl : pfx + uri + sfx,
               time = new Date().getTime();
-          logInfo("    AJAX call. " + uri + " to server url: " + url);
+          $.each(listeners, function(i, l) {l.debugAjaxCallStarted && l.debugAjaxCallStarted(appRoot, uri, url, callData)});
           var settings = {data: callData, traditional: true, success: function(data) {
-            logInfo("               " + uri + " executed in " + (new Date().getTime() - time));
+            $.each(listeners, function(i, l) {l.debugAjaxCallCompleted && l.debugAjaxCallCompleted(appRoot, uri, url, callData, new Date().getTime() - time)});
             if (callback) {
               try {
                 data = $.parseJSON(data);
               } catch (ex) {
               }
-              jiant.DEBUG_MODE.ajax && debug("   ---   Ajax call results for uri " + uri) && debug(data);
+              $.each(listeners, function(i, l) {l.debugAjaxCallResults && l.debugAjaxCallResults(appRoot, uri, url, callData, data)});
               callback(data);
             }
           }, error: function (jqXHR, textStatus, errorText) {
@@ -1664,6 +1670,7 @@
             } else {
               jiant.handleErrorFn(jqXHR.responseText);
             }
+            $.each(listeners, function(i, l) {l.debugAjaxCallError && l.debugAjaxCallError(appRoot, uri, url, callData, new Date().getTime() - time, jqXHR.responseText, jqXHR)});
           }};
           if (crossDomain) {
             settings.contentType = "application/json";
@@ -2026,7 +2033,7 @@
       }
 
       function version() {
-        return 125;
+        return 126;
       }
 
       return {
@@ -2035,7 +2042,6 @@
         DEV_MODE: true,
         DEBUG_MODE: {
           events: 0,
-          ajax: 0,
           data: 0
         },
         PAGER_RADIUS: 6,
