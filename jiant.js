@@ -11,6 +11,7 @@
  1.22: collection functions fix - setters didn't work, now ok
  1.23: jiant.data ctl type added for views/templates, saves provided data to data-name attribute, fld: jiant.data, view.fld() === view.attr("data-fld")
  1.24: jiant lifecycle application listeners added, via addListener(listener)/removeListener(listener), logger separated
+ 1.25: listeners methods used when available, built-in state debuggers extracted to listeners, DEBUG_MODE.states removed
 */
 (function() {
   var
@@ -38,6 +39,7 @@
     listenerProto = {
       bindStarted: function(app) {},
       bindCompleted: function(app) {},
+
       boundAjax: function(app, ajaxRoot, uri, ajaxFn) {},
       boundEvent: function(app, eventsRoot, name, eventImpl) {},
       boundLogic: function(app, logicsRoot, name, spec) {},
@@ -45,6 +47,15 @@
       boundState: function(app, states, name, stateSpec) {},
       boundTemplate: function(app, tmRoot, tmId, prefix, tm) {},
       boundView: function(app, viewsRoot, viewId, prefix, view) {},
+
+      debugStateEndCallHandler: function(app, name, stateSpec, trace) {},
+      debugStateEndRegisterHandler: function(app, name, stateSpec) {},
+      debugStateEndTrigger: function(app, name) {},
+      debugStateError: function(app, name, stateSpec, message) {},
+      debugStateStartCallHandler: function(app, name, stateSpec, trace, args) {},
+      debugStateStartRegisterHandler: function(app, name, stateSpec) {},
+      debugStateStartTrigger: function(app, name, params) {},
+
       logicImplemented: function(appId, name, unboundCount) {},
       onUiBoundCalled: function(appIdArr, dependenciesList, cb) {}
     },
@@ -385,10 +396,6 @@
 
       function debugData(s, obj) {
         jiant.DEBUG_MODE.data && debug("   ---   " + s) && debug(obj);
-      }
-
-      function debugStates(s) {
-        jiant.DEBUG_MODE.states && debug("   ---   " + s);
       }
 
       function debugEvents(s) {
@@ -744,7 +751,7 @@
           root[viewId].propagate = makePropagationFunction(viewId, viewContent, viewContent, root[viewId]);
           $.extend(root[viewId], view);
           maybeAddDevHook(view, viewId, undefined);
-          $.each(listeners, function(i, l) {l.boundView(appRoot, root, viewId, prefix, root[viewId])});
+          $.each(listeners, function(i, l) {l.boundView && l.boundView(appRoot, root, viewId, prefix, root[viewId])});
         });
       }
 
@@ -835,7 +842,7 @@
           root[tmId].parseTemplate2Text = function(data) {
             return parseTemplate(tm, data);
           };
-          $.each(listeners, function(i, l) {l.boundTemplate(appRoot, root, tmId, prefix, root[tmId])});
+          $.each(listeners, function(i, l) {l.boundTemplate && l.boundTemplate(appRoot, root, tmId, prefix, root[tmId])});
         });
       }
 
@@ -1162,7 +1169,7 @@
       function _bindModels(appRoot, models, appId) {
         $.each(models, function(name, spec) {
           bindFunctions(name, spec, spec, appId);
-          $.each(listeners, function(i, l) {l.boundModel(appRoot, models, name, models[name])});
+          $.each(listeners, function(i, l) {l.boundModel && l.boundModel(appRoot, models, name, models[name])});
         });
       }
 
@@ -1207,14 +1214,14 @@
               loadIntl(spec);
             }
           }
-          $.each(listeners, function(i, l) {l.boundLogic(appRoot, logics, name, spec)});
+          $.each(listeners, function(i, l) {l.boundLogic && l.boundLogic(appRoot, logics, name, spec)});
         });
       }
 
       function logUnboundCount(appId, name) {
         var len = 0;
         $.each(awaitingDepends[appId], function() {len++});
-        $.each(listeners, function(i, l) {l.logicImplemented(appId, name, len)});
+        $.each(listeners, function(i, l) {l.logicImplemented && l.logicImplemented(appId, name, len)});
       }
 
       function loadLibs(arr, cb, devMode) {
@@ -1311,7 +1318,7 @@
               cb && cb.apply(cb, args);
             });
           };
-          $.each(listeners, function(i, l) {l.boundEvent(appRoot, events, name, events[name])});
+          $.each(listeners, function(i, l) {l.boundEvent && l.boundEvent(appRoot, events, name, events[name])});
         });
       }
 
@@ -1333,15 +1340,13 @@
           stateSpec.go = go(name, stateSpec.root, stateExternalBase, appId);
           stateSpec.start = function(cb) {
             var trace;
-            if (jiant.DEBUG_MODE.states) {
-              debug("register state start handler: " + appId + name);
-              statesUsed[appId + name] && debug(" !!! State start handler registered after state triggered, possible error, for state " + appId + name);
-              trace = getStackTrace();
-            }
+            $.each(listeners, function(i, l) {l.debugStateStartRegisterHandler && l.debugStateStartRegisterHandler(appRoot, name, stateSpec)});
+            statesUsed[appId + name] && $.each(listeners, function(i, l) {l.debugStateError && l.debugStateError(appRoot, name, stateSpec, "State start handler registered after state triggered")});
+            trace = getStackTrace();
             eventBus.on(appId + "state_" + name + "_start", function() {
-              debugStates("called state start handler: " + appId + name + ", registered at " + trace);
               var args = $.makeArray(arguments);
               args.splice(0, 1);
+              $.each(listeners, function(i, l) {l.debugStateStartCallHandler && l.debugStateStartCallHandler(appRoot, name, stateSpec, trace, args)});
               cb && cb.apply(cb, args);
             });
             var current = parseState(appId);
@@ -1353,26 +1358,24 @@
           };
           stateSpec.end = function(cb) {
             var trace;
-            if (jiant.DEBUG_MODE.states) {
-              debug("register state end handler: " + appId + name);
-              statesUsed[appId + name] && debug(" !!! State end handler registered after state triggered, possible error, for state " + name);
-              trace = getStackTrace();
-            }
+            $.each(listeners, function(i, l) {l.debugStateEndRegisterHandler && l.debugStateEndRegisterHandler(appRoot, name, stateSpec)});
+            statesUsed[appId + name] && $.each(listeners, function(i, l) {l.debugStateError && l.debugStateError(appRoot, name, stateSpec, "State end handler registered after state triggered")});
+            trace = getStackTrace();
             eventBus.on(appId + "state_" + name + "_end", function() {
-              debugStates("called state end handler: " + appId + name + ", registered at " + trace);
+              $.each(listeners, function(i, l) {l.debugStateEndCallHandler && l.debugStateEndCallHandler(appRoot, name, stateSpec, trace)});
               var args = $.makeArray(arguments);
               args.splice(0, 1);
               cb && cb.apply(cb, args);
             });
           };
-          $.each(listeners, function(i, l) {l.boundState(appRoot, states, name, stateSpec)});
+          $.each(listeners, function(i, l) {l.boundState && l.boundState(appRoot, states, name, stateSpec)});
         });
-        $(window).hashchange(makeHashListener(appId));
+        $(window).hashchange(makeHashListener(appRoot, appId));
         lastStates[appId] = parseState(appId).now[0];
         lastEncodedStates[appId] = getAppState(appId);
       }
 
-      function makeHashListener(appId) {
+      function makeHashListener(appRoot, appId) {
         return function (event, enforce, runtimeAppId) {
           if (runtimeAppId && runtimeAppId != appId) {
             return;
@@ -1392,14 +1395,14 @@
             }
           });
           if (lastStates[appId] != undefined && lastStates[appId] != stateId) {
-            debugStates("trigger state end: " + appId + (lastStates[appId] ? lastStates[appId] : ""));
+            $.each(listeners, function(i, l) {l.debugStateEndTrigger && l.debugStateEndTrigger(appRoot, lastStates[appId])});
             eventBus.trigger(appId + "state_" + lastStates[appId] + "_end");
           }
           lastStates[appId] = stateId;
           lastEncodedStates[appId] = getAppState(appId);
           stateId = (stateId ? stateId : "");
-          debugStates("trigger state start: " + appId + stateId);
-          jiant.DEBUG_MODE.states && (!statesUsed[appId + stateId]) && (statesUsed[appId + stateId] = 1);
+          $.each(listeners, function(i, l) {l.debugStateStartTrigger && l.debugStateStartTrigger(appRoot, stateId, params)});
+          !statesUsed[appId + stateId] && (statesUsed[appId + stateId] = 1);
           //            jiant.logInfo(lastEncodedStates[appId] + " params are ", params);
           eventBus.trigger(appId + "state_" + stateId + "_start", params);
         }
@@ -1415,7 +1418,7 @@
             if (arg != undefined) {
               parsed.now.push(pack(arg));
             } else if ((prevState[0] == stateId || isSameStatesGroup(appId, prevState[0], stateId)) && prevState[idx + 1] != undefined) {
-              info("reusing pref param: " + prevState[idx + 1]);
+//              info("reusing prev state param: " + prevState[idx + 1]);
               parsed.now.push(pack(prevState[idx + 1]));
             } else {
               parsed.now.push(pack(arg));
@@ -1424,7 +1427,7 @@
           if (prevState && (prevState[0] == stateId || isSameStatesGroup(appId, prevState[0], stateId))) {
             var argLen = arguments.length;
             while (argLen < prevState.length - 1) {
-              info("pushing prevState param: " + prevState[argLen]);
+//              info("pushing prev state param: " + prevState[argLen]);
               parsed.now.push(pack(prevState[++argLen]));
             }
           }
@@ -1596,7 +1599,7 @@
           params && params.length > 0 ? params.splice(params.length - 1, 1) : params = [];
           root[uri] = makeAjaxPerformer(ajaxPrefix, ajaxSuffix, uri, params, $.isFunction(root[uri]) ? root[uri]() : undefined, crossDomain);
           root[uri]._jiantSpec = params;
-          $.each(listeners, function(i, l) {l.boundAjax(appRoot, root, uri, root[uri])});
+          $.each(listeners, function(i, l) {l.boundAjax && l.boundAjax(appRoot, root, uri, root[uri])});
         });
       }
 
@@ -1771,6 +1774,7 @@
       }
 
       function maybeSetDebugModeFromQueryString() {
+/*
         if ((window.location + "").toLowerCase().indexOf("jiant.debug_events") >= 0) {
           jiant.DEBUG_MODE.events = 1;
         }
@@ -1783,6 +1787,7 @@
         if ((window.location + "").toLowerCase().indexOf("jiant.debug_data") >= 0) {
           jiant.DEBUG_MODE.data = 1;
         }
+*/
       }
 
       function maybeShort(root, full, shorten) {
@@ -1842,7 +1847,7 @@
           root = prefix;
           prefix = root.appPrefix;
         }
-        $.each(listeners, function(i, l) {l.bindStarted(root)});
+        $.each(listeners, function(i, l) {l.bindStarted && l.bindStarted(root)});
         var appUiFactory = root.uiFactory ? root.uiFactory : uiFactory;
         if (viewsUrl) {
           var injectionPoint;
@@ -1861,7 +1866,7 @@
         } else {
           _bindUi(prefix, root, devMode, appUiFactory);
         }
-        $.each(listeners, function(i, l) {l.bindCompleted(root)});
+        $.each(listeners, function(i, l) {l.bindCompleted && l.bindCompleted(root)});
         devMode && setTimeout(function() {
           awaitingDepends.length > 0 && logError("Attention!! Some depends are not resolved", awaitingDepends);
         }, 10000);
@@ -1905,7 +1910,7 @@
         } else if (! dependenciesList) {
           dependenciesList = [];
         }
-        $.each(listeners, function(i, l) {l.onUiBoundCalled(appIdArr, dependenciesList, cb)});
+        $.each(listeners, function(i, l) {l.onUiBoundCalled && l.onUiBoundCalled(appIdArr, dependenciesList, cb)});
         $.each(appIdArr, function(idx, appId) {
           if ($.isPlainObject(appId)) {
             appId = appId.id;
@@ -2007,12 +2012,12 @@
       }
 
       function addListener(listener) {
-        $.each(listenerProto, function(fname, fnbody) {
-          if (! listener[fname] || !$.isFunction(listener[fname])) {
-            errorp("Listener misses function !!, adding empty replacement", fname);
-            listener[fname] = function() {};
-          }
-        });
+//        $.each(listenerProto, function(fname, fnbody) {
+//          if (! listener[fname] || !$.isFunction(listener[fname])) {
+//            errorp("Listener misses function !!, adding empty replacement", fname);
+//            listener[fname] = function() {};
+//          }
+//        });
         listeners.push(listener);
       }
 
@@ -2021,7 +2026,7 @@
       }
 
       function version() {
-        return 124;
+        return 125;
       }
 
       return {
@@ -2029,7 +2034,6 @@
         AJAX_SUFFIX: "",
         DEV_MODE: true,
         DEBUG_MODE: {
-          states: 0,
           events: 0,
           ajax: 0,
           data: 0
