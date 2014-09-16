@@ -13,6 +13,7 @@
  1.24: jiant lifecycle application listeners added, via addListener(listener)/removeListener(listener), logger separated
  1.25: listeners methods used when available, built-in state debuggers extracted to listeners, DEBUG_MODE.states removed
  1.26: ajax logging moved to listener, debugAjax.js
+ 1.27: debugEvents removed, debugData removed, DEBUG_MODE removed, listener methods renamed
 */
 (function() {
   var
@@ -49,18 +50,20 @@
       boundTemplate: function(app, tmRoot, tmId, prefix, tm) {},
       boundView: function(app, viewsRoot, viewId, prefix, view) {},
 
-      debugAjaxCallStarted: function(app, uri, url, callData) {},
-      debugAjaxCallCompleted: function(app, uri, url, callData, timeMs) {},
-      debugAjaxCallResults: function(app, uri, url, callData, data) {},
-      debugAjaxCallError: function(app, uri, url, callData, timeMs, errorMessage, jqXHR) {},
+      ajaxCallStarted: function(app, uri, url, callData) {},
+      ajaxCallCompleted: function(app, uri, url, callData, timeMs) {},
+      ajaxCallResults: function(app, uri, url, callData, data) {},
+      ajaxCallError: function(app, uri, url, callData, timeMs, errorMessage, jqXHR) {},
 
-      debugStateEndCallHandler: function(app, name, stateSpec, trace) {},
-      debugStateEndRegisterHandler: function(app, name, stateSpec) {},
-      debugStateEndTrigger: function(app, name) {},
-      debugStateError: function(app, name, stateSpec, message) {},
-      debugStateStartCallHandler: function(app, name, stateSpec, trace, args) {},
-      debugStateStartRegisterHandler: function(app, name, stateSpec) {},
-      debugStateStartTrigger: function(app, name, params) {},
+      stateEndCallHandler: function(app, name, stateSpec, trace) {},
+      stateEndRegisterHandler: function(app, name, stateSpec) {},
+      stateEndTrigger: function(app, name) {},
+      stateError: function(app, name, stateSpec, message) {},
+      stateStartCallHandler: function(app, name, stateSpec, trace, args) {},
+      stateStartRegisterHandler: function(app, name, stateSpec) {},
+      stateStartTrigger: function(app, name, params) {},
+
+      submittingForm: function(app, viewName, formName, data) {},
 
       logicImplemented: function(appId, name, unboundCount) {},
       onUiBoundCalled: function(appIdArr, dependenciesList, cb) {}
@@ -190,7 +193,6 @@
       }
 
       function parseTemplate(that, data, tmId) {
-        debugData("Called parse template " + (tmId ? tmId : "") + " with data", data);
         data = data || {};
         var str = $.trim($(that).html()),
           _tmplCache = {},
@@ -340,7 +342,7 @@
             data.xhrFields = {withCredentials: true};
             data.crossDomain = true;
           }
-          debugData("Submitting form", data);
+          $.each(listeners, function(i, l) {l.submittingForm && l.submittingForm(appRoot, key, name, data)});
           return $.ajax(data);
         };
       }
@@ -400,23 +402,6 @@
         printp(logInfo, arguments);
       }
 
-      function debugData(s, obj) {
-        jiant.DEBUG_MODE.data && debug("   ---   " + s) && debug(obj);
-      }
-
-      function debugEvents(s) {
-        jiant.DEBUG_MODE.events && debug("   ---   " + s);
-      }
-
-      function debug(s) {
-        if (window.console && window.console.error) {
-          window.console.error(s);
-          return true;
-        } else {
-          return false;
-        }
-      }
-
       function setupPager(uiElem) {
         var pagerBus = $({}),
             root = $("<ul></ul>"),
@@ -430,7 +415,6 @@
           pagerBus.trigger("ValueChange", lastPage);
         };
         uiElem.updatePager = function(page) {
-          debugData("Updating pager", page);
           root.empty();
           var from = Math.max(0, page.number - jiant.PAGER_RADIUS / 2),
             to = Math.min(page.number + jiant.PAGER_RADIUS / 2, page.totalPages);
@@ -680,7 +664,6 @@
           map[key] = elem;
         });
         var fn = function(data, subscribe4updates, reverseBinding) {
-          debugData("Propagating " + viewId + " with data", data);
           subscribe4updates = (subscribe4updates === undefined) ? true : subscribe4updates;
           $.each(map, function (key, elem) {
             if (spec[key].customRenderer || (data && data[key] !== undefined && data[key] !== null && ! isServiceName(key))) {
@@ -857,17 +840,11 @@
       function assignAsapHandler(obj, eventName, fname) {
         var fn = function(cb) {
           var trace;
-          if (jiant.DEBUG_MODE.events) {
-            debug("assigning event handler to " + eventName);
-            eventsUsed[eventName] && debug(" !!! Event handler assigned after fire occured, possible error, for event " + eventName);
-            trace = getStackTrace();
-          }
           var val = obj[fname]();
           if (val != undefined) {
             cb && cb.apply(cb, [obj, val]);
           } else {
             obj[modelInnerDataField].one(eventName, function () {
-              debugEvents("called event handler: " + eventName + ", registered at " + trace);
               var args = $.makeArray(arguments);
               args.splice(0, 1);
               cb && cb.apply(cb, args);
@@ -881,14 +858,8 @@
         eventObject = eventObject ? eventObject : obj[modelInnerDataField];
         var fn = function (cb) {
             var trace;
-            if (jiant.DEBUG_MODE.events) {
-              debug("assigning event handler to " + eventName);
-              eventsUsed[eventName] && debug(" !!! Event handler assigned after fire occured, possible error, for event " + eventName);
-              trace = getStackTrace();
-            }
             (fname ? obj[fname] : obj).listenersCount++;
             var handler = function () {
-              debugEvents("called event handler: " + eventName + ", registered at " + trace);
               var args = $.makeArray(arguments);
               args.splice(0, 1);
               //        args.splice(0, 2);
@@ -975,21 +946,15 @@
               $.each(toTrigger, function(key, val) {
                 obj[key](obj[key](), true, true);
               });
-              debugData("Called update on model " + name + " with data", objFrom);
               if (smthChanged) {
-                debugEvents("fire event: " + eventName);
-                jiant.DEBUG_MODE.events && (! eventsUsed[eventName]) && (eventsUsed[eventName] = 1);
                 obj[modelInnerDataField].trigger(eventName, obj);
                 obj != spec && spec[modelInnerDataField].trigger(eventName, obj);
-                debugEvents("fire event: " + globalChangeEventName);
-                jiant.DEBUG_MODE.events && (! eventsUsed[globalChangeEventName]) && (eventsUsed[globalChangeEventName] = 1);
                 eventBus.trigger(globalChangeEventName, [obj, fname]);
               }
             };
             assignOnOffHandlers(obj, eventName, fname);
           } else if (fname == "updateAll") {
             obj[fname] = function(arr, removeMissing, matcherCb) {
-              debugData("Called updateAll on model " + name + " with data", arr);
               arr = $.isArray(arr) ? arr : [arr];
               matcherCb = matcherCb ? matcherCb : function(modelObj, outerObj) {return modelObj.id ? modelObj.id() == outerObj.id : false;};
               var toRemove = [];
@@ -1017,7 +982,6 @@
             assignOnOffHandlers(obj, eventName, fname);
           } else if (fname == "addAll" || fname == "add") {
             obj[fname] = function(arr) {
-              debugData("Called " + fname + " on model " + name + " with data", arr);
               if (arr == undefined || arr == null) {
                 return;
               }
@@ -1039,11 +1003,7 @@
               $.each(arr, function(idx, item) {
                 fn(item);
               });
-              debugEvents("fire event: " + eventName);
-              jiant.DEBUG_MODE.events && (! eventsUsed[eventName]) && (eventsUsed[eventName] = 1);
               obj[modelInnerDataField].trigger(eventName, [newArr]);
-              debugEvents("fire event: " + globalChangeEventName);
-              jiant.DEBUG_MODE.events && (! eventsUsed[globalChangeEventName]) && (eventsUsed[globalChangeEventName] = 1);
               eventBus.trigger(globalChangeEventName, [newArr, fname]);
               $.each(arr, function(idx, item) {
                 newArr[idx].update && newArr[idx].update(item); // todo: replace by just trigger update event
@@ -1060,11 +1020,7 @@
               var prevLen = storage.length;
               storage = $.grep(storage, function(value) {return value != elem;});
               if (storage.length != prevLen) {
-                debugEvents("fire event: " + eventName);
-                jiant.DEBUG_MODE.events && (! eventsUsed[eventName]) && (eventsUsed[eventName] = 1);
                 obj[modelInnerDataField].trigger(eventName, [elem]);
-                debugEvents("fire event: " + globalChangeEventName);
-                jiant.DEBUG_MODE.events && (! eventsUsed[globalChangeEventName]) && (eventsUsed[globalChangeEventName] = 1);
                 eventBus.trigger(globalChangeEventName, [elem, fname]);
               }
               return elem;
@@ -1130,13 +1086,9 @@
                 if (forceEvent || (obj[modelStorageField][fname] !== val && forceEvent !== false)) {
                   var oldVal = obj[modelStorageField][fname];
                   obj[modelStorageField][fname] = val;
-                  debugEvents("fire event: " + eventName);
-                  jiant.DEBUG_MODE.events && (! eventsUsed[eventName]) && (eventsUsed[eventName] = 1);
                   obj[modelInnerDataField].trigger(eventName, [obj, val, oldVal]);
                   obj != spec && spec[modelInnerDataField].trigger(eventName, [obj, val, oldVal]);
                   if (! dontFireUpdate) {
-                    debugEvents("fire event: " + globalChangeEventName);
-                    jiant.DEBUG_MODE.events && (! eventsUsed[globalChangeEventName]) && (eventsUsed[globalChangeEventName] = 1);
                     eventBus.trigger(globalChangeEventName, [obj, fname, val, oldVal]);
                   }
                 } else {
@@ -1305,20 +1257,12 @@
         $.each(events, function(name, spec) {
           events[name].listenersCount = 0;
           events[name].fire = function() {
-            debugEvents("fire event: " + name);
-            jiant.DEBUG_MODE.events && (! eventsUsed[name]) && (eventsUsed[name] = 1);
             eventBus.trigger(appId + name + ".event", arguments);
           };
           events[name].on = function (cb) {
             var trace;
-            if (jiant.DEBUG_MODE.events) {
-              debug("assigning event handler to: " + name);
-              eventsUsed[name] && debug(" !!! Event handler assigned after fire occured, possible error, for event " + name);
-              trace = getStackTrace();
-            }
             events[name].listenersCount++;
             eventBus.on(appId + name + ".event", function () {
-              debugEvents("called event handler: " + name + ", registered at " + trace);
               var args = $.makeArray(arguments);
               args.splice(0, 1);
               cb && cb.apply(cb, args);
@@ -1346,13 +1290,13 @@
           stateSpec.go = go(name, stateSpec.root, stateExternalBase, appId);
           stateSpec.start = function(cb) {
             var trace;
-            $.each(listeners, function(i, l) {l.debugStateStartRegisterHandler && l.debugStateStartRegisterHandler(appRoot, name, stateSpec)});
-            statesUsed[appId + name] && $.each(listeners, function(i, l) {l.debugStateError && l.debugStateError(appRoot, name, stateSpec, "State start handler registered after state triggered")});
+            $.each(listeners, function(i, l) {l.stateStartRegisterHandler && l.stateStartRegisterHandler(appRoot, name, stateSpec)});
+            statesUsed[appId + name] && $.each(listeners, function(i, l) {l.stateError && l.stateError(appRoot, name, stateSpec, "State start handler registered after state triggered")});
             trace = getStackTrace();
             eventBus.on(appId + "state_" + name + "_start", function() {
               var args = $.makeArray(arguments);
               args.splice(0, 1);
-              $.each(listeners, function(i, l) {l.debugStateStartCallHandler && l.debugStateStartCallHandler(appRoot, name, stateSpec, trace, args)});
+              $.each(listeners, function(i, l) {l.stateStartCallHandler && l.stateStartCallHandler(appRoot, name, stateSpec, trace, args)});
               cb && cb.apply(cb, args);
             });
             var current = parseState(appId);
@@ -1364,11 +1308,11 @@
           };
           stateSpec.end = function(cb) {
             var trace;
-            $.each(listeners, function(i, l) {l.debugStateEndRegisterHandler && l.debugStateEndRegisterHandler(appRoot, name, stateSpec)});
-            statesUsed[appId + name] && $.each(listeners, function(i, l) {l.debugStateError && l.debugStateError(appRoot, name, stateSpec, "State end handler registered after state triggered")});
+            $.each(listeners, function(i, l) {l.stateEndRegisterHandler && l.stateEndRegisterHandler(appRoot, name, stateSpec)});
+            statesUsed[appId + name] && $.each(listeners, function(i, l) {l.stateError && l.stateError(appRoot, name, stateSpec, "State end handler registered after state triggered")});
             trace = getStackTrace();
             eventBus.on(appId + "state_" + name + "_end", function() {
-              $.each(listeners, function(i, l) {l.debugStateEndCallHandler && l.debugStateEndCallHandler(appRoot, name, stateSpec, trace)});
+              $.each(listeners, function(i, l) {l.stateEndCallHandler && l.stateEndCallHandler(appRoot, name, stateSpec, trace)});
               var args = $.makeArray(arguments);
               args.splice(0, 1);
               cb && cb.apply(cb, args);
@@ -1401,13 +1345,13 @@
             }
           });
           if (lastStates[appId] != undefined && lastStates[appId] != stateId) {
-            $.each(listeners, function(i, l) {l.debugStateEndTrigger && l.debugStateEndTrigger(appRoot, lastStates[appId])});
+            $.each(listeners, function(i, l) {l.stateEndTrigger && l.stateEndTrigger(appRoot, lastStates[appId])});
             eventBus.trigger(appId + "state_" + lastStates[appId] + "_end");
           }
           lastStates[appId] = stateId;
           lastEncodedStates[appId] = getAppState(appId);
           stateId = (stateId ? stateId : "");
-          $.each(listeners, function(i, l) {l.debugStateStartTrigger && l.debugStateStartTrigger(appRoot, stateId, params)});
+          $.each(listeners, function(i, l) {l.stateStartTrigger && l.stateStartTrigger(appRoot, stateId, params)});
           !statesUsed[appId + stateId] && (statesUsed[appId + stateId] = 1);
           //            jiant.logInfo(lastEncodedStates[appId] + " params are ", params);
           eventBus.trigger(appId + "state_" + stateId + "_start", params);
@@ -1419,7 +1363,6 @@
           var parsed = parseState(appId),
             prevState = parsed.now;
           parsed.now = [stateId];
-          debugData("Going to state " + stateId + " with data", arguments);
           $.each(arguments, function(idx, arg) {
             if (arg != undefined) {
               parsed.now.push(pack(arg));
@@ -1653,15 +1596,15 @@
               sfx = (ajaxSuffix || ajaxSuffix == "") ? ajaxSuffix : jiant.AJAX_SUFFIX,
               url = hardUrl ? hardUrl : pfx + uri + sfx,
               time = new Date().getTime();
-          $.each(listeners, function(i, l) {l.debugAjaxCallStarted && l.debugAjaxCallStarted(appRoot, uri, url, callData)});
+          $.each(listeners, function(i, l) {l.ajaxCallStarted && l.ajaxCallStarted(appRoot, uri, url, callData)});
           var settings = {data: callData, traditional: true, success: function(data) {
-            $.each(listeners, function(i, l) {l.debugAjaxCallCompleted && l.debugAjaxCallCompleted(appRoot, uri, url, callData, new Date().getTime() - time)});
+            $.each(listeners, function(i, l) {l.ajaxCallCompleted && l.ajaxCallCompleted(appRoot, uri, url, callData, new Date().getTime() - time)});
             if (callback) {
               try {
                 data = $.parseJSON(data);
               } catch (ex) {
               }
-              $.each(listeners, function(i, l) {l.debugAjaxCallResults && l.debugAjaxCallResults(appRoot, uri, url, callData, data)});
+              $.each(listeners, function(i, l) {l.ajaxCallResults && l.ajaxCallResults(appRoot, uri, url, callData, data)});
               callback(data);
             }
           }, error: function (jqXHR, textStatus, errorText) {
@@ -1670,7 +1613,7 @@
             } else {
               jiant.handleErrorFn(jqXHR.responseText);
             }
-            $.each(listeners, function(i, l) {l.debugAjaxCallError && l.debugAjaxCallError(appRoot, uri, url, callData, new Date().getTime() - time, jqXHR.responseText, jqXHR)});
+            $.each(listeners, function(i, l) {l.ajaxCallError && l.ajaxCallError(appRoot, uri, url, callData, new Date().getTime() - time, jqXHR.responseText, jqXHR)});
           }};
           if (crossDomain) {
             settings.contentType = "application/json";
@@ -2033,17 +1976,13 @@
       }
 
       function version() {
-        return 126;
+        return 127;
       }
 
       return {
         AJAX_PREFIX: "",
         AJAX_SUFFIX: "",
         DEV_MODE: true,
-        DEBUG_MODE: {
-          events: 0,
-          data: 0
-        },
         PAGER_RADIUS: 6,
         isMSIE: eval("/*@cc_on!@*/!1"),
         STATE_EXTERNAL_BASE: undefined,
