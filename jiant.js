@@ -14,6 +14,7 @@
  1.25: listeners methods used when available, built-in state debuggers extracted to listeners, DEBUG_MODE.states removed
  1.26: ajax logging moved to listener, debugAjax.js
  1.27: debugEvents removed, debugData removed, DEBUG_MODE removed, listener methods renamed
+ 1.28: parsedTemplate added to listeners
 */
 (function() {
   var
@@ -63,6 +64,7 @@
       stateStartRegisterHandler: function(app, name, stateSpec) {},
       stateStartTrigger: function(app, name, params) {},
 
+      parsedTemplate: function(app, tmRoot, tmId, tmSpec, data, tm) {},
       submittingForm: function(app, viewName, formName, data) {},
 
       logicImplemented: function(appId, name, unboundCount) {},
@@ -121,7 +123,6 @@
           onInitAppActions = [],
           uiFactory = new DefaultUiFactory(),
           statesUsed = {},
-          eventsUsed = {},
           listeners = [],
           modelInnerDataField = "jiant_innerData";
 
@@ -770,8 +771,8 @@
 
       function _bindTemplates(appRoot, root, pfx, appUiFactory) {
         $.each(root, function(tmId, tmContent) {
-          var prefix = tmContent.appPrefix ? tmContent.appPrefix : (pfx ? pfx : "");
-          var tm = appUiFactory.template(prefix, tmId, tmContent);
+          var prefix = tmContent.appPrefix ? tmContent.appPrefix : (pfx ? pfx : ""),
+              tm = appUiFactory.template(prefix, tmId, tmContent);
           $.each(tmContent, function (componentId, elemType) {
             if (componentId != "appPrefix") {
               if (elemType === jiant.lookup) {
@@ -826,6 +827,8 @@
             retVal.splice(0, 1); // remove first comment
             retVal.propagate = makePropagationFunction(tmId, tmContent, retVal, retVal);
             data && retVal.propagate(data);
+            retVal._jiantSpec = root[tmId];
+            $.each(listeners, function(i, l) {l.parsedTemplate && l.parsedTemplate(appRoot, root, tmId, root[tmId], data, retVal)});
             return retVal;
           };
           root[tmId].parseTemplate2Text = function(data) {
@@ -1976,7 +1979,7 @@
       }
 
       function version() {
-        return 127;
+        return 128;
       }
 
       return {
