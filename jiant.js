@@ -15,6 +15,7 @@
  1.26: ajax logging moved to listener, debugAjax.js
  1.27: debugEvents removed, debugData removed, DEBUG_MODE removed, listener methods renamed
  1.28: parsedTemplate added to listeners
+ 1.29: getCurrentState now accepts application, not only id as before
 */
 (function() {
   var
@@ -1530,6 +1531,9 @@
       }
 
       function getCurrentState(appId) {
+        if ($.isPlainObject(appId)) {
+          appId = appId.id;
+        }
         var parsed = parseState(appId);
         return parsed.now[0] ? parsed.now[0] : "";
       }
@@ -1979,7 +1983,7 @@
       }
 
       function version() {
-        return 128;
+        return 129;
       }
 
       return {
