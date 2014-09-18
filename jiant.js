@@ -16,6 +16,7 @@
  1.27: debugEvents removed, debugData removed, DEBUG_MODE removed, listener methods renamed
  1.28: parsedTemplate added to listeners
  1.29: getCurrentState now accepts application, not only id as before
+ 1.30: state.start parameters now passed as integers, if they are integers 
 */
 (function() {
   var
@@ -1526,7 +1527,9 @@
           });
           return retVal;
         } else {
-          return s === "undefined" ? undefined : s;
+          return s === "undefined" ? undefined
+            : (parseInt(s) + "" == s) ? parseInt(s)
+            : s;
         }
       }
 
@@ -1983,7 +1986,7 @@
       }
 
       function version() {
-        return 129;
+        return 130;
       }
 
       return {
