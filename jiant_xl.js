@@ -32,6 +32,7 @@
  xl.0.27 pseudoSelect() component added
  xl.0.28 pseudoSelect: function(arrElems, arrVals, cb, selectedIdx, selectClass) - further development
  xl.0.28.1 pseudoSelect.selected(val) supported, without UI sync, only changes selected value
+ xl.0.29 xOption(allSelector, filterFn) component added
  */
 
 (function() {
@@ -41,7 +42,7 @@
   var tmpJiantXl = {
 
     version: function() {
-      return 28;
+      return 29;
     },
 
     ctl2state: function(ctl, state, selectedCssClass, goProxy) {
@@ -260,6 +261,46 @@
           }, event);
         });
       };
+    },
+
+    xOption: function(allSelector, filterFn) {
+      function Impl(allSelector) {
+        var options = [];
+        function sync() {
+          var arr = [], allUnchecked = true, allChecked = true;
+          $.each(options, function(idx, elem) {
+            elem = $(elem);
+            if (elem.prop("checked")) {
+              arr.push(elem.data("val"));
+              allUnchecked = false;
+            } else {
+              allChecked = false;
+            }
+          });
+          allSelector.prop("checked", allChecked);
+          if (allChecked || allUnchecked) {
+            allSelector.removeClass("middle-check");
+          } else {
+            allSelector.addClass("middle-check");
+          }
+          filterFn && filterFn(arr);
+        }
+        allSelector.change(function() {
+          $.each(options, function(idx, option) {
+            var val = allSelector.prop("checked");
+            $(option).prop("checked", val);
+          });
+          sync();
+        });
+        return {
+          add: function(elem) {
+            options.push(elem);
+            elem.change(sync);
+          },
+          sync: sync
+        }
+      }
+      return new Impl(allSelector);
     },
 
     pseudoSelect: function(arrElems, arrVals, cb, selectedIdx, selectClass) {
