@@ -791,7 +791,6 @@
               } else if (elemType === jiant.cssMarker) {
                 tmContent[componentId] = {};
                 tmContent[componentId].customRenderer = function(obj, elem, val, isUpdate, viewOrTemplate) {
-                  jiant.logInfo("markering", tmId, obj, elem, val, cls);
                   var cls = componentId + "_" + val;
                   viewOrTemplate.removeClass(componentId);
                   viewOrTemplate.j_prevMarkerClass && viewOrTemplate.removeClass(viewOrTemplate.j_prevMarkerClass);
