@@ -16,8 +16,9 @@
  1.27: debugEvents removed, debugData removed, DEBUG_MODE removed, listener methods renamed
  1.28: parsedTemplate added to listeners
  1.29: getCurrentState now accepts application, not only id as before
- 1.30: state.start parameters now passed as integers, if they are integers 
-*/
+ 1.30: state.start parameters now passed as integers, if they are integers
+ 1.31: overlapped multiple cssMarker in templates fixed
+ */
 (function() {
   var
     DefaultUiFactory = function() {
@@ -76,57 +77,57 @@
     tmpJiant = (function($) {
 
       var collection = {},
-          container = {},
-          containerPaged = {},
-          ctl = {},
-          form = {},
-          fn = function (param) {
-          },
-          grid = {},
-          image = {},
-          input = {},
-          inputInt = {},
-          inputFloat = {},
-          inputDate = {},
-          label = {},
-          nlabel = {},
-          meta = {},
-          cssMarker = {},
-          data = function (val) {
-          },
-          lookup = function (selector) {
-          },
-          on = function (cb) {
-          },
-          goState = function (params, preserveOmitted) {
-          },
-          pager = {},
-          slider = {},
-          stub = function () {
-            var callerName = "not available";
-            if (arguments && arguments.callee && arguments.callee.caller) {
-              callerName = arguments.callee.caller.name;
-            }
-            alert("stub called from function: " + callerName);
-          },
-          tabs = {},
+        container = {},
+        containerPaged = {},
+        ctl = {},
+        form = {},
+        fn = function (param) {
+        },
+        grid = {},
+        image = {},
+        input = {},
+        inputInt = {},
+        inputFloat = {},
+        inputDate = {},
+        label = {},
+        nlabel = {},
+        meta = {},
+        cssMarker = {},
+        data = function (val) {
+        },
+        lookup = function (selector) {
+        },
+        on = function (cb) {
+        },
+        goState = function (params, preserveOmitted) {
+        },
+        pager = {},
+        slider = {},
+        stub = function () {
+          var callerName = "not available";
+          if (arguments && arguments.callee && arguments.callee.caller) {
+            callerName = arguments.callee.caller.name;
+          }
+          alert("stub called from function: " + callerName);
+        },
+        tabs = {},
 
-          bindingsResult = true,
-          errString,
+        bindingsResult = true,
+        errString,
 
-          pickTime,
-          lastStates = {},
-          lastEncodedStates = {},
-          loadedLogics = {},
-          awaitingDepends = {},
-          externalModules = {},
-          eventBus = $({}),
-          uiBoundRoot = {},
-          onInitAppActions = [],
-          uiFactory = new DefaultUiFactory(),
-          statesUsed = {},
-          listeners = [],
-          modelInnerDataField = "jiant_innerData";
+        pickTime,
+        lastStates = {},
+        lastEncodedStates = {},
+        loadedLogics = {},
+        awaitingDepends = {},
+        externalModules = {},
+        eventBus = $({}),
+        uiBoundRoot = {},
+        onInitAppActions = [],
+        uiFactory = new DefaultUiFactory(),
+        statesUsed = {},
+        listeners = [],
+        modelInnerDataField = "jiant_innerData";
 
       function randomIntBetween(from, to) {
         return Math.floor((Math.random()*(to - from + 1)) + from);
@@ -210,15 +211,15 @@
           if (!func) {
             var strFunc =
               "var p=[],print=function(){p.push.apply(p,arguments);};" +
-                "with(obj){p.push('" +
-                str.replace(/[\r\t\n]/g, " ")
-                  .replace(/'(?=[^#]*#>)/g, "\t")
-                  .split("'").join("\\'")
-                  .split("\t").join("'")
-                  .replace(/!! (.+?)!! /g, "',$1,'")
-                  .split("!?").join("');")
-                  .split("?!").join("p.push('")
-                + "');}return p.join('');";
+              "with(obj){p.push('" +
+              str.replace(/[\r\t\n]/g, " ")
+                .replace(/'(?=[^#]*#>)/g, "\t")
+                .split("'").join("\\'")
+                .split("\t").join("'")
+                .replace(/!! (.+?)!! /g, "',$1,'")
+                .split("!?").join("');")
+                .split("?!").join("p.push('")
+              + "');}return p.join('');";
 
             //alert(strFunc);
             func = new Function("obj", strFunc);
@@ -407,8 +408,8 @@
 
       function setupPager(uiElem) {
         var pagerBus = $({}),
-            root = $("<ul></ul>"),
-            lastPage = 0;
+          root = $("<ul></ul>"),
+          lastPage = 0;
         root.addClass("pagination");
         uiElem.append(root);
         uiElem.onValueChange = function(callback) {
@@ -552,7 +553,7 @@
               };
             } else {
               var isNlabel = viewRoot[componentId] === nlabel,
-                  uiElem = uiFactory.viewComponent(viewElem, viewId, prefix, componentId, componentContent);
+                uiElem = uiFactory.viewComponent(viewElem, viewId, prefix, componentId, componentContent);
               ensureExists(prefix, appRoot.dirtyList, uiElem, prefix + viewId, prefix + componentId);
               viewRoot[componentId] = uiElem;
               isNlabel && setupIntlProxies(appRoot, viewRoot[componentId]);
@@ -736,8 +737,8 @@
       function _bindViews(appRoot, root, pfx, appUiFactory) {
         $.each(root, function(viewId, viewContent) {
           var prefix = viewContent.appPrefix ? viewContent.appPrefix : (pfx ? pfx : ""),
-              view = appUiFactory.view(prefix, viewId),
-              viewOk = ensureExists(prefix, appRoot.dirtyList, view, prefix + viewId);
+            view = appUiFactory.view(prefix, viewId),
+            viewOk = ensureExists(prefix, appRoot.dirtyList, view, prefix + viewId);
           viewOk && _bindContent(appRoot, root[viewId], viewId, viewContent, view, prefix);
           ensureSafeExtend(root[viewId], view);
           root[viewId].propagate = makePropagationFunction(viewId, viewContent, viewContent, root[viewId]);
@@ -774,7 +775,7 @@
       function _bindTemplates(appRoot, root, pfx, appUiFactory) {
         $.each(root, function(tmId, tmContent) {
           var prefix = tmContent.appPrefix ? tmContent.appPrefix : (pfx ? pfx : ""),
-              tm = appUiFactory.template(prefix, tmId, tmContent);
+            tm = appUiFactory.template(prefix, tmId, tmContent);
           $.each(tmContent, function (componentId, elemType) {
             if (componentId != "appPrefix") {
               if (elemType === jiant.lookup) {
@@ -788,7 +789,9 @@
                   viewOrTemplate[componentId](val);
                 };
               } else if (elemType === jiant.cssMarker) {
+                tmContent[componentId] = {};
                 tmContent[componentId].customRenderer = function(obj, elem, val, isUpdate, viewOrTemplate) {
+                  jiant.logInfo("markering", tmId, obj, elem, val, cls);
                   var cls = componentId + "_" + val;
                   viewOrTemplate.removeClass(componentId);
                   viewOrTemplate.j_prevMarkerClass && viewOrTemplate.removeClass(viewOrTemplate.j_prevMarkerClass);
@@ -1112,7 +1115,7 @@
         $.each(collectionFunctions, function(idx, fn) {
           arr[fn] = function() {
             var ret = [],
-                args = arguments;
+              args = arguments;
             $.each(arr, function(idx, obj) {
               ret.push(obj[fn].apply(obj, args));
             });
@@ -1603,9 +1606,9 @@
             callData["antiCache3721"] = new Date().getTime();
           }
           var pfx = (ajaxPrefix || ajaxPrefix == "") ? ajaxPrefix : jiant.AJAX_PREFIX,
-              sfx = (ajaxSuffix || ajaxSuffix == "") ? ajaxSuffix : jiant.AJAX_SUFFIX,
-              url = hardUrl ? hardUrl : pfx + uri + sfx,
-              time = new Date().getTime();
+            sfx = (ajaxSuffix || ajaxSuffix == "") ? ajaxSuffix : jiant.AJAX_SUFFIX,
+            url = hardUrl ? hardUrl : pfx + uri + sfx,
+            time = new Date().getTime();
           $.each(listeners, function(i, l) {l.ajaxCallStarted && l.ajaxCallStarted(appRoot, uri, url, callData)});
           var settings = {data: callData, traditional: true, success: function(data) {
             $.each(listeners, function(i, l) {l.ajaxCallCompleted && l.ajaxCallCompleted(appRoot, uri, url, callData, new Date().getTime() - time)});
@@ -1734,20 +1737,20 @@
       }
 
       function maybeSetDebugModeFromQueryString() {
-/*
-        if ((window.location + "").toLowerCase().indexOf("jiant.debug_events") >= 0) {
-          jiant.DEBUG_MODE.events = 1;
-        }
-        if ((window.location + "").toLowerCase().indexOf("jiant.debug_states") >= 0) {
-          jiant.DEBUG_MODE.states = 1;
-        }
-        if ((window.location + "").toLowerCase().indexOf("jiant.debug_ajax") >= 0) {
-          jiant.DEBUG_MODE.ajax = 1;
-        }
-        if ((window.location + "").toLowerCase().indexOf("jiant.debug_data") >= 0) {
-          jiant.DEBUG_MODE.data = 1;
-        }
-*/
+        /*
+         if ((window.location + "").toLowerCase().indexOf("jiant.debug_events") >= 0) {
+         jiant.DEBUG_MODE.events = 1;
+         }
+         if ((window.location + "").toLowerCase().indexOf("jiant.debug_states") >= 0) {
+         jiant.DEBUG_MODE.states = 1;
+         }
+         if ((window.location + "").toLowerCase().indexOf("jiant.debug_ajax") >= 0) {
+         jiant.DEBUG_MODE.ajax = 1;
+         }
+         if ((window.location + "").toLowerCase().indexOf("jiant.debug_data") >= 0) {
+         jiant.DEBUG_MODE.data = 1;
+         }
+         */
       }
 
       function maybeShort(root, full, shorten) {
@@ -1986,7 +1989,7 @@
       }
 
       function version() {
-        return 130;
+        return 131;
       }
 
       return {
