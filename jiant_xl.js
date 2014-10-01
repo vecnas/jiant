@@ -33,6 +33,7 @@
  xl.0.28 pseudoSelect: function(arrElems, arrVals, cb, selectedIdx, selectClass) - further development
  xl.0.28.1 pseudoSelect.selected(val) supported, without UI sync, only changes selected value
  xl.0.29 xOption(allSelector, filterFn) component added
+ xl.0.30 bindList() fix - removal of UI element now works
  */
 
 (function() {
@@ -42,7 +43,7 @@
   var tmpJiantXl = {
 
     version: function() {
-      return 29;
+      return 30;
     },
 
     ctl2state: function(ctl, state, selectedCssClass, goProxy) {
@@ -113,7 +114,7 @@
     bindList: function(model, container, template, viewFieldSetterName) {
       function renderObj(obj) {
         var tm = $.isFunction(template) ? template(obj) : template,
-            view = tm.parseTemplate(obj);
+          view = tm.parseTemplate(obj);
 //          view = tm.parseTemplate({id: $.isFunction(obj.id) ? obj.id() : obj.id});
         container.append(view);
         viewFieldSetterName && $.isFunction(obj[viewFieldSetterName]) && obj[viewFieldSetterName](view);
@@ -127,7 +128,7 @@
         });
         model.add && model.add.on(renderObj);
         model.remove && model.remove.on(function(obj) {
-          obj.view().remove();
+          obj[viewFieldSetterName]().remove();
         });
       };
     },
@@ -196,7 +197,7 @@
           var parsedNum = parseInt(pageNum) + "";
           if (parsedNum != pageNum) {
             jiant.logError("pagedContent expects pageNum as first state parameter, passed: " + pageNum
-                + ", recommended fix: make pageNum first argument, now replacing pageNum by 0");
+              + ", recommended fix: make pageNum first argument, now replacing pageNum by 0");
             pageNum = 0;
           }
           var pageable = {"page.page": pageNum};
