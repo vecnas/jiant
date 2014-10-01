@@ -18,6 +18,7 @@
  1.29: getCurrentState now accepts application, not only id as before
  1.30: state.start parameters now passed as integers, if they are integers
  1.31: overlapped multiple cssMarker in templates fixed
+ 1.32: obj.remove() now works, same as model.remove(obj)
  */
 (function() {
   var
@@ -895,6 +896,7 @@
         var storage = [],
           modelStorageField = "_modelData",
           dataStorageField = "_sourceData",
+          parentModelReference = "_parentModel",
           collectionFunctions = [];
         obj[modelStorageField] = {};
         if (spec.updateAll && spec.id) {
@@ -1002,6 +1004,7 @@
                 storage.push(newObj);
                 newArr.push(newObj);
                 newObj[dataStorageField] = item;
+                newObj[parentModelReference] = obj;
                 bindFunctions(name, spec, newObj, appId);
                 $.each(item, function(name, param) {
                   newObj[name] && newObj[name](param);
@@ -1022,7 +1025,8 @@
             collectionFunctions.push(fname);
             obj[fname] = function(elem) {
               if (elem == undefined || elem == null) {
-                return
+                obj[parentModelReference].remove(obj);
+                return;
               }
               var prevLen = storage.length;
               storage = $.grep(storage, function(value) {return value != elem;});
@@ -1988,7 +1992,7 @@
       }
 
       function version() {
-        return 131;
+        return 132;
       }
 
       return {
