@@ -19,6 +19,7 @@
  1.30: state.start parameters now passed as integers, if they are integers
  1.31: overlapped multiple cssMarker in templates fixed
  1.32: obj.remove() now works, same as model.remove(obj)
+ 1.33: multiple cssMarkers on single element fixed for views 
  */
 (function() {
   var
@@ -542,12 +543,14 @@
                 viewRoot[componentId](val);
               }
             } else if (viewRoot[componentId] === jiant.cssMarker) {
+              var prevNm = "j_prevMarkerClass_" + componentId;
+              viewRoot[componentId] = {};
               viewRoot[componentId].customRenderer = function(obj, elem, val, isUpdate, viewOrTemplate) {
                 var cls = componentId + "_" + val;
                 viewOrTemplate.removeClass(componentId);
-                viewOrTemplate.j_prevMarkerClass && viewOrTemplate.removeClass(viewOrTemplate.j_prevMarkerClass);
+                viewOrTemplate[prevNm] && viewOrTemplate.removeClass(viewOrTemplate[prevNm]);
                 if (val !== undefined) {
-                  viewOrTemplate.j_prevMarkerClass = cls;
+                  viewOrTemplate[prevNm] = cls;
                   viewOrTemplate.addClass(componentId);
                   viewOrTemplate.addClass(cls);
                 }
@@ -1992,7 +1995,7 @@
       }
 
       function version() {
-        return 132;
+        return 133;
       }
 
       return {
