@@ -19,7 +19,8 @@
  1.30: state.start parameters now passed as integers, if they are integers
  1.31: overlapped multiple cssMarker in templates fixed
  1.32: obj.remove() now works, same as model.remove(obj)
- 1.33: multiple cssMarkers on single element fixed for views 
+ 1.33: multiple cssMarkers on single element fixed for views
+ 1.34: re-commit previous fix, and removed setting of field name class in cssMarker
  */
 (function() {
   var
@@ -547,11 +548,9 @@
               viewRoot[componentId] = {};
               viewRoot[componentId].customRenderer = function(obj, elem, val, isUpdate, viewOrTemplate) {
                 var cls = componentId + "_" + val;
-                viewOrTemplate.removeClass(componentId);
                 viewOrTemplate[prevNm] && viewOrTemplate.removeClass(viewOrTemplate[prevNm]);
                 if (val !== undefined) {
                   viewOrTemplate[prevNm] = cls;
-                  viewOrTemplate.addClass(componentId);
                   viewOrTemplate.addClass(cls);
                 }
               };
@@ -794,13 +793,12 @@
                 };
               } else if (elemType === jiant.cssMarker) {
                 tmContent[componentId] = {};
+                var markerName = "j_prevMarkerClass_" + componentId;
                 tmContent[componentId].customRenderer = function(obj, elem, val, isUpdate, viewOrTemplate) {
                   var cls = componentId + "_" + val;
-                  viewOrTemplate.removeClass(componentId);
-                  viewOrTemplate.j_prevMarkerClass && viewOrTemplate.removeClass(viewOrTemplate.j_prevMarkerClass);
+                  viewOrTemplate[markerName] && viewOrTemplate.removeClass(viewOrTemplate[markerName]);
                   if (val !== undefined) {
-                    viewOrTemplate.j_prevMarkerClass = cls;
-                    viewOrTemplate.addClass(componentId);
+                    viewOrTemplate[markerName] = cls;
                     viewOrTemplate.addClass(cls);
                   }
                 };
@@ -1995,7 +1993,7 @@
       }
 
       function version() {
-        return 133;
+        return 134;
       }
 
       return {
