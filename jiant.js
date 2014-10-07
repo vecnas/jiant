@@ -21,6 +21,7 @@
  1.32: obj.remove() now works, same as model.remove(obj)
  1.33: multiple cssMarkers on single element fixed for views
  1.34: re-commit previous fix, and removed setting of field name class in cssMarker
+ 1.35: add, addAll fixed - now doing subscribers notification when all fields are set
  */
 (function() {
   var
@@ -1001,14 +1002,19 @@
               }
               var newArr = [];
               function fn(item) {
-                var newObj = {};
+                var newObj = {},
+                    toTrigger = {};
                 storage.push(newObj);
                 newArr.push(newObj);
                 newObj[dataStorageField] = item;
                 newObj[parentModelReference] = obj;
                 bindFunctions(name, spec, newObj, appId);
                 $.each(item, function(name, param) {
-                  newObj[name] && newObj[name](param);
+                  newObj[name] && newObj[name](param, false);
+                  toTrigger[name] = param;
+                });
+                $.each(toTrigger, function(key, val) {
+                  newObj[key](newObj[key](), true, true);
                 });
               }
               $.each(arr, function(idx, item) {
@@ -1993,7 +1999,7 @@
       }
 
       function version() {
-        return 134;
+        return 135;
       }
 
       return {
