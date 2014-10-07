@@ -1010,8 +1010,10 @@
                 newObj[parentModelReference] = obj;
                 bindFunctions(name, spec, newObj, appId);
                 $.each(item, function(name, param) {
-                  newObj[name] && newObj[name](param, false);
-                  toTrigger[name] = param;
+                  if (newObj[name]) {
+                    newObj[name](param, false);
+                    toTrigger[name] = param;
+                  }
                 });
                 $.each(toTrigger, function(key, val) {
                   newObj[key](newObj[key](), true, true);
