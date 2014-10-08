@@ -22,6 +22,7 @@
  1.33: multiple cssMarkers on single element fixed for views
  1.34: re-commit previous fix, and removed setting of field name class in cssMarker
  1.35: add, addAll fixed - now doing subscribers notification when all fields are set
+ 1.36: non-empty model functions supported, using this. reference to refer to other object methods
  */
 (function() {
   var
@@ -678,7 +679,7 @@
               var val = data[key];
               elem = obj[key];
               if ($.isFunction(val)) {
-                getRenderer(spec, key)(data, elem, val(), false, viewOrTm);
+                getRenderer(spec, key)(data, elem, val.apply(data), false, viewOrTm);
                 if (subscribe4updates && $.isFunction(val.on)) {
                   if (fn[key]) {
                     var off = fn[key][0];
@@ -1119,6 +1120,8 @@
             };
             obj[fname].jiant_accessor = 1;
             assignOnOffHandlers(obj, eventName, fname);
+          } else if (fname != "_modelData") {
+            obj[fname] = funcSpec;
           }
         });
       }
@@ -2001,7 +2004,7 @@
       }
 
       function version() {
-        return 135;
+        return 136;
       }
 
       return {
