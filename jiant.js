@@ -23,6 +23,7 @@
  1.34: re-commit previous fix, and removed setting of field name class in cssMarker
  1.35: add, addAll fixed - now doing subscribers notification when all fields are set
  1.36: non-empty model functions supported, using this. reference to refer to other object methods
+ 1.37: model function add() removed, addAll() should be used instead. To avoid mess in events
  */
 (function() {
   var
@@ -992,7 +993,7 @@
               toAdd.length > 0 && obj.addAll(toAdd);
             };
             assignOnOffHandlers(obj, eventName, fname);
-          } else if (fname == "addAll" || fname == "add") {
+          } else if (fname == "addAll") {
             obj[fname] = function(arr) {
               if (arr == undefined || arr == null) {
                 return;
@@ -1004,7 +1005,7 @@
               var newArr = [];
               function fn(item) {
                 var newObj = {},
-                    toTrigger = {};
+                  toTrigger = {};
                 storage.push(newObj);
                 newArr.push(newObj);
                 newObj[dataStorageField] = item;
@@ -2004,7 +2005,7 @@
       }
 
       function version() {
-        return 136;
+        return 137;
       }
 
       return {
