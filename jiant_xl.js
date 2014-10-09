@@ -34,6 +34,7 @@
  xl.0.28.1 pseudoSelect.selected(val) supported, without UI sync, only changes selected value
  xl.0.29 xOption(allSelector, filterFn) component added
  xl.0.30 bindList() fix - removal of UI element now works
+ xl.0.31 minor cleanup in bindList - removed add.on handler due to add() removal in jiant 1.37
  */
 
 (function() {
@@ -43,7 +44,7 @@
   var tmpJiantXl = {
 
     version: function() {
-      return 30;
+      return 31;
     },
 
     ctl2state: function(ctl, state, selectedCssClass, goProxy) {
@@ -126,7 +127,6 @@
             renderObj(obj);
           });
         });
-        model.add && model.add.on(renderObj);
         model.remove && model.remove.on(function(obj) {
           obj[viewFieldSetterName]().remove();
         });
