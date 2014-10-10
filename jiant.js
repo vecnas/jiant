@@ -24,6 +24,7 @@
  1.35: add, addAll fixed - now doing subscribers notification when all fields are set
  1.36: non-empty model functions supported, using this. reference to refer to other object methods
  1.37: model function add() removed, addAll() should be used instead. To avoid mess in events
+ 1.38: redone of previous fix, add() remains, addAll() produces alert about need to replace it and doesn't work more
  */
 (function() {
   var
@@ -908,7 +909,7 @@
           if (! spec.findById) spec.findById = function(val) {};
         }
         if (spec.updateAll) {
-          if (! spec.addAll) spec.addAll = function(val) {};
+          if (! spec.add) spec.add = function(val) {};
           if (! spec.remove) spec.remove = function(elem) {};
         }
         if (! spec.update) {
@@ -990,10 +991,12 @@
               removeMissing && $.each(toRemove, function(idx, item) {
                 obj.remove(item);
               });
-              toAdd.length > 0 && obj.addAll(toAdd);
+              toAdd.length > 0 && obj.add(toAdd);
             };
             assignOnOffHandlers(obj, eventName, fname);
           } else if (fname == "addAll") {
+            alert("JIANT: Model function 'addAll' removed since 1.37, use previous versions or replace it by 'add'");
+          } else if (fname == "add") {
             obj[fname] = function(arr) {
               if (arr == undefined || arr == null) {
                 return;
@@ -2005,7 +2008,7 @@
       }
 
       function version() {
-        return 137;
+        return 138;
       }
 
       return {
