@@ -25,6 +25,7 @@
  1.36: non-empty model functions supported, using this. reference to refer to other object methods
  1.37: model function add() removed, addAll() should be used instead. To avoid mess in events
  1.38: redone of previous fix, add() remains, addAll() produces alert about need to replace it and doesn't work more
+ 1.39: customRenderer(obj, elem) available for view and template instances, called once per propagate(), doesn't subscribe for updates, useful for template UI setup
  */
 (function() {
   var
@@ -665,7 +666,7 @@
       }
 
       function isServiceName(key) {
-        var words = ["parseTemplate", "parseTemplate2Text", "propagate"];
+        var words = ["parseTemplate", "parseTemplate2Text", "propagate", "customRenderer"];
         return $.inArray(key, words) >= 0;
       }
 
@@ -681,30 +682,33 @@
               var val = data[key];
               elem = obj[key];
               if ($.isFunction(val)) {
-                getRenderer(spec, key)(data, elem, val.apply(data), false, viewOrTm);
+                getRenderer(spec[key])(data, elem, val.apply(data), false, viewOrTm);
                 if (subscribe4updates && $.isFunction(val.on)) {
                   if (fn[key]) {
                     var off = fn[key][0];
                     off && off(fn[key][1]);
                   }
-                  var handler = val.on(function(obj, newVal) {getRenderer(spec, key)(data, elem, newVal, true, viewOrTm)});
+                  var handler = val.on(function(obj, newVal) {getRenderer(spec[key])(data, elem, newVal, true, viewOrTm)});
                   fn[key] = [val.off, handler];
                 }
               } else {
-                getRenderer(spec, key)(data, elem, val, false, viewOrTm);
+                getRenderer(spec[key])(data, elem, val, false, viewOrTm);
               }
               if (reverseBinding) {
                 reverseBind(val, elem);
               }
             }
           });
+          if (spec.customRenderer && $.isFunction(spec.customRenderer)) {
+            spec.customRenderer(data, obj);
+          }
         };
         return fn;
       }
 
-      function getRenderer(spec, key) {
-        if (spec[key] && spec[key].customRenderer && $.isFunction(spec[key].customRenderer)) {
-          return spec[key].customRenderer;
+      function getRenderer(obj) {
+        if (obj && obj.customRenderer && $.isFunction(obj.customRenderer)) {
+          return obj.customRenderer;
         } else {
           return updateViewElement;
         }
