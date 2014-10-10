@@ -35,6 +35,7 @@
  xl.0.29 xOption(allSelector, filterFn) component added
  xl.0.30 bindList() fix - removal of UI element now works
  xl.0.31 minor cleanup in bindList - removed add.on handler due to add() removal in jiant 1.37
+ xl.0.32 adoption to jiant 1.38 - all 'addAll' calls replaced by 'add'
  */
 
 (function() {
@@ -44,7 +45,7 @@
   var tmpJiantXl = {
 
     version: function() {
-      return 31;
+      return 32;
     },
 
     ctl2state: function(ctl, state, selectedCssClass, goProxy) {
@@ -122,7 +123,7 @@
 //        container.refreshTabs && container.refreshTabs();
       }
       return function() {
-        model.addAll && model.addAll.on(function(arr) {
+        model.add && model.add.on(function(arr) {
           $.each(arr, function(idx, obj) {
             renderObj(obj);
           });
