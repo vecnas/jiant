@@ -855,8 +855,7 @@
 // ------------ model staff ----------------
 
       function assignAsapHandler(obj, eventName, fname) {
-        var fn = function(cb) {
-          var trace;
+        obj[fname].asap = function(cb) {
           var val = obj[fname]();
           if (val != undefined) {
             cb && cb.apply(cb, [obj, val]);
@@ -868,22 +867,20 @@
             })
           }
         };
-        obj[fname].asap = fn;
       }
 
       function assignOnOffHandlers(obj, eventName, fname, eventObject) {
         eventObject = eventObject ? eventObject : obj[modelInnerDataField];
         var fn = function (cb) {
-            var trace;
-            (fname ? obj[fname] : obj).listenersCount++;
             var handler = function () {
               var args = $.makeArray(arguments);
               args.splice(0, 1);
               //        args.splice(0, 2);
               cb && cb.apply(cb, args);
             };
+            (fname ? obj[fname] : obj).listenersCount++;
             eventObject.on(eventName, handler);
-            return handler
+            return handler;
           },
           fnOff = function (handler) {
             (fname ? obj[fname] : obj).listenersCount--;
@@ -2012,7 +2009,7 @@
       }
 
       function version() {
-        return 138;
+        return 139;
       }
 
       return {
