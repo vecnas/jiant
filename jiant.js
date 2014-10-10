@@ -26,6 +26,7 @@
  1.37: model function add() removed, addAll() should be used instead. To avoid mess in events
  1.38: redone of previous fix, add() remains, addAll() produces alert about need to replace it and doesn't work more
  1.39: customRenderer(obj, elem) available for view and template instances, called once per propagate(), doesn't subscribe for updates, useful for template UI setup
+ 1.40: added utility function getURLParameter(name)
  */
 (function() {
   var
@@ -183,6 +184,10 @@
       function lfill(val) {
         val = "" + val;
         return val.length == 0 ? "00" : val.length == 1 ? "0" + val : val;
+      }
+
+      function getURLParameter(name) {
+        return decodeURI((new RegExp(name + '=' + '(.+?)(&|$)').exec(location.search)||[,null])[1]);
       }
 
       function pick(marker) {
@@ -2009,7 +2014,7 @@
       }
 
       function version() {
-        return 139;
+        return 140;
       }
 
       return {
@@ -2051,6 +2056,7 @@
         formatTime: formatTime,
         formatTimeSeconds: formatTimeSeconds,
         randomIntBetween: randomIntBetween,
+        getURLParameter: getURLParameter,
         lfill: lfill,
         pick: pick,
 
