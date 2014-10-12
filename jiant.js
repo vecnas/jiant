@@ -27,6 +27,7 @@
  1.38: redone of previous fix, add() remains, addAll() produces alert about need to replace it and doesn't work more
  1.39: customRenderer(obj, elem) available for view and template instances, called once per propagate(), doesn't subscribe for updates, useful for template UI setup
  1.40: added utility function getURLParameter(name)
+ 1.41: reverse binding off for view re-propagation scenario
  */
 (function() {
   var
@@ -692,6 +693,7 @@
                   if (fn[key]) {
                     var off = fn[key][0];
                     off && off(fn[key][1]);
+                    fn[key][2] && elem.off("change", fn[key][2]);
                   }
                   var handler = val.on(function(obj, newVal) {getRenderer(spec[key])(data, elem, newVal, true, viewOrTm)});
                   fn[key] = [val.off, handler];
@@ -700,7 +702,11 @@
                 getRenderer(spec[key])(data, elem, val, false, viewOrTm);
               }
               if (reverseBinding) {
-                reverseBind(val, elem);
+                var backHandler = function() {
+                  val(elem.val());
+                };
+                elem.change && elem.val && elem.change(backHandler);
+                fn[key] && fn[key].push(backHandler);
               }
             }
           });
@@ -742,12 +748,6 @@
         } else {
           elem.html(val);
         }
-      }
-
-      function reverseBind(modelFn, elem) {
-        elem.change && elem.val && elem.change(function() {
-          modelFn(elem.val());
-        });
       }
 
       function _bindViews(appRoot, root, pfx, appUiFactory) {
@@ -2014,7 +2014,7 @@
       }
 
       function version() {
-        return 140;
+        return 141;
       }
 
       return {
