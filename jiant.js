@@ -28,6 +28,7 @@
  1.39: customRenderer(obj, elem) available for view and template instances, called once per propagate(), doesn't subscribe for updates, useful for template UI setup
  1.40: added utility function getURLParameter(name)
  1.41: reverse binding off for view re-propagation scenario
+ 1.42: fixed external logic declaration scenario - .declare call between bind performed and dependency declared
  */
 (function() {
   var
@@ -1816,10 +1817,10 @@
         _bindLogic(root, root.logic, appId);
         jiant.DEV_MODE && !bindingsResult && alert("Some elements not bound to HTML properly, check console" + errString);
         uiBoundRoot[appId] = root;
-        jiant.logInfo(root);
         loadedLogics[appId] || (loadedLogics[appId] = {});
         $.each(externalModules, function(name, impl) {
           loadedLogics[appId][name] || (loadedLogics[appId][name] = externalModules[name]);
+          copyLogic(appId, name);
           awakeAwaitingDepends(appId, name);
         });
         var appInitEvent = appId + "onAppInit" + appId;
@@ -2014,7 +2015,7 @@
       }
 
       function version() {
-        return 141;
+        return 142;
       }
 
       return {
