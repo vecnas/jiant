@@ -29,6 +29,7 @@
  1.40: added utility function getURLParameter(name)
  1.41: reverse binding off for view re-propagation scenario
  1.42: fixed external logic declaration scenario - .declare call between bind performed and dependency declared
+ 1.43: .declare accepts function as 2nd parameter: jiant.declare("name", function($, app)), it should return logic implementation
  */
 (function() {
   var
@@ -1231,11 +1232,11 @@
         jiant.bindUi({id: pseudoAppName}, devMode);
       }
 
-      function declare(name, objOrUrl) {
-        var lib = typeof objOrUrl === "string";
+      function declare(name, objOrUrlorFn) {
+        var lib = typeof objOrUrlorFn === "string";
         function handle() {
-          lib && jiant.info("Loaded external library " + objOrUrl);
-          externalModules[name] = lib ? {} : objOrUrl;
+          lib && jiant.info("Loaded external library " + objOrUrlorFn);
+          externalModules[name] = lib ? {} : objOrUrlorFn;
           $.each(awaitingDepends, function(appId, depList) {
             copyLogic(appId, name);
           });
@@ -1243,9 +1244,9 @@
             checkForExternalAwaiters(appId, name);
           });
         }
-        lib && jiant.info("Start loading external library " + objOrUrl);
+        lib && jiant.info("Start loading external library " + objOrUrlorFn);
         lib ? $.ajax({
-          url: objOrUrl,
+          url: objOrUrlorFn,
           cache: true,
           crossDomain: true,
           dataType: "script",
@@ -1258,15 +1259,14 @@
         if (obj && awaitingDepends[appId][name] && uiBoundRoot[appId]) {
           uiBoundRoot[appId].logic || (uiBoundRoot[appId].logic = {});
           uiBoundRoot[appId].logic[name] || (uiBoundRoot[appId].logic[name] = {});
-          $.each(obj, function(fname, fspec) {
+          $.each($.isFunction(obj) ? obj($, uiBoundRoot[appId]) : obj, function(fname, fspec) {
             uiBoundRoot[appId].logic[name][fname] = fspec;
           });
         }
       }
 
       function checkForExternalAwaiters(appId, name) {
-        var obj = externalModules[name];
-        if (obj && awaitingDepends[appId][name] && uiBoundRoot[appId]) {
+        if (externalModules[name] && awaitingDepends[appId][name] && uiBoundRoot[appId]) {
           awakeAwaitingDepends(appId, name);
           loadedLogics[appId][name] = 1;
           logUnboundCount(appId, name);
@@ -2015,7 +2015,7 @@
       }
 
       function version() {
-        return 142;
+        return 143;
       }
 
       return {
