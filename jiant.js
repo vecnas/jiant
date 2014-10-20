@@ -30,6 +30,7 @@
  1.41: reverse binding off for view re-propagation scenario
  1.42: fixed external logic declaration scenario - .declare call between bind performed and dependency declared
  1.43: .declare accepts function as 2nd parameter: jiant.declare("name", function($, app)), it should return logic implementation
+ 1.44: added to jiant.image reload(url) functions
  */
 (function() {
   var
@@ -653,6 +654,16 @@
         return true;
       }
 
+      function setupImage(uiElem) {
+        uiElem.reload = function (url) {
+          url = url || this.attr("src");
+          url = (url.indexOf("?") > -1) ? url : url + "?";
+          var antiCache = "&_=" + new Date().getTime();
+          url = (url.indexOf("&_=") > -1) ? url.replace(/&_=[0-9]{13}/, antiCache) : url + antiCache;
+          this.attr("src", url);
+        }
+      }
+
       function setupExtras(appRoot, uiElem, elemContent, key, elem) {
         if ((elemContent == jiant.tabs || elemContent.tabsTmInner) && uiElem.tabs) {
           uiElem.tabs();
@@ -669,6 +680,8 @@
           setupForm(appRoot, uiElem, key, elem);
         } else if (elemContent == containerPaged || elemContent.containerPagedTmInner) {
           setupContainerPaged(uiElem);
+        } else if (elemContent == jiant.image || elemContent.imageTmInner) {
+          setupImage(uiElem);
         }
         maybeAddDevHook(uiElem, key, elem);
       }
@@ -2015,7 +2028,7 @@
       }
 
       function version() {
-        return 143;
+        return 144;
       }
 
       return {
