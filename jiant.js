@@ -31,6 +31,7 @@
  1.42: fixed external logic declaration scenario - .declare call between bind performed and dependency declared
  1.43: .declare accepts function as 2nd parameter: jiant.declare("name", function($, app)), it should return logic implementation
  1.44: added to jiant.image reload(url) functions
+ 1.45: added new field type cssFlag, works like name_true, name_false, but sets/removes "name" css class only, without suffix
  */
 (function() {
   var
@@ -106,6 +107,7 @@
         nlabel = {},
         meta = {},
         cssMarker = {},
+        cssFlag = {},
         data = function (val) {
         },
         lookup = function (selector) {
@@ -557,13 +559,14 @@
               viewRoot[componentId].customRenderer = function(obj, elem, val, isUpdate, viewOrTemplate) {
                 viewRoot[componentId](val);
               }
-            } else if (viewRoot[componentId] === jiant.cssMarker) {
-              var prevNm = "j_prevMarkerClass_" + componentId;
+            } else if (viewRoot[componentId] === jiant.cssMarker || viewRoot[componentId] === jiant.cssFlag) {
+              var flag = viewRoot[componentId] === jiant.cssFlag,
+                  prevNm = "j_prevMarkerClass_" + componentId;
               viewRoot[componentId] = {};
               viewRoot[componentId].customRenderer = function(obj, elem, val, isUpdate, viewOrTemplate) {
-                var cls = componentId + "_" + val;
+                var cls = componentId + (flag ? "" : ("_" + val));
                 viewOrTemplate[prevNm] && viewOrTemplate.removeClass(viewOrTemplate[prevNm]);
-                if (val !== undefined) {
+                if ((!flag && val !== undefined) || (flag && !!val)) {
                   viewOrTemplate[prevNm] = cls;
                   viewOrTemplate.addClass(cls);
                 }
@@ -819,13 +822,14 @@
                 tmContent[componentId].customRenderer = function(obj, elem, val, isUpdate, viewOrTemplate) {
                   viewOrTemplate[componentId](val);
                 };
-              } else if (elemType === jiant.cssMarker) {
+              } else if (elemType === jiant.cssMarker || elemType === jiant.cssFlag) {
                 tmContent[componentId] = {};
-                var markerName = "j_prevMarkerClass_" + componentId;
+                var flag = elemType === jiant.cssFlag,
+                    markerName = "j_prevMarkerClass_" + componentId;
                 tmContent[componentId].customRenderer = function(obj, elem, val, isUpdate, viewOrTemplate) {
-                  var cls = componentId + "_" + val;
+                  var cls = componentId + (flag ? "" : ("_" + val));
                   viewOrTemplate[markerName] && viewOrTemplate.removeClass(viewOrTemplate[markerName]);
-                  if (val !== undefined) {
+                  if ((!flag && val !== undefined) || (flag && !!val)) {
                     viewOrTemplate[markerName] = cls;
                     viewOrTemplate.addClass(cls);
                   }
@@ -2028,7 +2032,7 @@
       }
 
       function version() {
-        return 144;
+        return 145;
       }
 
       return {
@@ -2092,6 +2096,7 @@
         label: label,
         nlabel: nlabel,
         meta: meta,
+        cssFlag: cssFlag,
         cssMarker: cssMarker,
         data: data,
         lookup: lookup,
