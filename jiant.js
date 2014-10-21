@@ -32,6 +32,7 @@
  1.43: .declare accepts function as 2nd parameter: jiant.declare("name", function($, app)), it should return logic implementation
  1.44: added to jiant.image reload(url) functions
  1.45: added new field type cssFlag, works like name_true, name_false, but sets/removes "name" css class only, without suffix
+ 1.46: reverse binding for checkboxes implemented, propagate setting of non-string values for select input implemented
  */
 (function() {
   var
@@ -720,8 +721,14 @@
                 getRenderer(spec[key])(data, elem, val, false, viewOrTm);
               }
               if (reverseBinding) {
-                var backHandler = function() {
-                  val(elem.val());
+                var backHandler = function(event) {
+                  var tagName = elem[0].tagName.toLowerCase(),
+                      tp = elem.attr("type");
+                  if (tagName == "input" && tp == "checkbox") {
+                    val(!!elem.prop("checked"));
+                  } else {
+                    val(elem.val());
+                  }
                 };
                 elem.change && elem.val && elem.change(backHandler);
                 fn[key] && fn[key].push(backHandler);
@@ -753,9 +760,9 @@
           var el = $(elem[0]),
             tp = el.attr("type");
           if ($.inArray(tp, types) >= 0) {
-            elem.val(val);
+            val !== undefined && elem.val(val + "");
           } else if (tp == "checkbox") {
-            elem.prop("checked", val ? true : false);
+            elem.prop("checked", !!val);
           } else if (tp == "radio") {
             $.each(elem, function(idx, subelem) {
               $(subelem).prop("checked", subelem.value == val);
@@ -2032,7 +2039,7 @@
       }
 
       function version() {
-        return 145;
+        return 146;
       }
 
       return {
