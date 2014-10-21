@@ -33,6 +33,7 @@
  1.44: added to jiant.image reload(url) functions
  1.45: added new field type cssFlag, works like name_true, name_false, but sets/removes "name" css class only, without suffix
  1.46: reverse binding for checkboxes implemented, propagate setting of non-string values for select input implemented
+ 1.47: jiant.asObjArray(arr, name[, idxName]) converts [2, 3, 5] to [{name: 2}, {name: 3}, {name: 5}], optional {name:2, idxName: 0}
  */
 (function() {
   var
@@ -2024,13 +2025,18 @@
         }, true);
       }
 
+      function asObjArray(arr, name, idxName) {
+        var ret = [];
+        $.each(arr, function(i, val) {
+          var obj = {};
+          obj[name] = val;
+          idxName && (obj[idxName] = i);
+          ret.push(obj);
+        });
+        return ret;
+      }
+
       function addListener(listener) {
-//        $.each(listenerProto, function(fname, fnbody) {
-//          if (! listener[fname] || !$.isFunction(listener[fname])) {
-//            errorp("Listener misses function !!, adding empty replacement", fname);
-//            listener[fname] = function() {};
-//          }
-//        });
         listeners.push(listener);
       }
 
@@ -2039,7 +2045,7 @@
       }
 
       function version() {
-        return 146;
+        return 147;
       }
 
       return {
@@ -2084,6 +2090,7 @@
         getURLParameter: getURLParameter,
         lfill: lfill,
         pick: pick,
+        asObjArray: asObjArray,
 
         addListener: addListener,
         removeListener: removeListener,
