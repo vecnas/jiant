@@ -34,6 +34,7 @@
  1.45: added new field type cssFlag, works like name_true, name_false, but sets/removes "name" css class only, without suffix
  1.46: reverse binding for checkboxes implemented, propagate setting of non-string values for select input implemented
  1.47: jiant.asObjArray(arr, name[, idxName]) converts [2, 3, 5] to [{name: 2}, {name: 3}, {name: 5}], optional {name:2, idxName: 0}
+ 1.48: nlabel now also translates arrays, returning comma separated translations, nlabel works for templates 
  */
 (function() {
   var
@@ -687,6 +688,8 @@
           setupContainerPaged(uiElem);
         } else if (elemContent == jiant.image || elemContent.imageTmInner) {
           setupImage(uiElem);
+        } else if (elemContent == jiant.nlabel || elemContent.nlabelTmInner) {
+          setupIntlProxies(appRoot, uiElem);
         }
         maybeAddDevHook(uiElem, key, elem);
       }
@@ -795,6 +798,7 @@
       function calcInnerTmKey(elem) {
         switch (elem) {
           case (jiant.label): return "labelTmInner";
+          case (jiant.nlabel): return "nlabelTmInner";
           case (jiant.ctl): return "ctlTmInner";
           case (jiant.container): return "containerTmInner";
           case (jiant.containerPaged): return "containerPagedTmInner";
@@ -855,7 +859,7 @@
           root[tmId].parseTemplate = function(data) {
             var retVal = $("<!-- -->" + parseTemplate(tm, data, tmId)); // add comment to force jQuery to read it as HTML fragment
             $.each(tmContent, function (elem, elemType) {
-              if (elemType == jiant.data) {
+              if (elemType === jiant.data) {
                 retVal[elem] = function(val) {
                   if (arguments.length == 0) {
                     return retVal.attr("data-" + elem);
@@ -865,7 +869,6 @@
                 };
               } else if (elem != "parseTemplate" && elem != "parseTemplate2Text" && elem != "appPrefix") {
                 retVal[elem] = $.merge(retVal.filter("." + prefix + elem), retVal.find("." + prefix + elem));
-                elemType === nlabel && setupIntlProxies(appRoot, retVal[elem]);
                 setupExtras(appRoot, retVal[elem], root[tmId][elem], tmId, elem);
                 maybeAddDevHook(retVal[elem], tmId, elem);
               }
@@ -1695,6 +1698,18 @@
 
 // ------------ internationalization, texts ------------
 
+      function translate(appRoot, val) {
+        if ($.isArray(val)) {
+          var arr = [];
+          $.each(val, function(i, key) {
+            arr.push(appRoot.logic.intl.t(key));
+          });
+          return arr.join(", ");
+        } else {
+          return appRoot.logic.intl.t(val);
+        }
+      }
+
       function intlProxy(appRoot, elem, fname) {
         if (! appRoot.logic.intl) {
           error("nlabel used, but no intl declared, degrading nlabel to label");
@@ -1706,10 +1721,10 @@
             return prev.call(elem);
           } else {
             if (loadedLogics[appRoot.id] && loadedLogics[appRoot.id].intl) {
-              prev.call(elem, appRoot.logic.intl.t(val));
+              prev.call(elem, translate(appRoot, val));
             } else {
               prev.call(elem, val);
-              onUiBound(appRoot, ["intl"], function() {prev.call(elem, appRoot.logic.intl.t(val));});
+              onUiBound(appRoot, ["intl"], function() {prev.call(elem, translate(appRoot, val));});
             }
           }
         }
@@ -2045,7 +2060,7 @@
       }
 
       function version() {
-        return 147;
+        return 148;
       }
 
       return {
