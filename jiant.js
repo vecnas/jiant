@@ -36,6 +36,7 @@
  1.47: jiant.asObjArray(arr, name[, idxName]) converts [2, 3, 5] to [{name: 2}, {name: 3}, {name: 5}], optional {name:2, idxName: 0}
  1.48: nlabel now also translates arrays, returning comma separated translations, nlabel works for templates
  1.49: empty array considered as undefined for cssFlag
+ 1.50: reverse binding for non-model fields had broken code
  */
 (function() {
   var
@@ -732,7 +733,7 @@
                       tp = elem.attr("type");
                   if (tagName == "input" && tp == "checkbox") {
                     val(!!elem.prop("checked"));
-                  } else {
+                  } else if (val) {
                     val(elem.val());
                   }
                 };
@@ -2063,7 +2064,7 @@
       }
 
       function version() {
-        return 149;
+        return 150;
       }
 
       return {
