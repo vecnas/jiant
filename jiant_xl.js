@@ -36,6 +36,7 @@
  xl.0.30 bindList() fix - removal of UI element now works
  xl.0.31 minor cleanup in bindList - removed add.on handler due to add() removal in jiant 1.37
  xl.0.32 adoption to jiant 1.38 - all 'addAll' calls replaced by 'add'
+ xl.0.33 bindList accepts one more parameter, sortFn(obj, obj2) - for sorting list presentation
  */
 
 (function() {
@@ -45,7 +46,7 @@
   var tmpJiantXl = {
 
     version: function() {
-      return 32;
+      return 33;
     },
 
     ctl2state: function(ctl, state, selectedCssClass, goProxy) {
@@ -113,14 +114,25 @@
       };
     },
 
-    bindList: function(model, container, template, viewFieldSetterName) {
+    bindList: function(model, container, template, viewFieldSetterName, sortFn) {
       function renderObj(obj) {
         var tm = $.isFunction(template) ? template(obj) : template,
-          view = tm.parseTemplate(obj);
-//          view = tm.parseTemplate({id: $.isFunction(obj.id) ? obj.id() : obj.id});
-        container.append(view);
+            view = tm.parseTemplate(obj),
+            appended = false;
+        if (viewFieldSetterName && sortFn && $.isFunction(sortFn) && model.all) {
+          $.each(model.all(), function(i, item) {
+            var order = sortFn(obj, item);
+            if (item[viewFieldSetterName] && item[viewFieldSetterName]() && order < 0) {
+              view.insertBefore(item[viewFieldSetterName]()[0]);
+              appended = true;
+              return false;
+            }
+          });
+        }
+        if (!appended) {
+          container.append(view);
+        }
         viewFieldSetterName && $.isFunction(obj[viewFieldSetterName]) && obj[viewFieldSetterName](view);
-//        container.refreshTabs && container.refreshTabs();
       }
       return function() {
         model.add && model.add.on(function(arr) {
