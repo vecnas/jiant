@@ -34,7 +34,8 @@
  1.45: added new field type cssFlag, works like name_true, name_false, but sets/removes "name" css class only, without suffix
  1.46: reverse binding for checkboxes implemented, propagate setting of non-string values for select input implemented
  1.47: jiant.asObjArray(arr, name[, idxName]) converts [2, 3, 5] to [{name: 2}, {name: 3}, {name: 5}], optional {name:2, idxName: 0}
- 1.48: nlabel now also translates arrays, returning comma separated translations, nlabel works for templates 
+ 1.48: nlabel now also translates arrays, returning comma separated translations, nlabel works for templates
+ 1.49: empty array considered as undefined for cssFlag
  */
 (function() {
   var
@@ -569,7 +570,8 @@
               viewRoot[componentId].customRenderer = function(obj, elem, val, isUpdate, viewOrTemplate) {
                 var cls = componentId + (flag ? "" : ("_" + val));
                 viewOrTemplate[prevNm] && viewOrTemplate.removeClass(viewOrTemplate[prevNm]);
-                if ((!flag && val !== undefined) || (flag && !!val)) {
+                var _val = flag && $.isArray(val) && val.length == 0 ? undefined : val;
+                if ((!flag && _val !== undefined) || (flag && !!_val)) {
                   viewOrTemplate[prevNm] = cls;
                   viewOrTemplate.addClass(cls);
                 }
@@ -841,7 +843,8 @@
                 tmContent[componentId].customRenderer = function(obj, elem, val, isUpdate, viewOrTemplate) {
                   var cls = componentId + (flag ? "" : ("_" + val));
                   viewOrTemplate[markerName] && viewOrTemplate.removeClass(viewOrTemplate[markerName]);
-                  if ((!flag && val !== undefined) || (flag && !!val)) {
+                  var _val = flag && $.isArray(val) && val.length == 0 ? undefined : val;
+                  if ((!flag && _val !== undefined) || (flag && !!_val)) {
                     viewOrTemplate[markerName] = cls;
                     viewOrTemplate.addClass(cls);
                   }
@@ -2060,7 +2063,7 @@
       }
 
       function version() {
-        return 148;
+        return 149;
       }
 
       return {
