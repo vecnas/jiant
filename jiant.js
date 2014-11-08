@@ -38,6 +38,7 @@
  1.49: empty array considered as undefined for cssFlag
  1.50: reverse binding for non-model fields had broken code
  1.51: propagate(.., true) updates all customRenderers for non-standard fields on any object change
+ 1.52: parseTemplate(data, subscribeForUpdates) accepts second parameter, it converted to boolean and used for propagate() call. False by default
  */
 (function() {
   var
@@ -727,7 +728,7 @@
                 }
               } else {
                 getRenderer(spec[key])(data, elem, val, false, viewOrTm);
-                if (subscribe4updates && $.isFunction(data.on)) {
+                if (subscribe4updates && $.isFunction(data.on) && spec[key].customRenderer) {
                   if (fn[key]) {
                     var off = fn[key][0];
                     off && off(fn[key][1]);
@@ -870,7 +871,7 @@
             }
           });
           ensureExists(prefix, appRoot.dirtyList, tm, prefix + tmId);
-          root[tmId].parseTemplate = function(data) {
+          root[tmId].parseTemplate = function(data, subscribeForUpdates) {
             var retVal = $("<!-- -->" + parseTemplate(tm, data, tmId)); // add comment to force jQuery to read it as HTML fragment
             $.each(tmContent, function (elem, elemType) {
               if (elemType === jiant.data) {
@@ -889,7 +890,7 @@
             });
             retVal.splice(0, 1); // remove first comment
             retVal.propagate = makePropagationFunction(tmId, tmContent, retVal, retVal);
-            data && retVal.propagate(data);
+            data && retVal.propagate(data, !!subscribeForUpdates);
             retVal._jiantSpec = root[tmId];
             $.each(listeners, function(i, l) {l.parsedTemplate && l.parsedTemplate(appRoot, root, tmId, root[tmId], data, retVal)});
             return retVal;
@@ -2071,7 +2072,7 @@
       }
 
       function version() {
-        return 151;
+        return 152;
       }
 
       return {
