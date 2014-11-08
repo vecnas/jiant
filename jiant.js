@@ -37,6 +37,7 @@
  1.48: nlabel now also translates arrays, returning comma separated translations, nlabel works for templates
  1.49: empty array considered as undefined for cssFlag
  1.50: reverse binding for non-model fields had broken code
+ 1.51: propagate(.., true) updates all customRenderers for non-standard fields on any object change
  */
 (function() {
   var
@@ -710,7 +711,7 @@
         var fn = function(data, subscribe4updates, reverseBinding) {
           subscribe4updates = (subscribe4updates === undefined) ? true : subscribe4updates;
           $.each(map, function (key, elem) {
-            if (spec[key].customRenderer || (data && data[key] !== undefined && data[key] !== null && ! isServiceName(key))) {
+            if (spec[key].customRenderer || (data && data[key] !== undefined && data[key] !== null && !isServiceName(key))) {
               var val = data[key];
               elem = obj[key];
               if ($.isFunction(val)) {
@@ -726,6 +727,15 @@
                 }
               } else {
                 getRenderer(spec[key])(data, elem, val, false, viewOrTm);
+                if (subscribe4updates && $.isFunction(data.on)) {
+                  if (fn[key]) {
+                    var off = fn[key][0];
+                    off && off(fn[key][1]);
+                    fn[key][2] && elem.off("change", fn[key][2]);
+                  }
+                  var handler = data.on(function(obj, newVal) {getRenderer(spec[key])(data, elem, newVal, true, viewOrTm)});
+                  fn[key] = [data.off, handler];
+                }
               }
               if (reverseBinding) {
                 var backHandler = function(event) {
@@ -944,24 +954,16 @@
           parentModelReference = "_parentModel",
           collectionFunctions = [];
         obj[modelStorageField] = {};
+        spec.on || (spec.on = function(obj) {});
+        spec.off || (spec.off = function(obj) {});
+        spec.update || (spec.update = function(obj) {});
+        spec.updateAll || (spec.update = function(obj) {});
+        spec.add || (spec.add = function(obj) {});
+        spec.remove || (spec.remove = function(obj) {});
+        spec.asMap || (spec.asMap = function(obj) {});
         if (spec.updateAll && spec.id) {
           if (! spec.update) spec.update = function(val) {};
           if (! spec.findById) spec.findById = function(val) {};
-        }
-        if (spec.updateAll) {
-          if (! spec.add) spec.add = function(val) {};
-          if (! spec.remove) spec.remove = function(elem) {};
-        }
-        if (! spec.update) {
-          $.each(spec, function(fname, funcSpec) {
-            if (fname.indexOf("set") == 0 && fname.length > 3 && ("" + funcSpec).indexOf("{}") == ("" + funcSpec).length - 2) {
-              spec.update = function(val) {};
-              return false;
-            }
-          });
-        }
-        if (! spec.asMap) {
-          spec.asMap = function() {};
         }
         obj[modelInnerDataField] = $({});
         $.each(spec, function(fname, funcSpec) {
@@ -978,6 +980,8 @@
               attachCollectionFunctions(retVal, collectionFunctions);
               return retVal;
             };
+          } else if (fname == "off") {
+            //assigned for fname="on"
           } else if (fname == "on") {
             collectionFunctions.push(fname);
             assignOnOffHandlers(obj, globalChangeEventName, undefined, eventBus);
@@ -1880,6 +1884,9 @@
           root = prefix;
           prefix = root.appPrefix;
         }
+        if (devMode === undefined) {
+          devMode = true;
+        }
         $.each(listeners, function(i, l) {l.bindStarted && l.bindStarted(root)});
         var appUiFactory = root.uiFactory ? root.uiFactory : uiFactory;
         if (viewsUrl) {
@@ -2064,7 +2071,7 @@
       }
 
       function version() {
-        return 150;
+        return 151;
       }
 
       return {
