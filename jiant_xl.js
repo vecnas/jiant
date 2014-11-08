@@ -37,6 +37,7 @@
  xl.0.31 minor cleanup in bindList - removed add.on handler due to add() removal in jiant 1.37
  xl.0.32 adoption to jiant 1.38 - all 'addAll' calls replaced by 'add'
  xl.0.33 bindList accepts one more parameter, sortFn(obj, obj2) - for sorting list presentation
+ xl.0.34 renderList(..., subscribeForUpdates) - new param is subscribe for template updates, for better performance 
  */
 
 (function() {
@@ -46,7 +47,7 @@
   var tmpJiantXl = {
 
     version: function() {
-      return 33;
+      return 34;
     },
 
     ctl2state: function(ctl, state, selectedCssClass, goProxy) {
@@ -117,7 +118,7 @@
     bindList: function(model, container, template, viewFieldSetterName, sortFn) {
       function renderObj(obj) {
         var tm = $.isFunction(template) ? template(obj) : template,
-            view = tm.parseTemplate(obj),
+            view = tm.parseTemplate(obj, true),
             appended = false;
         if (viewFieldSetterName && sortFn && $.isFunction(sortFn) && model.all) {
           $.each(model.all(), function(i, item) {
@@ -231,12 +232,12 @@
       };
     },
 
-    renderList: function(list, container, tm, perItemCb, noItemsLabel) {
+    renderList: function(list, container, tm, perItemCb, noItemsLabel, subscribeForUpdates) {
       return function() {
         noItemsLabel && (list.length ? noItemsLabel.hide() : noItemsLabel.show());
         container.empty();
         $.each(list, function(idx, item) {
-          var elem = tm.parseTemplate(item);
+          var elem = tm.parseTemplate(item, subscribeForUpdates);
           container.append(elem);
           perItemCb && perItemCb(item, elem, idx);
         });
