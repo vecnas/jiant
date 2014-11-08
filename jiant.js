@@ -39,6 +39,7 @@
  1.50: reverse binding for non-model fields had broken code
  1.51: propagate(.., true) updates all customRenderers for non-standard fields on any object change
  1.52: parseTemplate(data, subscribeForUpdates) accepts second parameter, it converted to boolean and used for propagate() call. False by default
+ 1.53: autoupdate of custom renderers temporary removed due to performance issues
  */
 (function() {
   var
@@ -728,15 +729,15 @@
                 }
               } else {
                 getRenderer(spec[key])(data, elem, val, false, viewOrTm);
-                if (subscribe4updates && $.isFunction(data.on) && spec[key].customRenderer) {
-                  if (fn[key]) {
-                    var off = fn[key][0];
-                    off && off(fn[key][1]);
-                    fn[key][2] && elem.off("change", fn[key][2]);
-                  }
-                  var handler = data.on(function(obj, newVal) {getRenderer(spec[key])(data, elem, newVal, true, viewOrTm)});
-                  fn[key] = [data.off, handler];
-                }
+//                if (subscribe4updates && $.isFunction(data.on) && spec[key].customRenderer) {
+//                  if (fn[key]) {
+//                    var off = fn[key][0];
+//                    off && off(fn[key][1]);
+//                    fn[key][2] && elem.off("change", fn[key][2]);
+//                  }
+//                  var handler = data.on(function(obj, newVal) {getRenderer(spec[key])(data, elem, newVal, true, viewOrTm)});
+//                  fn[key] = [data.off, handler];
+//                }
               }
               if (reverseBinding) {
                 var backHandler = function(event) {
@@ -2072,7 +2073,7 @@
       }
 
       function version() {
-        return 152;
+        return 153;
       }
 
       return {
