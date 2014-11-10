@@ -41,6 +41,7 @@
  1.52: parseTemplate(data, subscribeForUpdates) accepts second parameter, it converted to boolean and used for propagate() call. False by default
  1.53: autoupdate of custom renderers temporary removed due to performance issues
  1.54: customRenderer auto updated, model spec .on works as before, single model object .on triggers only on specified object update
+ 1.55: more consistent internal event fire
  */
 (function() {
   var
@@ -925,12 +926,14 @@
         eventObject = eventObject ? eventObject : obj[modelInnerDataField];
         var fn = function (cb) {
             var handler = function () {
+//              jiant.logError(eventName + " " + fname, eventObject);
               var args = $.makeArray(arguments);
               args.splice(0, 1);
               //        args.splice(0, 2);
               cb && cb.apply(cb, args);
             };
             (fname ? obj[fname] : obj).listenersCount++;
+//            jiant.logError("adding for " + eventName + " " + fname);
             eventObject.on(eventName, handler);
             return handler;
           },
@@ -990,7 +993,7 @@
             if (obj === spec) {
               assignOnOffHandlers(obj, globalChangeEventName, undefined, eventBus);
             } else {
-              assignOnOffHandlers(obj, eventName, undefined);
+              assignOnOffHandlers(obj, globalChangeEventName, undefined);
             }
           } else if (fname == "update") {
             collectionFunctions.push(fname);
@@ -1165,6 +1168,7 @@
                   obj[modelInnerDataField].trigger(eventName, [obj, val, oldVal]);
                   obj != spec && spec[modelInnerDataField].trigger(eventName, [obj, val, oldVal]);
                   if (! dontFireUpdate) {
+                    obj[modelInnerDataField].trigger(globalChangeEventName, [obj, fname, val, oldVal]);
                     eventBus.trigger(globalChangeEventName, [obj, fname, val, oldVal]);
                   }
                 } else {
@@ -2078,7 +2082,7 @@
       }
 
       function version() {
-        return 154;
+        return 155;
       }
 
       return {
