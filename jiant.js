@@ -40,6 +40,7 @@
  1.51: propagate(.., true) updates all customRenderers for non-standard fields on any object change
  1.52: parseTemplate(data, subscribeForUpdates) accepts second parameter, it converted to boolean and used for propagate() call. False by default
  1.53: autoupdate of custom renderers temporary removed due to performance issues
+ 1.54: customRenderer auto updated, model spec .on works as before, single model object .on triggers only on specified object update
  */
 (function() {
   var
@@ -729,15 +730,15 @@
                 }
               } else {
                 getRenderer(spec[key])(data, elem, val, false, viewOrTm);
-//                if (subscribe4updates && $.isFunction(data.on) && spec[key].customRenderer) {
-//                  if (fn[key]) {
-//                    var off = fn[key][0];
-//                    off && off(fn[key][1]);
-//                    fn[key][2] && elem.off("change", fn[key][2]);
-//                  }
-//                  var handler = data.on(function(obj, newVal) {getRenderer(spec[key])(data, elem, newVal, true, viewOrTm)});
-//                  fn[key] = [data.off, handler];
-//                }
+                if (subscribe4updates && $.isFunction(data.on) && spec[key].customRenderer) {
+                  if (fn[key]) {
+                    var off = fn[key][0];
+                    off && off(fn[key][1]);
+                    fn[key][2] && elem.off("change", fn[key][2]);
+                  }
+                  var handler = data.on(function(obj, newVal) {getRenderer(spec[key])(data, elem, newVal, true, viewOrTm)});
+                  fn[key] = [data.off, handler];
+                }
               }
               if (reverseBinding) {
                 var backHandler = function(event) {
@@ -891,7 +892,7 @@
             });
             retVal.splice(0, 1); // remove first comment
             retVal.propagate = makePropagationFunction(tmId, tmContent, retVal, retVal);
-            data && retVal.propagate(data, !!subscribeForUpdates);
+            data && retVal.propagate(data, subscribeForUpdates);
             retVal._jiantSpec = root[tmId];
             $.each(listeners, function(i, l) {l.parsedTemplate && l.parsedTemplate(appRoot, root, tmId, root[tmId], data, retVal)});
             return retVal;
@@ -959,7 +960,7 @@
         spec.on || (spec.on = function(obj) {});
         spec.off || (spec.off = function(obj) {});
         spec.update || (spec.update = function(obj) {});
-        spec.updateAll || (spec.update = function(obj) {});
+        spec.updateAll || (spec.updateAll = function(obj) {});
         spec.add || (spec.add = function(obj) {});
         spec.remove || (spec.remove = function(obj) {});
         spec.asMap || (spec.asMap = function(obj) {});
@@ -986,7 +987,11 @@
             //assigned for fname="on"
           } else if (fname == "on") {
             collectionFunctions.push(fname);
-            assignOnOffHandlers(obj, globalChangeEventName, undefined, eventBus);
+            if (obj === spec) {
+              assignOnOffHandlers(obj, globalChangeEventName, undefined, eventBus);
+            } else {
+              assignOnOffHandlers(obj, eventName, undefined);
+            }
           } else if (fname == "update") {
             collectionFunctions.push(fname);
             obj[fname] = function(objFrom, treatMissingAsNulls) {
@@ -2073,7 +2078,7 @@
       }
 
       function version() {
-        return 153;
+        return 154;
       }
 
       return {
