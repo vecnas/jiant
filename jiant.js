@@ -42,6 +42,7 @@
  1.53: autoupdate of custom renderers temporary removed due to performance issues
  1.54: customRenderer auto updated, model spec .on works as before, single model object .on triggers only on specified object update
  1.55: more consistent internal event fire
+ 1.56: jiant.ctlHide added, hides view on click
  */
 (function() {
   var
@@ -104,6 +105,7 @@
         container = {},
         containerPaged = {},
         ctl = {},
+        ctlHide = {},
         form = {},
         fn = function (param) {
         },
@@ -588,7 +590,7 @@
               ensureExists(prefix, appRoot.dirtyList, uiElem, prefix + viewId, prefix + componentId);
               viewRoot[componentId] = uiElem;
               isNlabel && setupIntlProxies(appRoot, viewRoot[componentId]);
-              setupExtras(appRoot, uiElem, componentContent, viewId, componentId);
+              setupExtras(appRoot, uiElem, componentContent, viewId, componentId, viewRoot);
               //        logInfo("    bound UI for: " + componentId);
             }
           }
@@ -678,10 +680,16 @@
         }
       }
 
-      function setupExtras(appRoot, uiElem, elemContent, key, elem) {
+      function setupCtlHide(viewOrTm, elem) {
+        elem.click(function() {viewOrTm.hide()})
+      }
+
+      function setupExtras(appRoot, uiElem, elemContent, key, elem, viewOrTm) {
         if ((elemContent == jiant.tabs || elemContent.tabsTmInner) && uiElem.tabs) {
           uiElem.tabs();
           uiElem.refreshTabs = function() {uiElem.tabs("refresh");};
+        } else if (elemContent == jiant.ctlHide || elemContent.ctlHideTmInner) {
+          setupCtlHide(viewOrTm, uiElem);
         } else if (elemContent == jiant.inputInt || elemContent.inputIntTmInner) {
           setupInputInt(uiElem);
         } else if (elemContent == jiant.inputFloat || elemContent.inputFloatTmInner) {
@@ -817,6 +825,7 @@
           case (jiant.label): return "labelTmInner";
           case (jiant.nlabel): return "nlabelTmInner";
           case (jiant.ctl): return "ctlTmInner";
+          case (jiant.ctlHide): return "ctlHideTmInner";
           case (jiant.container): return "containerTmInner";
           case (jiant.containerPaged): return "containerPagedTmInner";
           case (jiant.form): return "formTmInner";
@@ -887,7 +896,7 @@
                 };
               } else if (elem != "parseTemplate" && elem != "parseTemplate2Text" && elem != "appPrefix") {
                 retVal[elem] = $.merge(retVal.filter("." + prefix + elem), retVal.find("." + prefix + elem));
-                setupExtras(appRoot, retVal[elem], root[tmId][elem], tmId, elem);
+                setupExtras(appRoot, retVal[elem], root[tmId][elem], tmId, elem, retVal);
                 maybeAddDevHook(retVal[elem], tmId, elem);
               }
             });
@@ -2082,7 +2091,7 @@
       }
 
       function version() {
-        return 155;
+        return 156;
       }
 
       return {
@@ -2136,6 +2145,7 @@
         container: container,
         containerPaged: containerPaged,
         ctl : ctl,
+        ctlHide : ctlHide,
         fn: fn,
         form: form,
         grid: grid,
