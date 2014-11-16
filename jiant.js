@@ -43,6 +43,7 @@
  1.54: customRenderer auto updated, model spec .on works as before, single model object .on triggers only on specified object update
  1.55: more consistent internal event fire
  1.56: jiant.ctlHide added, hides view on click
+ 1.57: by default 2nd parameter of parseTemplate() is false, while 2nd of propagate() is true, for full compatibility with previous version
  */
 (function() {
   var
@@ -902,7 +903,7 @@
             });
             retVal.splice(0, 1); // remove first comment
             retVal.propagate = makePropagationFunction(tmId, tmContent, retVal, retVal);
-            data && retVal.propagate(data, subscribeForUpdates);
+            data && retVal.propagate(data, !!subscribeForUpdates);
             retVal._jiantSpec = root[tmId];
             $.each(listeners, function(i, l) {l.parsedTemplate && l.parsedTemplate(appRoot, root, tmId, root[tmId], data, retVal)});
             return retVal;
@@ -2091,7 +2092,7 @@
       }
 
       function version() {
-        return 156;
+        return 157;
       }
 
       return {
