@@ -44,6 +44,7 @@
  1.55: more consistent internal event fire
  1.56: jiant.ctlHide added, hides view on click
  1.57: by default 2nd parameter of parseTemplate() is false, while 2nd of propagate() is true, for full compatibility with previous version
+ 1.58: double intlProxy for views nlabel fixed
  */
 (function() {
   var
@@ -586,11 +587,9 @@
                 }
               };
             } else {
-              var isNlabel = viewRoot[componentId] === nlabel,
-                uiElem = uiFactory.viewComponent(viewElem, viewId, prefix, componentId, componentContent);
+              var uiElem = uiFactory.viewComponent(viewElem, viewId, prefix, componentId, componentContent);
               ensureExists(prefix, appRoot.dirtyList, uiElem, prefix + viewId, prefix + componentId);
               viewRoot[componentId] = uiElem;
-              isNlabel && setupIntlProxies(appRoot, viewRoot[componentId]);
               setupExtras(appRoot, uiElem, componentContent, viewId, componentId, viewRoot);
               //        logInfo("    bound UI for: " + componentId);
             }
@@ -2092,7 +2091,7 @@
       }
 
       function version() {
-        return 157;
+        return 158;
       }
 
       return {
