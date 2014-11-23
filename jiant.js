@@ -45,6 +45,7 @@
  1.56: jiant.ctlHide added, hides view on click
  1.57: by default 2nd parameter of parseTemplate() is false, while 2nd of propagate() is true, for full compatibility with previous version
  1.58: double intlProxy for views nlabel fixed
+ 1.59: usage of templates nlabel inside of ["intl"] dependency fixed
  */
 (function() {
   var
@@ -1254,9 +1255,9 @@
                   }
                 }
               });
-              awakeAwaitingDepends(appId, name);
               (! loadedLogics[appId]) && (loadedLogics[appId] = {});
               loadedLogics[appId][name] = 1;
+              awakeAwaitingDepends(appId, name);
               logUnboundCount(appId, name);
             };
             if (name == "intl") {
@@ -1752,7 +1753,7 @@
               prev.call(elem, translate(appRoot, val));
             } else {
               prev.call(elem, val);
-              onUiBound(appRoot, ["intl"], function() {prev.call(elem, translate(appRoot, val));});
+              onUiBound(appRoot, ["intl"], function() {prev.call(elem, translate(appRoot, val))});
             }
           }
         }
@@ -2091,7 +2092,7 @@
       }
 
       function version() {
-        return 158;
+        return 159;
       }
 
       return {
