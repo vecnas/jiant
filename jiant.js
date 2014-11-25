@@ -46,6 +46,7 @@
  1.57: by default 2nd parameter of parseTemplate() is false, while 2nd of propagate() is true, for full compatibility with previous version
  1.58: double intlProxy for views nlabel fixed
  1.59: usage of templates nlabel inside of ["intl"] dependency fixed
+ 1.60: asMap() and data() added to model collection functions
  */
 (function() {
   var
@@ -1158,10 +1159,12 @@
               return newVals;
             }
           } else if (fname == "asMap") {
+            collectionFunctions.push(fname);
             obj[fname] = function () {
               return obj[modelStorageField];
             }
           } else if (fname == "data") {
+            collectionFunctions.push(fname);
             obj[fname] = function () {
               return obj[dataStorageField];
             }
@@ -2092,7 +2095,7 @@
       }
 
       function version() {
-        return 159;
+        return 160;
       }
 
       return {
