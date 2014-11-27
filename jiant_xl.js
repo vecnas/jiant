@@ -40,6 +40,7 @@
  xl.0.34 renderList(..., subscribeForUpdates) - new param is subscribe for template updates, for better performance
  xl.0.35 bindList accepts one more param, subscribeForUpdates, to subscribe template for model data updates
  xl.0.36 latest Spring compatible pageable request, added "page" and "sort", still compatible with previous version
+ xl.0.37 "page" passed as val-1, for PageableHandlerMethodArgumentResolver 0-based compatiblity
  */
 
 (function() {
@@ -49,7 +50,7 @@
   var tmpJiantXl = {
 
     version: function() {
-      return 36;
+      return 37;
     },
 
     ctl2state: function(ctl, state, selectedCssClass, goProxy) {
@@ -153,8 +154,8 @@
       function refresh(pageNum) {
         var parsedNum = parseInt(pageNum);
         parsedNum = isNaN(parsedNum) ? 0 : parsedNum;
-        var pageable = {"page.page": parsedNum, "page": parsedNum};
-        filterSortModel && filterSortModel.sort && filterSortModel.sort() 
+        var pageable = {"page.page": parsedNum, "page": parsedNum == 0 ? 0 : parsedNum - 1};
+        filterSortModel && filterSortModel.sort && filterSortModel.sort()
         && (pageable["page.sort"] = filterSortModel.sort(), pageable["sort"] = filterSortModel.sort());
         ajax(filterSortModel, pageable, function(data) {
           model.updateAll(data.content, true);
@@ -179,8 +180,8 @@
       function refresh(pageNum) {
         var parsedNum = parseInt(pageNum);
         parsedNum = isNaN(parsedNum) ? 0 : parsedNum;
-        var pageable = {"page.page": parsedNum, "page": parsedNum};
-        filterModel && filterModel.sort && filterModel.sort() 
+        var pageable = {"page.page": parsedNum, "page": parsedNum == 0 ? 0 : parsedNum - 1};
+        filterModel && filterModel.sort && filterModel.sort()
         && (pageable["page.sort"] = filterModel.sort(), pageable["sort"] = filterModel.sort());
         ajax(filterModel, pageable, function(data) {
           container.empty();
@@ -218,7 +219,7 @@
               + ", recommended fix: make pageNum first argument, now replacing pageNum by 0");
             pageNum = 0;
           }
-          var pageable = {"page.page": pageNum, "page": pageNum};
+          var pageable = {"page.page": pageNum, "page": parsedNum == 0 ? 0 : parsedNum - 1};
           useSorting && sort && (pageable["page.sort"] = sort, pageable["sort"] = sort);
           ajax(pageable, function(data) {
             container.empty();
