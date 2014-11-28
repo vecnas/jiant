@@ -41,6 +41,7 @@
  xl.0.35 bindList accepts one more param, subscribeForUpdates, to subscribe template for model data updates
  xl.0.36 latest Spring compatible pageable request, added "page" and "sort", still compatible with previous version
  xl.0.37 "page" passed as val-1, for PageableHandlerMethodArgumentResolver 0-based compatiblity
+ xl.0.38 pseudoDropdown(ctl, dropPanel, dropContainer, optionTm) added for styled select behaviour emulation
  */
 
 (function() {
@@ -50,7 +51,7 @@
   var tmpJiantXl = {
 
     version: function() {
-      return 37;
+      return 38;
     },
 
     ctl2state: function(ctl, state, selectedCssClass, goProxy) {
@@ -189,7 +190,7 @@
           $.each(data.content, function(idx, item) {
             var row = template.parseTemplate(item);
             container.append(row);
-            perItemCb && perItemCb(item, row);
+            perItemCb && perItemCb(item, row, idx);
           });
           pager && pager.updatePager(data);
           onCompleteCb && onCompleteCb(data);
@@ -321,6 +322,43 @@
         }
       }
       return new Impl(allSelector);
+    },
+
+    pseudoDropdown: function(ctl, label, dropPanel, dropContainer, optionTm) {
+      var selectedVal;
+      ctl.click(function() {
+        ctl.toggleClass("pseudoDropped");
+        dropPanel.toggleClass("pseudoDropped");
+      });
+      function val(_val, title) {
+        if (arguments.length == 0) {
+          return selectedVal;
+        } else {
+          selectedVal = _val;
+          label && label.html(title);
+          ctl.trigger("change", selectedVal);
+        }
+      }
+      return {
+        add: function(_val, title, selected) {
+          var elem = optionTm.parseTemplate(_val);
+          if (Object.prototype.toString.call(_val) == "[object String]" && title) {
+            elem.html(title);
+          }
+          dropContainer.append(elem);
+          elem.click(function() {
+            val(_val, title);
+          });
+          selected && val(_val, title);
+        },
+        change: function(arg) {
+          ctl.change(arg);
+        },
+        empty: function() {
+          dropContainer.empty();
+        },
+        val: val
+      }
     },
 
     pseudoSelect: function(arrElems, arrVals, cb, selectedIdx, selectClass) {
