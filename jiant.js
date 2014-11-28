@@ -47,6 +47,7 @@
  1.58: double intlProxy for views nlabel fixed
  1.59: usage of templates nlabel inside of ["intl"] dependency fixed
  1.60: asMap() and data() added to model collection functions
+ 1.61: templates data() field overlap fixed
  */
 (function() {
   var
@@ -859,6 +860,7 @@
                 //skipping, app meta info
               } else if (elemType === jiant.data) {
                 //skipping, data function
+                tmContent[componentId] = {jiant_data: 1};
                 tmContent[componentId].customRenderer = function(obj, elem, val, isUpdate, viewOrTemplate) {
                   viewOrTemplate[componentId](val);
                 };
@@ -888,7 +890,7 @@
           root[tmId].parseTemplate = function(data, subscribeForUpdates) {
             var retVal = $("<!-- -->" + parseTemplate(tm, data, tmId)); // add comment to force jQuery to read it as HTML fragment
             $.each(tmContent, function (elem, elemType) {
-              if (elemType === jiant.data) {
+              if (elemType.jiant_data) {
                 retVal[elem] = function(val) {
                   if (arguments.length == 0) {
                     return retVal.attr("data-" + elem);
@@ -2095,7 +2097,7 @@
       }
 
       function version() {
-        return 160;
+        return 161;
       }
 
       return {
