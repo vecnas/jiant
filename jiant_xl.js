@@ -42,6 +42,7 @@
  xl.0.36 latest Spring compatible pageable request, added "page" and "sort", still compatible with previous version
  xl.0.37 "page" passed as val-1, for PageableHandlerMethodArgumentResolver 0-based compatiblity
  xl.0.38 pseudoDropdown(ctl, dropPanel, dropContainer, optionTm) added for styled select behaviour emulation
+ xl.0.39 minor updates
  */
 
 (function() {
@@ -51,7 +52,7 @@
   var tmpJiantXl = {
 
     version: function() {
-      return 38;
+      return 39;
     },
 
     ctl2state: function(ctl, state, selectedCssClass, goProxy) {
@@ -363,10 +364,11 @@
 
     pseudoSelect: function(arrElems, arrVals, cb, selectedIdx, selectClass) {
       function Impl() {
-        var selectedElem, selectedVal, selectClass;
+        var selectedElem, selectedVal, selectClass, defaultCb = cb;
         return {
           add: function(elem, val, cb, selected) {
             elem = $(elem);
+            cb = cb || defaultCb;
             elem.click(function() {
               var prevElem = selectedElem, prevVal = selectedVal;
               selectedVal = val;
