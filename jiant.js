@@ -48,6 +48,7 @@
  1.59: usage of templates nlabel inside of ["intl"] dependency fixed
  1.60: asMap() and data() added to model collection functions
  1.61: templates data() field overlap fixed
+ 1.62: i18n (http://i18next.com/) integration for intl logic, via setting "i18n: true" logic field
  */
 (function() {
   var
@@ -1780,7 +1781,6 @@
       }
 
       function loadIntl(intlRoot) {
-//        jiant.logInfo("Loading intl: ", intlRoot);
         if (! intlRoot.url) {
           error("Intl data url not provided, internationalization will not be loaded");
           return;
@@ -1788,12 +1788,22 @@
         intlRoot.t = function(val) {};
         intlRoot.t.spec = true;
         intlRoot.t.empty = true;
+        logInfo(intlRoot);
         $.getJSON(intlRoot.url, function(data) {
           var implSpec = {};
+          if (intlRoot.i18n) {
+            var option = {
+              customLoad: function(lng, ns, options, loadComplete) {
+                 loadComplete(null, data);
+              },
+              interpolationPrefix: '{',
+              interpolationSuffix: '}'
+            };
+            i18n.init(option);
+          }
           $.each(intlRoot, function(fname, fspec) {
             if (fspec.spec) {
-              implSpec[fname] = implementIntlFunction(fname, fspec, data);
-//              info("intl implementation assigned to ", fname);
+              implSpec[fname] = intlRoot.i18n ? implementIntlFunctionWithI18N(fname, fspec, data) : implementIntlFunction(fname, fspec, data);
             }
           });
           intlRoot.implement(implSpec);
@@ -1808,20 +1818,39 @@
         return key;
       }
 
-      function implementIntlFunction(fname, fspec, data) {
+      function ensureIntlKey(data, key) {
+        data[key] || jiant.error("Not found translation for key: ", key);
+      }
+
+      function implementIntlFunctionWithI18N(fname, fspec, data) {
         if (fname == "t") {
           return function(key) {
-            return prepareTranslation(key, data[key]);
+            var args = {};
+            arguments && $.each(arguments, function(i, a) {i > 0 && (args["" + (i - 1)] = a)});
+            ensureIntlKey(data, key);
+            jiant.logInfo(key, args);
+            return i18n.t(key, args);
           }
         } else if (fspec.empty) {
-          if (! fspec.params) {
-            return function() {
-              return prepareTranslation(fname, data[fname]);
-            }
-          } else {
-            return function(param) {
-              return prepareTranslation(fname + param, data[fname + param]);
-            }
+          return function() {
+            var args = {};
+            arguments && $.each(arguments, function(i, a) {args["" + i] = a});
+            ensureIntlKey(data, fname);
+            jiant.logInfo(fname, args);
+            return i18n.t(fname, args);
+          }
+        } else {
+          return fspec;
+        }
+      }
+
+      function implementIntlFunction(fname, fspec, data) {
+        var impl = function(key) {return prepareTranslation(key, data[key])};
+        if (fname == "t") {
+          return impl
+        } else if (fspec.empty) {
+          return function() {
+            return impl(fname);
           }
         } else {
           return fspec;
@@ -2097,7 +2126,7 @@
       }
 
       function version() {
-        return 161;
+        return 162;
       }
 
       return {
