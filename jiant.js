@@ -49,6 +49,8 @@
  1.60: asMap() and data() added to model collection functions
  1.61: templates data() field overlap fixed
  1.62: i18n (http://i18next.com/) integration for intl logic, via setting "i18n: true" logic field
+ 1.63: i18n integration supports java-style {0} and i18n style __varname__ substs, switched by javaSubst option on intl logic
+ 1.64: parseTemplate one more arg, reverseBind, for reverse binding on propagate: function(data, subscribeForUpdates, reverseBind)
  */
 (function() {
   var
@@ -888,7 +890,7 @@
             }
           });
           ensureExists(prefix, appRoot.dirtyList, tm, prefix + tmId);
-          root[tmId].parseTemplate = function(data, subscribeForUpdates) {
+          root[tmId].parseTemplate = function(data, subscribeForUpdates, reverseBind) {
             var retVal = $("<!-- -->" + parseTemplate(tm, data, tmId)); // add comment to force jQuery to read it as HTML fragment
             $.each(tmContent, function (elem, elemType) {
               if (elemType.jiant_data) {
@@ -907,7 +909,7 @@
             });
             retVal.splice(0, 1); // remove first comment
             retVal.propagate = makePropagationFunction(tmId, tmContent, retVal, retVal);
-            data && retVal.propagate(data, !!subscribeForUpdates);
+            data && retVal.propagate(data, !!subscribeForUpdates, !!reverseBind);
             retVal._jiantSpec = root[tmId];
             $.each(listeners, function(i, l) {l.parsedTemplate && l.parsedTemplate(appRoot, root, tmId, root[tmId], data, retVal)});
             return retVal;
@@ -1795,15 +1797,17 @@
             var option = {
               customLoad: function(lng, ns, options, loadComplete) {
                  loadComplete(null, data);
-              },
-              interpolationPrefix: '{',
-              interpolationSuffix: '}'
+              }
             };
+            if (intlRoot.javaSubst) {
+              option.interpolationPrefix = '{';
+              option.interpolationSuffix = '}';
+            }
             i18n.init(option);
           }
           $.each(intlRoot, function(fname, fspec) {
             if (fspec.spec) {
-              implSpec[fname] = intlRoot.i18n ? implementIntlFunctionWithI18N(fname, fspec, data) : implementIntlFunction(fname, fspec, data);
+              implSpec[fname] = intlRoot.i18n ? implementIntlFunctionWithI18N(fname, fspec, data, intlRoot.javaSubst) : implementIntlFunction(fname, fspec, data);
             }
           });
           intlRoot.implement(implSpec);
@@ -1822,21 +1826,32 @@
         data[key] || jiant.error("Not found translation for key: ", key);
       }
 
-      function implementIntlFunctionWithI18N(fname, fspec, data) {
+      function implementIntlFunctionWithI18N(fname, fspec, data, javaSubst) {
         if (fname == "t") {
           return function(key) {
             var args = {};
-            arguments && $.each(arguments, function(i, a) {i > 0 && (args["" + (i - 1)] = a)});
+            if (arguments) {
+              if (javaSubst) {
+                $.each(arguments, function(i, a) {i > 0 && (args["" + (i - 1)] = a)});
+              } else {
+                args = arguments[1];
+              }
+            }
             ensureIntlKey(data, key);
-            jiant.logInfo(key, args);
             return i18n.t(key, args);
           }
         } else if (fspec.empty) {
           return function() {
             var args = {};
-            arguments && $.each(arguments, function(i, a) {args["" + i] = a});
+            if (arguments) {
+              if (javaSubst) {
+                $.each(arguments, function(i, a) {args["" + i] = a});
+              } else {
+                var paramNames = getParamNames(fspec);
+                $.each(arguments, function(i, a) {i > 0 && i < paramNames.length && (args[paramNames[i]] = a)});
+              }
+            }
             ensureIntlKey(data, fname);
-            jiant.logInfo(fname, args);
             return i18n.t(fname, args);
           }
         } else {
@@ -2126,7 +2141,7 @@
       }
 
       function version() {
-        return 162;
+        return 164;
       }
 
       return {
