@@ -43,6 +43,7 @@
  xl.0.37 "page" passed as val-1, for PageableHandlerMethodArgumentResolver 0-based compatiblity
  xl.0.38 pseudoDropdown(ctl, dropPanel, dropContainer, optionTm) added for styled select behaviour emulation
  xl.0.39 minor updates
+ xl.0.40 bindList, one more argument: reversePropagate - for reverse propagate binding
  */
 
 (function() {
@@ -52,7 +53,7 @@
   var tmpJiantXl = {
 
     version: function() {
-      return 39;
+      return 40;
     },
 
     ctl2state: function(ctl, state, selectedCssClass, goProxy) {
@@ -120,11 +121,12 @@
       };
     },
 
-    bindList: function(model, container, template, viewFieldSetterName, sortFn, subscribeForUpdates) {
+    bindList: function(model, container, template, viewFieldSetterName, sortFn, subscribeForUpdates, reversePropagate) {
       function renderObj(obj) {
         var tm = $.isFunction(template) ? template(obj) : template,
-            view = tm.parseTemplate(obj, subscribeForUpdates),
+            view = tm.parseTemplate(obj),
             appended = false;
+        (subscribeForUpdates || reversePropagate) && view.propagate(obj, subscribeForUpdates, reversePropagate);
         if (viewFieldSetterName && sortFn && $.isFunction(sortFn) && model.all) {
           $.each(model.all(), function(i, item) {
             var order = sortFn(obj, item);
