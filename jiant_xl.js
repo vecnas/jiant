@@ -124,9 +124,8 @@
     bindList: function(model, container, template, viewFieldSetterName, sortFn, subscribeForUpdates, reversePropagate) {
       function renderObj(obj) {
         var tm = $.isFunction(template) ? template(obj) : template,
-            view = tm.parseTemplate(obj),
+            view = tm.parseTemplate(obj, subscribeForUpdates, reversePropagate),
             appended = false;
-        (subscribeForUpdates || reversePropagate) && view.propagate(obj, subscribeForUpdates, reversePropagate);
         if (viewFieldSetterName && sortFn && $.isFunction(sortFn) && model.all) {
           $.each(model.all(), function(i, item) {
             var order = sortFn(obj, item);
