@@ -51,13 +51,14 @@
  1.62: i18n (http://i18next.com/) integration for intl logic, via setting "i18n: true" logic field
  1.63: i18n integration supports java-style {0} and i18n style __varname__ substs, switched by javaSubst option on intl logic
  1.64: parseTemplate one more arg, reverseBind, for reverse binding on propagate: function(data, subscribeForUpdates, reverseBind)
+ 1.65: "impl" field added to views and templates, to specify implementation inline, like appView: { impl: "<div><span class="_container" ..., inputInt enhanced
  */
 (function() {
   var
     DefaultUiFactory = function() {
 
-      function view(prefix, viewId) {
-        return $("#" + prefix + viewId);
+      function view(prefix, viewId, viewContent) {
+        return viewContent.impl ? $(viewContent.impl) : $("#" + prefix + viewId);
       }
 
       function viewComponent(viewElem, viewId, prefix, componentId, componentContent) {
@@ -65,7 +66,7 @@
       }
 
       function template(prefix, tmId, tmContent) {
-        return $("#" + prefix + tmId);
+        return tmContent.impl ? $(tmContent.impl) : $("#" + prefix + tmId);
       }
 
       return {
@@ -293,6 +294,27 @@
             || event.keyCode == jiant.key.home || event.keyCode == jiant.key.tab || event.keyCode == jiant.key.enter) {
             input.val(fit(input.valInt(), input.j_valMin, input.j_valMax));
           } else if (event.shiftKey || (event.keyCode < 48 || event.keyCode > 57) && (event.keyCode < 96 || event.keyCode > 105 )) {
+            event.preventDefault();
+            return false;
+          } else {
+            input.val(fit(input.valInt(), input.j_valMin, input.j_valMax));
+          }
+          return true;
+        });
+        input.keyup(function(event) {
+          if (event.keyCode == jiant.key.down && input.val() > 0) {
+            input.val(fit(input.valInt() - 1, input.j_valMin, input.j_valMax));
+            input.trigger("change");
+            return false;
+          } else if (event.keyCode == jiant.key.up) {
+            input.val(fit(input.valInt() + 1, input.j_valMin, input.j_valMax));
+            input.trigger("change");
+            return false;
+          } else if (event.keyCode == jiant.key.backspace || event.keyCode == jiant.key.del
+            || event.keyCode == jiant.key.end || event.keyCode == jiant.key.left || event.keyCode == jiant.key.right
+            || event.keyCode == jiant.key.home || event.keyCode == jiant.key.tab || event.keyCode == jiant.key.enter) {
+            input.val(fit(input.valInt(), input.j_valMin, input.j_valMax));
+          } else if ((event.keyCode < 48 || event.keyCode > 57 && event.keyCode < 96 || event.keyCode > 105) && !event.ctrlKey) {
             event.preventDefault();
             return false;
           } else {
@@ -562,7 +584,7 @@
         var viewSpec = {};
         $.each(viewContent, function (componentId, componentContent) {
           viewSpec[componentId] = componentId;
-          if (componentId != "appPrefix") {
+          if (componentId != "appPrefix" && componentId != "impl") {
             if (viewRoot[componentId] === jiant.lookup) {
               jiant.logInfo("    loookup element, no checks/bindings: " + componentId);
               viewRoot[componentId] = function() {return viewElem.find("." + prefix + componentId);};
@@ -813,7 +835,7 @@
       function _bindViews(appRoot, root, pfx, appUiFactory) {
         $.each(root, function(viewId, viewContent) {
           var prefix = viewContent.appPrefix ? viewContent.appPrefix : (pfx ? pfx : ""),
-            view = appUiFactory.view(prefix, viewId),
+            view = appUiFactory.view(prefix, viewId, viewContent),
             viewOk = ensureExists(prefix, appRoot.dirtyList, view, prefix + viewId);
           viewOk && _bindContent(appRoot, root[viewId], viewId, viewContent, view, prefix);
           ensureSafeExtend(root[viewId], view);
@@ -855,7 +877,7 @@
           var prefix = tmContent.appPrefix ? tmContent.appPrefix : (pfx ? pfx : ""),
             tm = appUiFactory.template(prefix, tmId, tmContent);
           $.each(tmContent, function (componentId, elemType) {
-            if (componentId != "appPrefix") {
+            if (componentId != "appPrefix" && componentId != "impl") {
               if (elemType === jiant.lookup) {
                 jiant.logInfo("    loookup element, no checks/bindings: " + componentId);
                 tmContent[componentId] = function() {return tmContent.find("." + prefix + componentId);};
@@ -2141,7 +2163,7 @@
       }
 
       function version() {
-        return 164;
+        return 165;
       }
 
       return {
