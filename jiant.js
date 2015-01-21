@@ -52,6 +52,7 @@
  1.63: i18n integration supports java-style {0} and i18n style __varname__ substs, switched by javaSubst option on intl logic
  1.64: parseTemplate one more arg, reverseBind, for reverse binding on propagate: function(data, subscribeForUpdates, reverseBind)
  1.65: "impl" field added to views and templates, to specify implementation inline, like appView: { impl: "<div><span class="_container" ..., inputInt enhanced
+ 1.66: pager now adds class totalPages_N, N - is amount of total pages, for better styling
  */
 (function() {
   var
@@ -470,7 +471,8 @@
       function setupPager(uiElem) {
         var pagerBus = $({}),
           root = $("<ul></ul>"),
-          lastPage = 0;
+          lastPage = 0,
+            lastTotalCls;
         root.addClass("pagination");
         uiElem.append(root);
         uiElem.onValueChange = function(callback) {
@@ -481,6 +483,9 @@
         };
         uiElem.updatePager = function(page) {
           root.empty();
+          lastTotalCls && root.removeClass(lastTotalCls);
+          lastTotalCls = "totalPages_" + page.totalPages;
+          root.addClass(lastTotalCls);
           var from = Math.max(0, page.number - jiant.PAGER_RADIUS / 2),
             to = Math.min(page.number + jiant.PAGER_RADIUS / 2, page.totalPages);
           if (from > 0) {
@@ -2163,7 +2168,7 @@
       }
 
       function version() {
-        return 165;
+        return 166;
       }
 
       return {
