@@ -53,6 +53,7 @@
  1.64: parseTemplate one more arg, reverseBind, for reverse binding on propagate: function(data, subscribeForUpdates, reverseBind)
  1.65: "impl" field added to views and templates, to specify implementation inline, like appView: { impl: "<div><span class="_container" ..., inputInt enhanced
  1.66: pager now adds class totalPages_N, N - is amount of total pages, for better styling
+ 1.67: inputInt and inputFloat fix
  */
 (function() {
   var
@@ -290,42 +291,13 @@
             input.val(fit(input.valInt() + 1, input.j_valMin, input.j_valMax));
             input.trigger("change");
             return false;
-          } else if (event.keyCode == jiant.key.backspace || event.keyCode == jiant.key.del
-            || event.keyCode == jiant.key.end || event.keyCode == jiant.key.left || event.keyCode == jiant.key.right
-            || event.keyCode == jiant.key.home || event.keyCode == jiant.key.tab || event.keyCode == jiant.key.enter) {
+          } else if ( event.keyCode == jiant.key.end || event.keyCode == jiant.key.home || event.keyCode == jiant.key.tab || event.keyCode == jiant.key.enter) {
             input.val(fit(input.valInt(), input.j_valMin, input.j_valMax));
-          } else if (event.shiftKey || (event.keyCode < 48 || event.keyCode > 57) && (event.keyCode < 96 || event.keyCode > 105 )) {
+          } else if (!event.ctrlKey && !event.shiftKey && (event.keyCode != jiant.key.backspace && event.keyCode != jiant.key.del && event.keyCode != jiant.key.left && event.keyCode != jiant.key.right && event.keyCode < 48 || event.keyCode > 57) && (event.keyCode < 96 || event.keyCode > 105 )) {
             event.preventDefault();
             return false;
-          } else {
-            input.val(fit(input.valInt(), input.j_valMin, input.j_valMax));
           }
           return true;
-        });
-        input.keyup(function(event) {
-          if (event.keyCode == jiant.key.down && input.val() > 0) {
-            input.val(fit(input.valInt() - 1, input.j_valMin, input.j_valMax));
-            input.trigger("change");
-            return false;
-          } else if (event.keyCode == jiant.key.up) {
-            input.val(fit(input.valInt() + 1, input.j_valMin, input.j_valMax));
-            input.trigger("change");
-            return false;
-          } else if (event.keyCode == jiant.key.backspace || event.keyCode == jiant.key.del
-            || event.keyCode == jiant.key.end || event.keyCode == jiant.key.left || event.keyCode == jiant.key.right
-            || event.keyCode == jiant.key.home || event.keyCode == jiant.key.tab || event.keyCode == jiant.key.enter) {
-            input.val(fit(input.valInt(), input.j_valMin, input.j_valMax));
-          } else if ((event.keyCode < 48 || event.keyCode > 57 && event.keyCode < 96 || event.keyCode > 105) && !event.ctrlKey) {
-            event.preventDefault();
-            return false;
-          } else {
-            input.val(fit(input.valInt(), input.j_valMin, input.j_valMax));
-          }
-          return true;
-        });
-        input.change(function(event) {
-          input.val(fit(input.valInt(), input.j_valMin, input.j_valMax));
-          return false;
         });
         input.valInt = function() {
           var val = parseInt(input.val());
@@ -355,15 +327,11 @@
             return false;
           } else if (event.keyCode == jiant.key.dot || event.keyCode == jiant.key.dotExtra) {
             return (input.val().indexOf(".") < 0) && input.val().length > 0;
-          } else if (event.keyCode == jiant.key.backspace || event.keyCode == jiant.key.del
-            || event.keyCode == jiant.key.end || event.keyCode == jiant.key.left || event.keyCode == jiant.key.right
-            || event.keyCode == jiant.key.home || event.keyCode == jiant.key.tab || event.keyCode == jiant.key.enter) {
+          } else if ( event.keyCode == jiant.key.end || event.keyCode == jiant.key.home || event.keyCode == jiant.key.tab || event.keyCode == jiant.key.enter) {
             input.val(fit(input.valFloat(), input.j_valMin, input.j_valMax));
-          } else if (event.shiftKey || (event.keyCode < 48 || event.keyCode > 57) && (event.keyCode < 96 || event.keyCode > 105 )) {
+          } else if (!event.ctrlKey && !event.shiftKey && (event.keyCode != jiant.key.backspace && event.keyCode != jiant.key.del && event.keyCode != jiant.key.left && event.keyCode != jiant.key.right && event.keyCode < 48 || event.keyCode > 57) && (event.keyCode < 96 || event.keyCode > 105 )) {
             event.preventDefault();
             return false;
-          } else {
-            input.val(fit(input.val(), input.j_valMin, input.j_valMax));
           }
           return true;
         });
@@ -2168,7 +2136,7 @@
       }
 
       function version() {
-        return 166;
+        return 167;
       }
 
       return {
