@@ -54,6 +54,7 @@
  1.65: "impl" field added to views and templates, to specify implementation inline, like appView: { impl: "<div><span class="_container" ..., inputInt enhanced
  1.66: pager now adds class totalPages_N, N - is amount of total pages, for better styling
  1.67: inputInt and inputFloat fix
+ 1.68: submitForm uses ajax errorHandler for errors notifications
  */
 (function() {
   var
@@ -368,7 +369,8 @@
             type: "POST",
             url: url,
             data: elem.serialize(),
-            success: cb
+            success: cb,
+            error: function (jqXHR, textStatus, errorText) {jiant.handleErrorFn(jqXHR.responseText)}
           };
           if (appRoot.crossDomain) {
             data.contentType = "application/json";
@@ -2136,7 +2138,7 @@
       }
 
       function version() {
-        return 167;
+        return 168;
       }
 
       return {
