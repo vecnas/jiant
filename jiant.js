@@ -55,6 +55,7 @@
  1.66: pager now adds class totalPages_N, N - is amount of total pages, for better styling
  1.67: inputInt and inputFloat fix
  1.68: submitForm uses ajax errorHandler for errors notifications
+ 1.69: return false from .on handler to stop immediate event propagation
  */
 (function() {
   var
@@ -938,12 +939,15 @@
       function assignOnOffHandlers(obj, eventName, fname, eventObject) {
         eventObject = eventObject ? eventObject : obj[modelInnerDataField];
         var fn = function (cb) {
-            var handler = function () {
+            var handler = function (evt) {
 //              jiant.logError(eventName + " " + fname, eventObject);
               var args = $.makeArray(arguments);
               args.splice(0, 1);
               //        args.splice(0, 2);
-              cb && cb.apply(cb, args);
+              var res = cb && cb.apply(cb, args);
+              if (res === false) {
+                evt.stopImmediatePropagation();
+              }
             };
             (fname ? obj[fname] : obj).listenersCount++;
 //            jiant.logError("adding for " + eventName + " " + fname);
@@ -2138,7 +2142,7 @@
       }
 
       function version() {
-        return 168;
+        return 169;
       }
 
       return {
