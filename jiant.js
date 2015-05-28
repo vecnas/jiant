@@ -56,6 +56,7 @@
  1.67: inputInt and inputFloat fix
  1.68: submitForm uses ajax errorHandler for errors notifications
  1.69: return false from .on handler to stop immediate event propagation
+ 1.70: minor import logic related fixes 
  */
 (function() {
   var
@@ -1279,7 +1280,7 @@
 
       function logUnboundCount(appId, name) {
         var len = 0;
-        $.each(awaitingDepends[appId], function() {len++});
+        awaitingDepends[appId] && $.each(awaitingDepends[appId], function() {len++});
         $.each(listeners, function(i, l) {l.logicImplemented && l.logicImplemented(appId, name, len)});
       }
 
@@ -1322,7 +1323,7 @@
 
       function copyLogic(appId, name) {
         var obj = externalModules[name];
-        if (obj && awaitingDepends[appId][name] && uiBoundRoot[appId]) {
+        if (obj && awaitingDepends[appId] && awaitingDepends[appId][name] && uiBoundRoot[appId]) {
           uiBoundRoot[appId].logic || (uiBoundRoot[appId].logic = {});
           uiBoundRoot[appId].logic[name] || (uiBoundRoot[appId].logic[name] = {});
           $.each($.isFunction(obj) ? obj($, uiBoundRoot[appId]) : obj, function(fname, fspec) {
@@ -2142,7 +2143,7 @@
       }
 
       function version() {
-        return 169;
+        return 170;
       }
 
       return {
