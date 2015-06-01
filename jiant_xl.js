@@ -44,6 +44,7 @@
  xl.0.38 pseudoDropdown(ctl, dropPanel, dropContainer, optionTm) added for styled select behaviour emulation
  xl.0.39 minor updates
  xl.0.40 bindList, one more argument: reversePropagate - for reverse propagate binding
+ xl.0.41 bindList, one more argument: dontAddToDom = to completely pass dom manipulations to customRenderer
  */
 
 (function() {
@@ -53,7 +54,7 @@
   var tmpJiantXl = {
 
     version: function() {
-      return 40;
+      return 41;
     },
 
     ctl2state: function(ctl, state, selectedCssClass, goProxy) {
@@ -121,7 +122,7 @@
       };
     },
 
-    bindList: function(model, container, template, viewFieldSetterName, sortFn, subscribeForUpdates, reversePropagate) {
+    bindList: function(model, container, template, viewFieldSetterName, sortFn, subscribeForUpdates, reversePropagate, dontAddToDom) {
       function renderObj(obj) {
         var tm = $.isFunction(template) ? template(obj) : template,
             view = tm.parseTemplate(obj, subscribeForUpdates, reversePropagate),
@@ -130,16 +131,16 @@
           $.each(model.all(), function(i, item) {
             var order = sortFn(obj, item);
             if (item[viewFieldSetterName] && item[viewFieldSetterName]() && order < 0) {
-              view.insertBefore(item[viewFieldSetterName]()[0]);
+              !dontAddToDom && view.insertBefore(item[viewFieldSetterName]()[0]);
               appended = true;
               return false;
             }
           });
         }
-        if (!appended) {
+        if (!dontAddToDom && !appended) {
           container.append(view);
         }
-        viewFieldSetterName && $.isFunction(obj[viewFieldSetterName]) && obj[viewFieldSetterName](view);
+        !dontAddToDom && viewFieldSetterName && $.isFunction(obj[viewFieldSetterName]) && obj[viewFieldSetterName](view);
       }
       return function() {
         model.add && model.add.on(function(arr) {
@@ -148,7 +149,7 @@
           });
         });
         model.remove && model.remove.on(function(obj) {
-          obj[viewFieldSetterName]().remove();
+          !dontAddToDom && obj[viewFieldSetterName]().remove();
         });
       };
     },
