@@ -45,6 +45,7 @@
  xl.0.39 minor updates
  xl.0.40 bindList, one more argument: reversePropagate - for reverse propagate binding
  xl.0.41 bindList, one more argument: dontAddToDom = to completely pass dom manipulations to customRenderer
+ xl.0.42: bindList, dontAddToDom replaced by elemFactory({create: fn, remove: fn} - to produce and attach element, by default parses template and attaches to DOM
  */
 
 (function() {
@@ -54,7 +55,7 @@
   var tmpJiantXl = {
 
     version: function() {
-      return 41;
+      return 42;
     },
 
     ctl2state: function(ctl, state, selectedCssClass, goProxy) {
@@ -122,25 +123,27 @@
       };
     },
 
-    bindList: function(model, container, template, viewFieldSetterName, sortFn, subscribeForUpdates, reversePropagate, dontAddToDom) {
+    bindList: function(model, container, template, viewFieldSetterName, sortFn, subscribeForUpdates, reversePropagate, elemFactory) {
       function renderObj(obj) {
         var tm = $.isFunction(template) ? template(obj) : template,
-            view = tm.parseTemplate(obj, subscribeForUpdates, reversePropagate),
+            view = elemFactory ? elemFactory.create(obj, subscribeForUpdates, reversePropagate)
+                : tm.parseTemplate(obj, subscribeForUpdates, reversePropagate),
             appended = false;
+        viewFieldSetterName = viewFieldSetterName || "viewFieldSetterXL";
         if (viewFieldSetterName && sortFn && $.isFunction(sortFn) && model.all) {
           $.each(model.all(), function(i, item) {
             var order = sortFn(obj, item);
             if (item[viewFieldSetterName] && item[viewFieldSetterName]() && order < 0) {
-              !dontAddToDom && view.insertBefore(item[viewFieldSetterName]()[0]);
+              !elemFactory && view.insertBefore(item[viewFieldSetterName]()[0]);
               appended = true;
               return false;
             }
           });
         }
-        if (!dontAddToDom && !appended) {
-          container.append(view);
+        if (!appended) {
+          !elemFactory && container.append(view);
         }
-        !dontAddToDom && viewFieldSetterName && $.isFunction(obj[viewFieldSetterName]) && obj[viewFieldSetterName](view);
+        viewFieldSetterName && $.isFunction(obj[viewFieldSetterName]) && obj[viewFieldSetterName](view);
       }
       return function() {
         model.add && model.add.on(function(arr) {
@@ -149,7 +152,7 @@
           });
         });
         model.remove && model.remove.on(function(obj) {
-          !dontAddToDom && obj[viewFieldSetterName]().remove();
+          elemFactory ? elemFactory.remove(obj[viewFieldSetterName]()) : obj[viewFieldSetterName]().remove();
         });
       };
     },
