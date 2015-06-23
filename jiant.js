@@ -56,7 +56,8 @@
  1.67: inputInt and inputFloat fix
  1.68: submitForm uses ajax errorHandler for errors notifications
  1.69: return false from .on handler to stop immediate event propagation
- 1.70: minor import logic related fixes 
+ 1.70: minor import logic related fixes
+ 1.71: semaphores added, for flags set/wait; semaphore.release() and semaphore.on(cb)
  */
 (function() {
   var
@@ -1352,6 +1353,33 @@
         });
       }
 
+// ------------ semaphores staff ----------------
+
+      function _bindSemaphores(appRoot, semaphores, appId) {
+        $.each(semaphores, function(name, spec) {
+          semaphores[name].release = function() {
+            if (semaphores[name].released) {
+              logError("re-releasing semaphore already released, ignoring: " + appId + ".semaphores." + name);
+              return;
+            }
+            semaphores[name].released = true;
+            semaphores[name].releasedArgs = arguments;
+            eventBus.trigger(appId + "." + name + ".semaphore", arguments);
+          };
+          semaphores[name].on = function(cb) {
+            if (semaphores[name].released) {
+              cb && cb.apply(cb, semaphores[name].releasedArgs);
+            } else {
+              eventBus.on(appId + "." + name + ".semaphore", function() {
+                var args = $.makeArray(arguments);
+                args.splice(0, 1);
+                cb && cb.apply(cb, args);
+              });
+            }
+          };
+        });
+      }
+
 // ------------ events staff ----------------
 
       function _bindEvents(appRoot, events, appId) {
@@ -1361,7 +1389,6 @@
             eventBus.trigger(appId + name + ".event", arguments);
           };
           events[name].on = function (cb) {
-            var trace;
             events[name].listenersCount++;
             eventBus.on(appId + name + ".event", function () {
               var args = $.makeArray(arguments);
@@ -1882,23 +1909,6 @@
         }
       }
 
-      function maybeSetDebugModeFromQueryString() {
-        /*
-         if ((window.location + "").toLowerCase().indexOf("jiant.debug_events") >= 0) {
-         jiant.DEBUG_MODE.events = 1;
-         }
-         if ((window.location + "").toLowerCase().indexOf("jiant.debug_states") >= 0) {
-         jiant.DEBUG_MODE.states = 1;
-         }
-         if ((window.location + "").toLowerCase().indexOf("jiant.debug_ajax") >= 0) {
-         jiant.DEBUG_MODE.ajax = 1;
-         }
-         if ((window.location + "").toLowerCase().indexOf("jiant.debug_data") >= 0) {
-         jiant.DEBUG_MODE.data = 1;
-         }
-         */
-      }
-
       function maybeShort(root, full, shorten) {
         if (root[full]) {
           return true;
@@ -1914,7 +1924,6 @@
       function _bindUi(prefix, root, devMode, appUiFactory) {
         jiant.DEV_MODE = devMode;
         ! devMode && maybeSetDevModeFromQueryString();
-        maybeSetDebugModeFromQueryString();
         errString = "";
         bindingsResult = true;
         var appId = (root.id ? root.id : "no_app_id");
@@ -1932,6 +1941,7 @@
         maybeShort(root, "templates", "t") && _bindTemplates(root, root.templates, prefix, appUiFactory);
         maybeShort(root, "ajax", "a") && _bindAjax(root, root.ajax, root.ajaxPrefix, root.ajaxSuffix, root.crossDomain);
         maybeShort(root, "events", "e") && _bindEvents(root, root.events, appId);
+        maybeShort(root, "semaphores", "sem") && _bindSemaphores(root, root.semaphores, appId);
         maybeShort(root, "states", "s") && _bindStates(root, root.states, root.stateExternalBase, appId);
         maybeShort(root, "models", "m") && _bindModels(root, root.models, appId);
         _bindLogic(root, root.logic, appId);
@@ -2143,7 +2153,7 @@
       }
 
       function version() {
-        return 170;
+        return 171;
       }
 
       return {
