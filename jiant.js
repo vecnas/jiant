@@ -58,6 +58,7 @@
  1.69: return false from .on handler to stop immediate event propagation
  1.70: minor import logic related fixes
  1.71: semaphores added, for flags set/wait; semaphore.release() and semaphore.on(cb)
+ 1.72: event.off added, accepts handler returned by event.on
  */
 (function() {
   var
@@ -959,6 +960,7 @@
           fnOff = function (handler) {
             (fname ? obj[fname] : obj).listenersCount--;
             var res = eventObject.off(eventName, handler);
+            return res;
           };
         if (fname) {
           obj[fname].on = fn;
@@ -1390,12 +1392,19 @@
           };
           events[name].on = function (cb) {
             events[name].listenersCount++;
-            eventBus.on(appId + name + ".event", function () {
+            var handler = eventBus.on(appId + name + ".event", function () {
               var args = $.makeArray(arguments);
               args.splice(0, 1);
               cb && cb.apply(cb, args);
             });
+            return handler;
           };
+          events[name].off = function (handler) {
+            events[name].listenersCount--;
+            var res = eventBus.off(appId + name + ".event", handler);
+            return res;
+          };
+
           $.each(listeners, function(i, l) {l.boundEvent && l.boundEvent(appRoot, events, name, events[name])});
         });
       }
@@ -2153,7 +2162,7 @@
       }
 
       function version() {
-        return 171;
+        return 172;
       }
 
       return {
