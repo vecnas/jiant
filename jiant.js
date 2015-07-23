@@ -1,64 +1,5 @@
 /*
- 1.15: reverse binding via propagate(.., .., true) - for .val elements
- 1.15.1: model function fields extracted for ajax call
- 1.16: empty state "" auto-added, if states declared
- 1.17: jiant.pager.refreshPage() added to refresh current pager page and trigger all listeners
- 1.18: cssMarker tuned, also adds both componentId_value and componentId classes, removes completely for undefined vals
- 1.19: model.data() function added, returns source data unchanged, for most lazy data usage with other model benefits
- 1.19.1: pager minor behaviour fix
- 1.20: model ajax parse fix
- 1.21: collection proxy functions added to models
- 1.22: collection functions fix - setters didn't work, now ok
- 1.23: jiant.data ctl type added for views/templates, saves provided data to data-name attribute, fld: jiant.data, view.fld() === view.attr("data-fld")
- 1.24: jiant lifecycle application listeners added, via addListener(listener)/removeListener(listener), logger separated
- 1.25: listeners methods used when available, built-in state debuggers extracted to listeners, DEBUG_MODE.states removed
- 1.26: ajax logging moved to listener, debugAjax.js
- 1.27: debugEvents removed, debugData removed, DEBUG_MODE removed, listener methods renamed
- 1.28: parsedTemplate added to listeners
- 1.29: getCurrentState now accepts application, not only id as before
- 1.30: state.start parameters now passed as integers, if they are integers
- 1.31: overlapped multiple cssMarker in templates fixed
- 1.32: obj.remove() now works, same as model.remove(obj)
- 1.33: multiple cssMarkers on single element fixed for views
- 1.34: re-commit previous fix, and removed setting of field name class in cssMarker
- 1.35: add, addAll fixed - now doing subscribers notification when all fields are set
- 1.36: non-empty model functions supported, using this. reference to refer to other object methods
- 1.37: model function add() removed, addAll() should be used instead. To avoid mess in events
- 1.38: redone of previous fix, add() remains, addAll() produces alert about need to replace it and doesn't work more
- 1.39: customRenderer(obj, elem) available for view and template instances, called once per propagate(), doesn't subscribe for updates, useful for template UI setup
- 1.40: added utility function getURLParameter(name)
- 1.41: reverse binding off for view re-propagation scenario
- 1.42: fixed external logic declaration scenario - .declare call between bind performed and dependency declared
- 1.43: .declare accepts function as 2nd parameter: jiant.declare("name", function($, app)), it should return logic implementation
- 1.44: added to jiant.image reload(url) functions
- 1.45: added new field type cssFlag, works like name_true, name_false, but sets/removes "name" css class only, without suffix
- 1.46: reverse binding for checkboxes implemented, propagate setting of non-string values for select input implemented
- 1.47: jiant.asObjArray(arr, name[, idxName]) converts [2, 3, 5] to [{name: 2}, {name: 3}, {name: 5}], optional {name:2, idxName: 0}
- 1.48: nlabel now also translates arrays, returning comma separated translations, nlabel works for templates
- 1.49: empty array considered as undefined for cssFlag
- 1.50: reverse binding for non-model fields had broken code
- 1.51: propagate(.., true) updates all customRenderers for non-standard fields on any object change
- 1.52: parseTemplate(data, subscribeForUpdates) accepts second parameter, it converted to boolean and used for propagate() call. False by default
- 1.53: autoupdate of custom renderers temporary removed due to performance issues
- 1.54: customRenderer auto updated, model spec .on works as before, single model object .on triggers only on specified object update
- 1.55: more consistent internal event fire
- 1.56: jiant.ctlHide added, hides view on click
- 1.57: by default 2nd parameter of parseTemplate() is false, while 2nd of propagate() is true, for full compatibility with previous version
- 1.58: double intlProxy for views nlabel fixed
- 1.59: usage of templates nlabel inside of ["intl"] dependency fixed
- 1.60: asMap() and data() added to model collection functions
- 1.61: templates data() field overlap fixed
- 1.62: i18n (http://i18next.com/) integration for intl logic, via setting "i18n: true" logic field
- 1.63: i18n integration supports java-style {0} and i18n style __varname__ substs, switched by javaSubst option on intl logic
- 1.64: parseTemplate one more arg, reverseBind, for reverse binding on propagate: function(data, subscribeForUpdates, reverseBind)
- 1.65: "impl" field added to views and templates, to specify implementation inline, like appView: { impl: "<div><span class="_container" ..., inputInt enhanced
- 1.66: pager now adds class totalPages_N, N - is amount of total pages, for better styling
- 1.67: inputInt and inputFloat fix
- 1.68: submitForm uses ajax errorHandler for errors notifications
- 1.69: return false from .on handler to stop immediate event propagation
- 1.70: minor import logic related fixes
- 1.71: semaphores added, for flags set/wait; semaphore.release() and semaphore.on(cb)
- 1.72: event.off added, accepts handler returned by event.on
+ 1.73: numLabel label type added, formats values as 123,456,000
  */
 (function() {
   var
@@ -133,6 +74,7 @@
         inputDate = {},
         label = {},
         nlabel = {},
+        numLabel = {},
         meta = {},
         cssMarker = {},
         cssFlag = {},
@@ -713,6 +655,8 @@
           setupImage(uiElem);
         } else if (elemContent == jiant.nlabel || elemContent.nlabelTmInner) {
           setupIntlProxies(appRoot, uiElem);
+        } else if (elemContent == jiant.numLabel || elemContent.numLabelTmInner) {
+          setupNumLabel(appRoot, uiElem);
         }
         maybeAddDevHook(uiElem, key, elem);
       }
@@ -831,6 +775,7 @@
         switch (elem) {
           case (jiant.label): return "labelTmInner";
           case (jiant.nlabel): return "nlabelTmInner";
+          case (jiant.numLabel): return "numLabelTmInner";
           case (jiant.ctl): return "ctlTmInner";
           case (jiant.ctlHide): return "ctlHideTmInner";
           case (jiant.container): return "containerTmInner";
@@ -1785,6 +1730,18 @@
         }
       }
 
+      function setupNumLabel(appRoot, uiElem) {
+        var prev = uiElem.html;
+        uiElem.html = function(val) {
+          var num = parseInt(val);
+          if (isNaN(num) || val != num + "") {
+            prev.call(uiElem, val);
+          } else {
+            prev.call(uiElem, formatMoney(num));
+          }
+        };
+      }
+
       function intlProxy(appRoot, elem, fname) {
         if (! appRoot.logic.intl) {
           error("nlabel used, but no intl declared, degrading nlabel to label");
@@ -2162,7 +2119,7 @@
       }
 
       function version() {
-        return 172;
+        return 173;
       }
 
       return {
@@ -2227,6 +2184,7 @@
         inputFloat: inputFloat,
         label: label,
         nlabel: nlabel,
+        numLabel: numLabel,
         meta: meta,
         cssFlag: cssFlag,
         cssMarker: cssMarker,
