@@ -1,5 +1,6 @@
 /*
  1.73: numLabel label type added, formats values as 123,456,000
+ 1.74: more intellectual ajax parameters parsing, with arrays and inner objects support. COULD BE BACKWARD INCOMPATIBLE!
  */
 (function() {
   var
@@ -1639,17 +1640,19 @@
         });
       }
 
-      function parseForAjaxCall(root, path, actual) {
+      function parseForAjaxCall(root, path, actual, traverse) {
         if ($.isArray(actual)) {
-          root[path] = actual;
-        } else if ($.isFunction(actual) && $.isFunction(actual.on)) { // model
+          $.each(actual, function(i, obj) {
+            parseForAjaxCall(root, path + "[" + i + "]", obj, true);
+          });
+        } else if (isModelAccessor(actual)) { // model
           root[path] = actual();
         } else if ($.isPlainObject(actual)) {
           $.each(actual, function(key, value) {
             if (actual[modelInnerDataField]) { // model
-              isModelAccessor(value) && parseForAjaxCall(root, key, value);
+              isModelAccessor(value) && parseForAjaxCall(root, (traverse ? (path + ".") : "") + key, value, true);
             } else {
-              parseForAjaxCall(root, key, value);
+              parseForAjaxCall(root, (traverse ? (path + ".") : "") + key, value, true);
             }
 //        parseForAjaxCall(root, path + "." + key, value);
           });
@@ -2119,7 +2122,7 @@
       }
 
       function version() {
-        return 173;
+        return 174;
       }
 
       return {
