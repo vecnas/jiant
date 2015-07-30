@@ -1,6 +1,7 @@
 /*
  1.73: numLabel label type added, formats values as 123,456,000
  1.74: more intellectual ajax parameters parsing, with arrays and inner objects support. COULD BE BACKWARD INCOMPATIBLE!
+ 1.75: datepicker change event triggered, undefined propagated to inputs value, model.reset(val) added to reset all fields to "val" value
  */
 (function() {
   var
@@ -645,7 +646,7 @@
         } else if (elemContent == jiant.inputFloat || elemContent.inputFloatTmInner) {
           setupInputFloat(uiElem);
         } else if ((elemContent == jiant.inputDate || elemContent.inputDateTmInner) && uiElem.datepicker) {
-          uiElem.datepicker();
+          uiElem.datepicker().on('changeDate', function() {uiElem.trigger("change")});
         } else if (elemContent == jiant.pager || elemContent.pagerTmInner) {
           setupPager(uiElem);
         } else if (elemContent == jiant.form || elemContent.formTmInner) {
@@ -741,7 +742,7 @@
           var el = $(elem[0]),
             tp = el.attr("type");
           if ($.inArray(tp, types) >= 0) {
-            val !== undefined && elem.val(val + "");
+            (val == undefined || val == null) ? elem.val(val) : elem.val(val + "");
           } else if (tp == "checkbox") {
             elem.prop("checked", !!val);
           } else if (tp == "radio") {
@@ -931,6 +932,7 @@
         spec.off || (spec.off = function(obj) {});
         spec.update || (spec.update = function(obj) {});
         spec.updateAll || (spec.updateAll = function(obj) {});
+        spec.reset || (spec.reset = function(obj) {});
         spec.add || (spec.add = function(obj) {});
         spec.remove || (spec.remove = function(obj) {});
         spec.asMap || (spec.asMap = function(obj) {});
@@ -1113,6 +1115,12 @@
               });
               obj.update(newVals);
               return newVals;
+            }
+          } else if (fname == "reset") {
+            obj[fname] = function (val) {
+              $.each(obj, function(name, fn) {
+                isModelAccessor(fn) && fn(val, true);
+              });
             }
           } else if (fname == "asMap") {
             collectionFunctions.push(fname);
@@ -2122,7 +2130,7 @@
       }
 
       function version() {
-        return 174;
+        return 175;
       }
 
       return {
