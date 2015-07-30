@@ -46,6 +46,7 @@
  xl.0.40 bindList, one more argument: reversePropagate - for reverse propagate binding
  xl.0.41 bindList, one more argument: dontAddToDom = to completely pass dom manipulations to customRenderer
  xl.0.42: bindList, dontAddToDom replaced by elemFactory({create: fn, remove: fn} - to produce and attach element, by default parses template and attaches to DOM
+ xl.0.43: bindList, no-uifield scenario
  */
 
 (function() {
@@ -55,7 +56,7 @@
   var tmpJiantXl = {
 
     version: function() {
-      return 42;
+      return 43;
     },
 
     ctl2state: function(ctl, state, selectedCssClass, goProxy) {
@@ -143,7 +144,7 @@
         if (!appended) {
           !elemFactory && container.append(view);
         }
-        viewFieldSetterName && $.isFunction(obj[viewFieldSetterName]) && obj[viewFieldSetterName](view);
+        viewFieldSetterName && $.isFunction(obj[viewFieldSetterName]) && view && obj[viewFieldSetterName](view);
       }
       return function() {
         model.add && model.add.on(function(arr) {
@@ -152,7 +153,7 @@
           });
         });
         model.remove && model.remove.on(function(obj) {
-          elemFactory ? elemFactory.remove(obj[viewFieldSetterName]()) : obj[viewFieldSetterName]().remove();
+          obj[viewFieldSetterName] && (elemFactory ? elemFactory.remove(obj[viewFieldSetterName]()) : obj[viewFieldSetterName]().remove());
         });
       };
     },
