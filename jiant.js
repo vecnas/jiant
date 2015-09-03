@@ -2,6 +2,7 @@
  1.73: numLabel label type added, formats values as 123,456,000
  1.74: more intellectual ajax parameters parsing, with arrays and inner objects support. COULD BE BACKWARD INCOMPATIBLE!
  1.75: datepicker change event triggered, undefined propagated to inputs value, model.reset(val) added to reset all fields to "val" value
+ 1.76: jiant.inputSet added, maps model field array value to set of checkboxes, with reverse binding. Mapped by checkbox value
  */
 (function() {
   var
@@ -71,6 +72,7 @@
         grid = {},
         image = {},
         input = {},
+        inputSet = {},
         inputInt = {},
         inputFloat = {},
         inputDate = {},
@@ -504,8 +506,9 @@
 // ------------ views ----------------
 
       function _bindContent(appRoot, viewRoot, viewId, viewContent, viewElem, prefix) {
-        var viewSpec = {};
+        var viewSpec = {}, typeSpec = {};
         $.each(viewContent, function (componentId, componentContent) {
+          typeSpec[componentId] = componentContent;
           viewSpec[componentId] = componentId;
           if (componentId != "appPrefix" && componentId != "impl") {
             if (viewRoot[componentId] === jiant.lookup) {
@@ -547,6 +550,7 @@
           }
         });
         viewRoot._jiantSpec = viewSpec;
+        viewRoot._jiantTypeSpec = typeSpec;
       }
 
       function ensureSafeExtend(spec, jqObject) {
@@ -639,25 +643,25 @@
         if ((elemContent == jiant.tabs || elemContent.tabsTmInner) && uiElem.tabs) {
           uiElem.tabs();
           uiElem.refreshTabs = function() {uiElem.tabs("refresh");};
-        } else if (elemContent == jiant.ctlHide || elemContent.ctlHideTmInner) {
+        } else if (elemContent === jiant.ctlHide || elemContent.ctlHideTmInner) {
           setupCtlHide(viewOrTm, uiElem);
-        } else if (elemContent == jiant.inputInt || elemContent.inputIntTmInner) {
+        } else if (elemContent === jiant.inputInt || elemContent.inputIntTmInner) {
           setupInputInt(uiElem);
-        } else if (elemContent == jiant.inputFloat || elemContent.inputFloatTmInner) {
+        } else if (elemContent === jiant.inputFloat || elemContent.inputFloatTmInner) {
           setupInputFloat(uiElem);
-        } else if ((elemContent == jiant.inputDate || elemContent.inputDateTmInner) && uiElem.datepicker) {
+        } else if ((elemContent === jiant.inputDate || elemContent.inputDateTmInner) && uiElem.datepicker) {
           uiElem.datepicker().on('changeDate', function() {uiElem.trigger("change")});
-        } else if (elemContent == jiant.pager || elemContent.pagerTmInner) {
+        } else if (elemContent === jiant.pager || elemContent.pagerTmInner) {
           setupPager(uiElem);
-        } else if (elemContent == jiant.form || elemContent.formTmInner) {
+        } else if (elemContent === jiant.form || elemContent.formTmInner) {
           setupForm(appRoot, uiElem, key, elem);
         } else if (elemContent == containerPaged || elemContent.containerPagedTmInner) {
           setupContainerPaged(uiElem);
-        } else if (elemContent == jiant.image || elemContent.imageTmInner) {
+        } else if (elemContent === jiant.image || elemContent.imageTmInner) {
           setupImage(uiElem);
-        } else if (elemContent == jiant.nlabel || elemContent.nlabelTmInner) {
+        } else if (elemContent === jiant.nlabel || elemContent.nlabelTmInner) {
           setupIntlProxies(appRoot, uiElem);
-        } else if (elemContent == jiant.numLabel || elemContent.numLabelTmInner) {
+        } else if (elemContent === jiant.numLabel || elemContent.numLabelTmInner) {
           setupNumLabel(appRoot, uiElem);
         }
         maybeAddDevHook(uiElem, key, elem);
@@ -678,38 +682,52 @@
           $.each(map, function (key, elem) {
             if (spec[key].customRenderer || (data && data[key] !== undefined && data[key] !== null && !isServiceName(key))) {
               var val = data[key];
+              var elemType = viewOrTm._jiantTypeSpec[key];
               elem = obj[key];
               if ($.isFunction(val)) {
-                getRenderer(spec[key])(data, elem, val.apply(data), false, viewOrTm);
+                getRenderer(spec[key], elemType)(data, elem, val.apply(data), false, viewOrTm);
                 if (subscribe4updates && $.isFunction(val.on)) {
                   if (fn[key]) {
                     var off = fn[key][0];
                     off && off(fn[key][1]);
                     fn[key][2] && elem.off("change", fn[key][2]);
                   }
-                  var handler = val.on(function(obj, newVal) {getRenderer(spec[key])(data, elem, newVal, true, viewOrTm)});
+                  var handler = val.on(function(obj, newVal) {getRenderer(spec[key], elemType)(data, elem, newVal, true, viewOrTm)});
                   fn[key] = [val.off, handler];
                 }
               } else {
-                getRenderer(spec[key])(data, elem, val, false, viewOrTm);
+                getRenderer(spec[key], elemType)(data, elem, val, false, viewOrTm);
                 if (subscribe4updates && $.isFunction(data.on) && spec[key].customRenderer) {
                   if (fn[key]) {
                     var off = fn[key][0];
                     off && off(fn[key][1]);
                     fn[key][2] && elem.off("change", fn[key][2]);
                   }
-                  var handler = data.on(function(obj, newVal) {getRenderer(spec[key])(data, elem, newVal, true, viewOrTm)});
+                  var handler = data.on(function(obj, newVal) {getRenderer(spec[key], elemType)(data, elem, newVal, true, viewOrTm)});
                   fn[key] = [data.off, handler];
                 }
               }
               if (reverseBinding) {
                 var backHandler = function(event) {
                   var tagName = elem[0].tagName.toLowerCase(),
-                      tp = elem.attr("type");
-                  if (tagName == "input" && tp == "checkbox") {
-                    val(!!elem.prop("checked"));
-                  } else if (val) {
-                    val(elem.val());
+                      tp = elem.attr("type"),
+                      etype = viewOrTm._jiantTypeSpec[key];
+                  if (val) {
+                    if (etype === jiant.inputSet || etype["inputSetTmInner"]) {
+                      var arr = [];
+                      $.each(elem, function(idx, item) {
+                        if (!!$(item).prop("checked")) {
+                          arr.push($(item).val());
+                        }
+                      });
+                      val(arr);
+                    } else {
+                      if (tagName == "input" && tp == "checkbox") {
+                        val(!!elem.prop("checked"));
+                      } else {
+                        val(elem.val());
+                      }
+                    }
                   }
                 };
                 elem.change && elem.val && elem.change(backHandler);
@@ -724,12 +742,33 @@
         return fn;
       }
 
-      function getRenderer(obj) {
+      function getRenderer(obj, elemType) {
         if (obj && obj.customRenderer && $.isFunction(obj.customRenderer)) {
           return obj.customRenderer;
+        } else if (elemType === jiant.inputSet || elemType["inputSetTmInner"]) {
+          return updateInputSet;
         } else {
           return updateViewElement;
         }
+      }
+
+      function updateInputSet(obj, elem, val, isUpdate, viewOrTemplate) {
+        if (! elem || ! elem[0]) {
+          return;
+        }
+        $.each(elem, function(idx, item) {
+          item = $(item);
+          var check = item.val() === val;
+          if (! check && $.isArray(val)) {
+            $.each(val, function(i, subval) {
+              if (subval + "" == item.val() + "") {
+                check = true;
+                return false;
+              }
+            });
+          }
+          item.prop("checked", check);
+        });
       }
 
       function updateViewElement(obj, elem, val, isUpdate, viewOrTemplate) {
@@ -787,6 +826,7 @@
           case (jiant.image): return "imageTmInner";
           case (jiant.grid): return "gridTmInner";
           case (jiant.input): return "inputTmInner";
+          case (jiant.inputSet): return "inputSetTmInner";
           case (jiant.inputInt): return "inputIntTmInner";
           case (jiant.inputFloat): return "inputFloatTmInner";
           case (jiant.inputDate): return "inputDateTmInner";
@@ -856,6 +896,7 @@
               }
             });
             retVal.splice(0, 1); // remove first comment
+            retVal._jiantTypeSpec = root[tmId];
             retVal.propagate = makePropagationFunction(tmId, tmContent, retVal, retVal);
             data && retVal.propagate(data, !!subscribeForUpdates, !!reverseBind);
             retVal._jiantSpec = root[tmId];
@@ -2130,7 +2171,7 @@
       }
 
       function version() {
-        return 175;
+        return 176;
       }
 
       return {
@@ -2190,6 +2231,7 @@
         grid: grid,
         image: image,
         input: input,
+        inputSet: inputSet,
         inputDate: inputDate,
         inputInt: inputInt,
         inputFloat: inputFloat,
