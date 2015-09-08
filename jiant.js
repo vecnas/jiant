@@ -3,6 +3,7 @@
  1.74: more intellectual ajax parameters parsing, with arrays and inner objects support. COULD BE BACKWARD INCOMPATIBLE!
  1.75: datepicker change event triggered, undefined propagated to inputs value, model.reset(val) added to reset all fields to "val" value
  1.76: jiant.inputSet added, maps model field array value to set of checkboxes, with reverse binding. Mapped by checkbox value
+ 1.77: binding of array to cssMarker now produces multiple classes, related to array elements: class="marker_val0, marker_val1"
  */
 (function() {
   var
@@ -532,12 +533,29 @@
                   prevNm = "j_prevMarkerClass_" + componentId;
               viewRoot[componentId] = {};
               viewRoot[componentId].customRenderer = function(obj, elem, val, isUpdate, viewOrTemplate) {
-                var cls = componentId + (flag ? "" : ("_" + val));
-                viewOrTemplate[prevNm] && viewOrTemplate.removeClass(viewOrTemplate[prevNm]);
-                var _val = flag && $.isArray(val) && val.length == 0 ? undefined : val;
-                if ((!flag && _val !== undefined) || (flag && !!_val)) {
-                  viewOrTemplate[prevNm] = cls;
-                  viewOrTemplate.addClass(cls);
+                if (viewOrTemplate[prevNm]) {
+                  $.each(viewOrTemplate[prevNm], function(i, cls) {
+                    cls && viewOrTemplate.removeClass(cls);
+                  });
+                }
+                viewOrTemplate[prevNm] = [];
+                if (flag) {
+                  var _v = $.isArray(val) && val.length == 0 ? undefined : val;
+                  if (!!_v) {
+                    viewOrTemplate[prevNm].push(componentId);
+                    viewOrTemplate.addClass(componentId);
+                  }
+                } else {
+                  if (val !== undefined && val !== null) {
+                    if (!$.isArray(val)) {
+                      val = [val];
+                    }
+                    $.each(val, function(i, v) {
+                      var cls = componentId + "_" + v;
+                      viewOrTemplate[prevNm].push(cls);
+                      viewOrTemplate.addClass(cls);
+                    })
+                  }
                 }
               };
             } else {
@@ -856,16 +874,65 @@
                   viewOrTemplate[componentId](val);
                 };
               } else if (elemType === jiant.cssMarker || elemType === jiant.cssFlag) {
-                tmContent[componentId] = {};
+                /*
+              var flag = viewRoot[componentId] === jiant.cssFlag,
+                  prevNm = "j_prevMarkerClass_" + componentId;
+              viewRoot[componentId] = {};
+              viewRoot[componentId].customRenderer = function(obj, elem, val, isUpdate, viewOrTemplate) {
+                if (viewOrTemplate[prevNm]) {
+                  $.each(viewOrTemplate[prevNm], function(i, cls) {
+                    cls && viewOrTemplate.removeClass(cls);
+                  });
+                }
+                viewOrTemplate[prevNm] = [];
+                if (flag) {
+                  var _v = $.isArray(val) && val.length == 0 ? undefined : val;
+                  if (!!_v) {
+                    viewOrTemplate[prevNm].push(componentId);
+                    viewOrTemplate.addClass(componentId);
+                  }
+                } else {
+                  if (val !== undefined && val !== null) {
+                    if (!$.isArray(val)) {
+                      val = [val];
+                    }
+                    $.each(val, function(i, v) {
+                      var cls = componentId + "_" + v;
+                      viewOrTemplate[prevNm].push(cls);
+                      viewOrTemplate.addClass(cls);
+                    })
+                  }
+                }
+              };
+
+                */
                 var flag = elemType === jiant.cssFlag,
                     markerName = "j_prevMarkerClass_" + componentId;
+                tmContent[componentId] = {};
                 tmContent[componentId].customRenderer = function(obj, elem, val, isUpdate, viewOrTemplate) {
-                  var cls = componentId + (flag ? "" : ("_" + val));
-                  viewOrTemplate[markerName] && viewOrTemplate.removeClass(viewOrTemplate[markerName]);
-                  var _val = flag && $.isArray(val) && val.length == 0 ? undefined : val;
-                  if ((!flag && _val !== undefined) || (flag && !!_val)) {
-                    viewOrTemplate[markerName] = cls;
-                    viewOrTemplate.addClass(cls);
+                  if (viewOrTemplate[markerName]) {
+                    $.each(viewOrTemplate[markerName], function(i, cls) {
+                      cls && viewOrTemplate.removeClass(cls);
+                    });
+                  }
+                  viewOrTemplate[markerName] = [];
+                  if (flag) {
+                    var _v = $.isArray(val) && val.length == 0 ? undefined : val;
+                    if (!!_v) {
+                      viewOrTemplate[markerName].push(componentId);
+                      viewOrTemplate.addClass(componentId);
+                    }
+                  } else {
+                    if (val !== undefined && val !== null) {
+                      if (!$.isArray(val)) {
+                        val = [val];
+                      }
+                      $.each(val, function(i, v) {
+                        var cls = componentId + "_" + v;
+                        viewOrTemplate[markerName].push(cls);
+                        viewOrTemplate.addClass(cls);
+                      })
+                    }
                   }
                 };
               } else {
@@ -2171,7 +2238,7 @@
       }
 
       function version() {
-        return 176;
+        return 177;
       }
 
       return {
