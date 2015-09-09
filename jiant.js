@@ -6,6 +6,8 @@
  1.77: binding of array to cssMarker now produces multiple classes, related to array elements: class="marker_val0, marker_val1"
  1.78: jiant.nvl(val, defVal, path) added, returns defVal, if val is null or undefined, path is optional, val[path], may be function
  1.79: ajax call parsing tuned
+ 1.80: jiant.inputSetAsString added, same as inputSet, but uses comma-separated string instead of array
+ 1.81: cssMarker splits value by ","
  */
 (function() {
   var
@@ -76,6 +78,7 @@
         image = {},
         input = {},
         inputSet = {},
+        inputSetAsString = {},
         inputInt = {},
         inputFloat = {},
         inputDate = {},
@@ -564,7 +567,7 @@
                 } else {
                   if (val !== undefined && val !== null) {
                     if (!$.isArray(val)) {
-                      val = [val];
+                      val = val.split(",");
                     }
                     $.each(val, function(i, v) {
                       var cls = componentId + "_" + v;
@@ -749,12 +752,20 @@
                   if (val) {
                     if (etype === jiant.inputSet || etype["inputSetTmInner"]) {
                       var arr = [];
-                      $.each(elem, function(idx, item) {
+                      $.each(elem, function (idx, item) {
                         if (!!$(item).prop("checked")) {
                           arr.push($(item).val());
                         }
                       });
                       val(arr);
+                    } else if (etype === jiant.inputSetAsString || etype["inputSetAsStringTmInner"]) {
+                      var arr = [];
+                      $.each(elem, function(idx, item) {
+                        if (!!$(item).prop("checked")) {
+                          arr.push($(item).val());
+                        }
+                      });
+                      val(arr.join(","));
                     } else {
                       if (tagName == "input" && tp == "checkbox") {
                         val(!!elem.prop("checked"));
@@ -781,6 +792,10 @@
           return obj.customRenderer;
         } else if (elemType === jiant.inputSet || elemType["inputSetTmInner"]) {
           return updateInputSet;
+        } else if (elemType === jiant.inputSetAsString || elemType["inputSetAsStringTmInner"]) {
+          return function(obj, elem, val, isUpdate, viewOrTemplate) {
+            updateInputSet(obj, elem, !!val ? val.split(",") : [], isUpdate, viewOrTemplate);
+          };
         } else {
           return updateViewElement;
         }
@@ -861,6 +876,7 @@
           case (jiant.grid): return "gridTmInner";
           case (jiant.input): return "inputTmInner";
           case (jiant.inputSet): return "inputSetTmInner";
+          case (jiant.inputSetAsString): return "inputSetAsStringTmInner";
           case (jiant.inputInt): return "inputIntTmInner";
           case (jiant.inputFloat): return "inputFloatTmInner";
           case (jiant.inputDate): return "inputDateTmInner";
@@ -909,7 +925,7 @@
                   } else {
                     if (val !== undefined && val !== null) {
                       if (!$.isArray(val)) {
-                        val = [val];
+                        val = val.split(",");
                       }
                       $.each(val, function(i, v) {
                         var cls = componentId + "_" + v;
@@ -2219,7 +2235,7 @@
       }
 
       function version() {
-        return 179;
+        return 181;
       }
 
       return {
@@ -2281,6 +2297,7 @@
         image: image,
         input: input,
         inputSet: inputSet,
+        inputSetAsString: inputSetAsString,
         inputDate: inputDate,
         inputInt: inputInt,
         inputFloat: inputFloat,
