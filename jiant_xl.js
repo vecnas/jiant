@@ -47,6 +47,7 @@
  xl.0.41 bindList, one more argument: dontAddToDom = to completely pass dom manipulations to customRenderer
  xl.0.42: bindList, dontAddToDom replaced by elemFactory({create: fn, remove: fn} - to produce and attach element, by default parses template and attaches to DOM
  xl.0.43: bindList, no-uifield scenario
+ xl.0.44: pseudoSelect default callback show/hide toggler
  */
 
 (function() {
@@ -56,7 +57,7 @@
   var tmpJiantXl = {
 
     version: function() {
-      return 43;
+      return 44;
     },
 
     ctl2state: function(ctl, state, selectedCssClass, goProxy) {
@@ -397,6 +398,12 @@
             selectClass = cls;
           }
         };
+      }
+      if (! cb) {
+        cb = function(selectedElem, selectedVal, prevElem, prevVal) {
+               prevVal && prevVal.hide();
+               selectedVal && selectedVal.show();
+             };
       }
       var impl = new Impl();
       impl.setSelectClass(selectClass);
