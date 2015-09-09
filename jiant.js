@@ -5,6 +5,7 @@
  1.76: jiant.inputSet added, maps model field array value to set of checkboxes, with reverse binding. Mapped by checkbox value
  1.77: binding of array to cssMarker now produces multiple classes, related to array elements: class="marker_val0, marker_val1"
  1.78: jiant.nvl(val, defVal, path) added, returns defVal, if val is null or undefined, path is optional, val[path], may be function
+ 1.79: ajax call parsing tuned
  */
 (function() {
   var
@@ -1744,16 +1745,13 @@
           $.each(actual, function(i, obj) {
             parseForAjaxCall(root, path + "[" + i + "]", obj, true);
           });
-        } else if (isModelAccessor(actual)) { // model
-          root[path] = actual();
         } else if ($.isPlainObject(actual)) {
           $.each(actual, function(key, value) {
             if (actual[modelInnerDataField]) { // model
-              isModelAccessor(value) && parseForAjaxCall(root, (traverse ? (path + ".") : "") + key, value, true);
+              isModelAccessor(value) && parseForAjaxCall(root, (traverse ? (path + ".") : "") + key, value(), true);
             } else {
               parseForAjaxCall(root, (traverse ? (path + ".") : "") + key, value, true);
             }
-//        parseForAjaxCall(root, path + "." + key, value);
           });
         } else {
           root[path] = actual;
@@ -2221,7 +2219,7 @@
       }
 
       function version() {
-        return 178;
+        return 179;
       }
 
       return {
