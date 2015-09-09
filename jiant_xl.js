@@ -401,8 +401,8 @@
       }
       if (! cb) {
         cb = function(selectedElem, selectedVal, prevElem, prevVal) {
-               prevVal && prevVal.hide();
-               selectedVal && selectedVal.show();
+               prevVal && $(prevVal).hide();
+               selectedVal && $(selectedVal).show();
              };
       }
       var impl = new Impl();
