@@ -4,6 +4,7 @@
  1.75: datepicker change event triggered, undefined propagated to inputs value, model.reset(val) added to reset all fields to "val" value
  1.76: jiant.inputSet added, maps model field array value to set of checkboxes, with reverse binding. Mapped by checkbox value
  1.77: binding of array to cssMarker now produces multiple classes, related to array elements: class="marker_val0, marker_val1"
+ 1.78: jiant.nvl(val, defVal, path) added, returns defVal, if val is null or undefined, path is optional, val[path], may be function
  */
 (function() {
   var
@@ -188,6 +189,20 @@
           });
         });
         return $.trim($(elem).html()).replace(/!!/g, "!! ").replace(/e2013e03e11eee /g, "!! ");
+      }
+
+      function nvl(val, defVal, path) {
+        if (val === undefined || val === null) {
+          return defVal;
+        }
+        if (path) {
+          var v = $.isFunction(val[path]) ? val[path]() : val[path];
+          if (v === undefined || v === null) {
+            return defVal;
+          }
+          return v;
+        }
+        return val;
       }
 
       function parseTemplate(that, data, tmId) {
@@ -874,38 +889,6 @@
                   viewOrTemplate[componentId](val);
                 };
               } else if (elemType === jiant.cssMarker || elemType === jiant.cssFlag) {
-                /*
-              var flag = viewRoot[componentId] === jiant.cssFlag,
-                  prevNm = "j_prevMarkerClass_" + componentId;
-              viewRoot[componentId] = {};
-              viewRoot[componentId].customRenderer = function(obj, elem, val, isUpdate, viewOrTemplate) {
-                if (viewOrTemplate[prevNm]) {
-                  $.each(viewOrTemplate[prevNm], function(i, cls) {
-                    cls && viewOrTemplate.removeClass(cls);
-                  });
-                }
-                viewOrTemplate[prevNm] = [];
-                if (flag) {
-                  var _v = $.isArray(val) && val.length == 0 ? undefined : val;
-                  if (!!_v) {
-                    viewOrTemplate[prevNm].push(componentId);
-                    viewOrTemplate.addClass(componentId);
-                  }
-                } else {
-                  if (val !== undefined && val !== null) {
-                    if (!$.isArray(val)) {
-                      val = [val];
-                    }
-                    $.each(val, function(i, v) {
-                      var cls = componentId + "_" + v;
-                      viewOrTemplate[prevNm].push(cls);
-                      viewOrTemplate.addClass(cls);
-                    })
-                  }
-                }
-              };
-
-                */
                 var flag = elemType === jiant.cssFlag,
                     markerName = "j_prevMarkerClass_" + componentId;
                 tmContent[componentId] = {};
@@ -2238,7 +2221,7 @@
       }
 
       function version() {
-        return 177;
+        return 178;
       }
 
       return {
@@ -2284,6 +2267,7 @@
         lfill: lfill,
         pick: pick,
         asObjArray: asObjArray,
+        nvl: nvl,
 
         addListener: addListener,
         removeListener: removeListener,
