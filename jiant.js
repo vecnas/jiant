@@ -8,6 +8,7 @@
  1.79: ajax call parsing tuned
  1.80: jiant.inputSetAsString added, same as inputSet, but uses comma-separated string instead of array
  1.81: cssMarker splits value by ","
+ 1.81.1: cssMarker split fix
  */
 (function() {
   var
@@ -924,7 +925,7 @@
                     }
                   } else {
                     if (val !== undefined && val !== null) {
-                      if (!$.isArray(val)) {
+                      if (!$.isArray(val) && val && val.split && $.isFunction(val.split)) {
                         val = val.split(",");
                       }
                       $.each(val, function(i, v) {
