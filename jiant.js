@@ -9,6 +9,7 @@
  1.80: jiant.inputSetAsString added, same as inputSet, but uses comma-separated string instead of array
  1.81: cssMarker splits value by ","
  1.81.1: cssMarker split fix
+ 1.82: added pager.val([value]) method to set pager page programmatically
  */
 (function() {
   var
@@ -421,6 +422,14 @@
         };
         uiElem.refreshPage = function() {
           pagerBus.trigger("ValueChange", lastPage);
+        };
+        uiElem.val = function() {
+          if (arguments.length == 0) {
+            return lastPage;
+          } else {
+            lastPage = parseInt(arguments[0]);
+            uiElem.refreshPage();
+          }
         };
         uiElem.updatePager = function(page) {
           root.empty();
@@ -2236,7 +2245,7 @@
       }
 
       function version() {
-        return 181;
+        return 182;
       }
 
       return {
