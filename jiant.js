@@ -11,6 +11,7 @@
  1.81.1: cssMarker split fix
  1.82: added pager.val([value]) method to set pager page programmatically
  1.83: more spring-friendly way for arrays presentation in ajax calls
+ 1.83.1: cssMarker one more split fix
  */
 (function() {
   var
@@ -579,6 +580,8 @@
                   if (val !== undefined && val !== null) {
                     if (!$.isArray(val) && val && $.isFunction(val.split)) {
                       val = val.split(",");
+                    } else {
+                      val = [val];
                     }
                     $.each(val, function(i, v) {
                       var cls = componentId + "_" + v;
@@ -937,6 +940,8 @@
                     if (val !== undefined && val !== null) {
                       if (!$.isArray(val) && val && $.isFunction(val.split)) {
                         val = val.split(",");
+                      } else {
+                        val = [val];
                       }
                       $.each(val, function(i, v) {
                         var cls = componentId + "_" + v;
