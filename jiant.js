@@ -10,6 +10,7 @@
  1.81: cssMarker splits value by ","
  1.81.1: cssMarker split fix
  1.82: added pager.val([value]) method to set pager page programmatically
+ 1.83: more spring-friendly way for arrays presentation in ajax calls
  */
 (function() {
   var
@@ -576,7 +577,7 @@
                   }
                 } else {
                   if (val !== undefined && val !== null) {
-                    if (!$.isArray(val)) {
+                    if (!$.isArray(val) && val && $.isFunction(val.split)) {
                       val = val.split(",");
                     }
                     $.each(val, function(i, v) {
@@ -934,7 +935,7 @@
                     }
                   } else {
                     if (val !== undefined && val !== null) {
-                      if (!$.isArray(val) && val && val.split && $.isFunction(val.split)) {
+                      if (!$.isArray(val) && val && $.isFunction(val.split)) {
                         val = val.split(",");
                       }
                       $.each(val, function(i, v) {
@@ -1768,9 +1769,16 @@
 
       function parseForAjaxCall(root, path, actual, traverse) {
         if ($.isArray(actual)) {
-          $.each(actual, function(i, obj) {
-            parseForAjaxCall(root, path + "[" + i + "]", obj, true);
-          });
+          if (actual.length == 0) {
+            root[path] = actual;
+          } else {
+            root[path] = [];
+            $.each(actual, function(i, obj) {
+              var tmp = {};
+              parseForAjaxCall(tmp, "root", obj, true);
+              root[path].push(tmp.root);
+            });
+          }
         } else if ($.isPlainObject(actual)) {
           $.each(actual, function(key, value) {
             if (actual[modelInnerDataField]) { // model
@@ -2245,7 +2253,7 @@
       }
 
       function version() {
-        return 182;
+        return 183;
       }
 
       return {
