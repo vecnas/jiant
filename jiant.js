@@ -14,6 +14,7 @@
  1.83.1: cssMarker one more split fix
  1.83.2: cssMarker 3rd tuning, hope last
  1.84: pager first and last elements now have classes pager_first, pager_last, for better customization
+ 1.84.1: rounding of odd page radiuses
  */
 (function() {
   var
@@ -440,8 +441,8 @@
           lastTotalCls && root.removeClass(lastTotalCls);
           lastTotalCls = "totalPages_" + page.totalPages;
           root.addClass(lastTotalCls);
-          var from = Math.max(0, page.number - jiant.PAGER_RADIUS / 2),
-            to = Math.min(page.number + jiant.PAGER_RADIUS / 2, page.totalPages);
+          var from = Math.max(0, page.number - Math.round(jiant.PAGER_RADIUS / 2)),
+            to = Math.min(page.number + Math.round(jiant.PAGER_RADIUS / 2), page.totalPages);
           if (from > 0) {
             addPageCtl(1, "pager_first");
             addPageCtl(-1, "disabled emptyPlaceholder");
@@ -2231,7 +2232,7 @@
       }
 
       function visualize(appId) {
-        loadLibs(["https://raw.github.com/vecnas/jiant/master/graph.js"], function() {
+        loadLibs(["https://cdn.rawgit.com/vecnas/jiant/master/graph.js"], function() {
           appId || $.each(uiBoundRoot, function(key, val) {
             appId = key;
             return false;
