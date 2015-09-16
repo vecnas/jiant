@@ -13,6 +13,7 @@
  1.83: more spring-friendly way for arrays presentation in ajax calls
  1.83.1: cssMarker one more split fix
  1.83.2: cssMarker 3rd tuning, hope last
+ 1.84: pager first and last elements now have classes pager_first, pager_last, for better customization
  */
 (function() {
   var
@@ -442,7 +443,7 @@
           var from = Math.max(0, page.number - jiant.PAGER_RADIUS / 2),
             to = Math.min(page.number + jiant.PAGER_RADIUS / 2, page.totalPages);
           if (from > 0) {
-            addPageCtl(1, "");
+            addPageCtl(1, "pager_first");
             addPageCtl(-1, "disabled emptyPlaceholder");
           }
           for (var i = from; i < to; i++) {
@@ -452,11 +453,13 @@
             }
             addPageCtl(i + 1, cls);
           }
+          var clsLast = "";
           if (to < page.totalPages - 1) {
             addPageCtl(-1, "disabled emptyPlaceholder");
+            clsLast = "pager_last";
           }
           if (to < page.totalPages) {
-            addPageCtl(page.totalPages, "");
+            addPageCtl(page.totalPages, clsLast);
           }
         };
         function addPageCtl(value, ctlClass) {
@@ -2259,7 +2262,7 @@
       }
 
       function version() {
-        return 183;
+        return 184;
       }
 
       return {
