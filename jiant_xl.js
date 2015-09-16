@@ -48,6 +48,7 @@
  xl.0.42: bindList, dontAddToDom replaced by elemFactory({create: fn, remove: fn} - to produce and attach element, by default parses template and attaches to DOM
  xl.0.43: bindList, no-uifield scenario
  xl.0.44: pseudoSelect default callback show/hide toggler
+ xl.0.45: pageableFilterableSortableModel proper reaction on model changes, when state used
  */
 
 (function() {
@@ -57,7 +58,7 @@
   var tmpJiantXl = {
 
     version: function() {
-      return 44;
+      return 45;
     },
 
     ctl2state: function(ctl, state, selectedCssClass, goProxy) {
@@ -174,7 +175,7 @@
       state && state.start(refresh);
       if (filterSortModel && filterSortModel.on) {
         filterSortModel.on(function() {
-          refresh(0);
+          state ? state.go(0) : refresh(0);
         });
       }
       pager && pager.onValueChange(function(event, pageNum) {
