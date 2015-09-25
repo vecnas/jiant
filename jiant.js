@@ -2269,7 +2269,6 @@
       }
 
       function registerCustomType(customTypeName, handler) {
-        jiant.logInfo(customTypeName);
         if (! (typeof customTypeName === 'string' || customTypeName instanceof String)) {
           alert("Custom type name should be string");
         }
