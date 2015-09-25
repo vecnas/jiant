@@ -15,6 +15,7 @@
  1.83.2: cssMarker 3rd tuning, hope last
  1.84: pager first and last elements now have classes pager_first, pager_last, for better customization
  1.84.1: rounding of odd page radiuses
+ 1.85: rollback of 1.83, it breaks submit of model.all(), reverse bind of radio inputs to model
  */
 (function() {
   var
@@ -768,26 +769,21 @@
                   var tagName = elem[0].tagName.toLowerCase(),
                       tp = elem.attr("type"),
                       etype = viewOrTm._jiantTypeSpec[key];
+                  function elem2arr(elem) {
+                    var arr = [];
+                    $.each(elem, function (idx, item) {!!$(item).prop("checked") && arr.push($(item).val());});
+                    return arr;
+                  }
                   if (val) {
                     if (etype === jiant.inputSet || etype["inputSetTmInner"]) {
-                      var arr = [];
-                      $.each(elem, function (idx, item) {
-                        if (!!$(item).prop("checked")) {
-                          arr.push($(item).val());
-                        }
-                      });
-                      val(arr);
+                      val(elem2arr(elem));
                     } else if (etype === jiant.inputSetAsString || etype["inputSetAsStringTmInner"]) {
-                      var arr = [];
-                      $.each(elem, function(idx, item) {
-                        if (!!$(item).prop("checked")) {
-                          arr.push($(item).val());
-                        }
-                      });
-                      val(arr.join(","));
+                      val(elem2arr(elem).join(","));
                     } else {
                       if (tagName == "input" && tp == "checkbox") {
                         val(!!elem.prop("checked"));
+                      } else if (tagName == "input" && tp == "radio") {
+                        val(elem2arr(elem).join(","));
                       } else {
                         val(elem.val());
                       }
@@ -1779,16 +1775,9 @@
 
       function parseForAjaxCall(root, path, actual, traverse) {
         if ($.isArray(actual)) {
-          if (actual.length == 0) {
-            root[path] = actual;
-          } else {
-            root[path] = [];
-            $.each(actual, function(i, obj) {
-              var tmp = {};
-              parseForAjaxCall(tmp, "root", obj, true);
-              root[path].push(tmp.root);
-            });
-          }
+          $.each(actual, function(i, obj) {
+            parseForAjaxCall(root, path + "[" + i + "]", obj, true);
+          });
         } else if ($.isPlainObject(actual)) {
           $.each(actual, function(key, value) {
             if (actual[modelInnerDataField]) { // model
@@ -2263,7 +2252,7 @@
       }
 
       function version() {
-        return 184;
+        return 185;
       }
 
       return {
