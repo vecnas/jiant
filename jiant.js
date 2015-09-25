@@ -16,6 +16,7 @@
  1.84: pager first and last elements now have classes pager_first, pager_last, for better customization
  1.84.1: rounding of odd page radiuses
  1.85: rollback of 1.83, it breaks submit of model.all(), reverse bind of radio inputs to model
+ 1.85.1: firefox + firebug recursion glitch workaround
  */
 (function() {
   var
@@ -387,9 +388,14 @@
       }
 
       function print(method, args) {
-        window.console && window.console[method] && $.each(args, function(idx, arg) {
-          window.console[method](arg);
-        });
+        try {
+          window.console && window.console[method] && $.each(args, function(idx, arg) {
+            window.console[method](arg);
+          });
+        } catch (ex) {
+          // firefox + firebug glitch with recursion workaround 
+          method != "info" && print("info", args);
+        }
       }
 
       function logError() {
