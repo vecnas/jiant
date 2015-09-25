@@ -17,6 +17,7 @@
  1.84.1: rounding of odd page radiuses
  1.85: rollback of 1.83, it breaks submit of model.all(), reverse bind of radio inputs to model
  1.85.1: firefox + firebug recursion glitch workaround
+ 1.86 jiant.registerCustomType(typeName, handler(uiElem) {}) to add user custom control types, like someView: {elem0: "customtype", typeName is string
  */
 (function() {
   var
@@ -97,6 +98,7 @@
         meta = {},
         cssMarker = {},
         cssFlag = {},
+        customElementTypes = {},
         data = function (val) {
         },
         lookup = function (selector) {
@@ -393,7 +395,7 @@
             window.console[method](arg);
           });
         } catch (ex) {
-          // firefox + firebug glitch with recursion workaround 
+          // firefox + firebug glitch with recursion workaround
           method != "info" && print("info", args);
         }
       }
@@ -718,7 +720,7 @@
           setupPager(uiElem);
         } else if (elemContent === jiant.form || elemContent.formTmInner) {
           setupForm(appRoot, uiElem, key, elem);
-        } else if (elemContent == containerPaged || elemContent.containerPagedTmInner) {
+        } else if (elemContent == jiant.containerPaged || elemContent.containerPagedTmInner) {
           setupContainerPaged(uiElem);
         } else if (elemContent === jiant.image || elemContent.imageTmInner) {
           setupImage(uiElem);
@@ -726,6 +728,10 @@
           setupIntlProxies(appRoot, uiElem);
         } else if (elemContent === jiant.numLabel || elemContent.numLabelTmInner) {
           setupNumLabel(appRoot, uiElem);
+        } else if (elemContent.customType && customElementTypes[elemContent.customType]) {
+          customElementTypes[elemContent.customType](uiElem);
+        } else if (customElementTypes[elemContent]) {
+          customElementTypes[elemContent](uiElem);
         }
         maybeAddDevHook(uiElem, key, elem);
       }
@@ -901,7 +907,7 @@
           case (jiant.inputInt): return "inputIntTmInner";
           case (jiant.inputFloat): return "inputFloatTmInner";
           case (jiant.inputDate): return "inputDateTmInner";
-          default: return "customTmInner";
+          default: return null;
         }
       }
 
@@ -961,9 +967,14 @@
               } else {
                 var comp = appUiFactory.viewComponent(tm, tmId, prefix, componentId, elemType);
                 ensureExists(prefix, appRoot.dirtyList, comp, prefix + tmId, prefix + componentId);
-                var innerTmKey = calcInnerTmKey(tmContent[componentId]);
+                var key = tmContent[componentId],
+                    innerTmKey = calcInnerTmKey(key);
                 tmContent[componentId] = {};
-                tmContent[componentId][innerTmKey] = true;
+                if (innerTmKey != null) {
+                  tmContent[componentId][innerTmKey] = true;
+                } else {
+                  tmContent[componentId].customType = key;
+                }
               }
             }
           });
@@ -2257,8 +2268,16 @@
         listeners.remove(listener);
       }
 
+      function registerCustomType(customTypeName, handler) {
+        jiant.logInfo(customTypeName);
+        if (! (typeof customTypeName === 'string' || customTypeName instanceof String)) {
+          alert("Custom type name should be string");
+        }
+        customElementTypes[customTypeName] = handler;
+      }
+
       function version() {
-        return 185;
+        return 186;
       }
 
       return {
@@ -2284,6 +2303,7 @@
         visualize: visualize,
 
         handleErrorFn: defaultAjaxErrorsHandle,
+        registerCustomType: registerCustomType,
         logInfo: logInfo,
         logError: logError,
         info: info,
