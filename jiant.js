@@ -18,6 +18,7 @@
  1.85: rollback of 1.83, it breaks submit of model.all(), reverse bind of radio inputs to model
  1.85.1: firefox + firebug recursion glitch workaround
  1.86 jiant.registerCustomType(typeName, handler(uiElem) {}) to add user custom control types, like someView: {elem0: "customtype", typeName is string
+ 1.87: finally both java spring @RequestParameter and @ModelAttribute compatible arrays representation, jiant.transientFn added for non-ajaxable model fields
  */
 (function() {
   var
@@ -98,6 +99,7 @@
         meta = {},
         cssMarker = {},
         cssFlag = {},
+        transientFn = function(val) {},
         customElementTypes = {},
         data = function (val) {
         },
@@ -428,7 +430,7 @@
         var pagerBus = $({}),
           root = $("<ul></ul>"),
           lastPage = 0,
-            lastTotalCls;
+          lastTotalCls;
         root.addClass("pagination");
         uiElem.append(root);
         uiElem.onValueChange = function(callback) {
@@ -575,7 +577,7 @@
               }
             } else if (viewRoot[componentId] === jiant.cssMarker || viewRoot[componentId] === jiant.cssFlag) {
               var flag = viewRoot[componentId] === jiant.cssFlag,
-                  prevNm = "j_prevMarkerClass_" + componentId;
+                prevNm = "j_prevMarkerClass_" + componentId;
               viewRoot[componentId] = {};
               viewRoot[componentId].customRenderer = function(obj, elem, val, isUpdate, viewOrTemplate) {
                 if (viewOrTemplate[prevNm]) {
@@ -779,8 +781,8 @@
               if (reverseBinding) {
                 var backHandler = function(event) {
                   var tagName = elem[0].tagName.toLowerCase(),
-                      tp = elem.attr("type"),
-                      etype = viewOrTm._jiantTypeSpec[key];
+                    tp = elem.attr("type"),
+                    etype = viewOrTm._jiantTypeSpec[key];
                   function elem2arr(elem) {
                     var arr = [];
                     $.each(elem, function (idx, item) {!!$(item).prop("checked") && arr.push($(item).val());});
@@ -934,7 +936,7 @@
                 };
               } else if (elemType === jiant.cssMarker || elemType === jiant.cssFlag) {
                 var flag = elemType === jiant.cssFlag,
-                    markerName = "j_prevMarkerClass_" + componentId;
+                  markerName = "j_prevMarkerClass_" + componentId;
                 tmContent[componentId] = {};
                 tmContent[componentId].customRenderer = function(obj, elem, val, isUpdate, viewOrTemplate) {
                   if (viewOrTemplate[markerName]) {
@@ -968,7 +970,7 @@
                 var comp = appUiFactory.viewComponent(tm, tmId, prefix, componentId, elemType);
                 ensureExists(prefix, appRoot.dirtyList, comp, prefix + tmId, prefix + componentId);
                 var key = tmContent[componentId],
-                    innerTmKey = calcInnerTmKey(key);
+                  innerTmKey = calcInnerTmKey(key);
                 tmContent[componentId] = {};
                 if (innerTmKey != null) {
                   tmContent[componentId][innerTmKey] = true;
@@ -1275,6 +1277,7 @@
               return obj[dataStorageField];
             }
           } else if (isEmptyFunction(funcSpec) || spec[modelInnerDataField][fname]) {
+            var trans = funcSpec === jiant.transientFn || isTransient(funcSpec);
             collectionFunctions.push(fname);
             spec[modelInnerDataField][fname] = true;
             obj[fname] = function(val, forceEvent, dontFireUpdate) {
@@ -1297,6 +1300,7 @@
               }
             };
             obj[fname].jiant_accessor = 1;
+            obj[fname].transient_fn = trans;
             assignOnOffHandlers(obj, eventName, fname);
           } else if (fname != "_modelData") {
             obj[fname] = funcSpec;
@@ -1315,6 +1319,10 @@
             return ret;
           }
         });
+      }
+
+      function isTransient(fn) {
+        return fn.transient_fn;
       }
 
       function isModelAccessor(fn) {
@@ -1630,7 +1638,7 @@
       function isSameStatesGroup(appId, state0, state1) {
         var statesRoot = uiBoundRoot[appId].states;
         return (statesRoot[state0] && statesRoot[state1] && statesRoot[state0].statesGroup !== undefined
-          && statesRoot[state0].statesGroup === statesRoot[state1].statesGroup);
+        && statesRoot[state0].statesGroup === statesRoot[state1].statesGroup);
       }
 
       function goRoot(appId) {
@@ -1791,20 +1799,32 @@
       }
 
       function parseForAjaxCall(root, path, actual, traverse) {
-        if ($.isArray(actual)) {
+        if ($.isArray(actual) && actual.length > 0) {
+          var compound = false;
           $.each(actual, function(i, obj) {
-            parseForAjaxCall(root, path + "[" + i + "]", obj, true);
+            compound = compound || $.isPlainObject(obj);
+          });
+          $.each(actual, function(i, obj) {
+            parseForAjaxCall(root, path + (compound ? ("[" + i + "]") : ""), obj, true);
           });
         } else if ($.isPlainObject(actual)) {
           $.each(actual, function(key, value) {
             if (actual[modelInnerDataField]) { // model
-              isModelAccessor(value) && parseForAjaxCall(root, (traverse ? (path + ".") : "") + key, value(), true);
+              isModelAccessor(value) && !isTransient(value) && parseForAjaxCall(root, (traverse ? (path + ".") : "") + key, value(), true);
             } else {
               parseForAjaxCall(root, (traverse ? (path + ".") : "") + key, value, true);
             }
           });
         } else {
-          root[path] = actual;
+          if (root[path]) {
+            if ($.isArray(root[path])) {
+              root[path].push(actual);
+            } else {
+              root[path] = [root[path], actual];
+            }
+          } else {
+            root[path] = actual;
+          }
         }
       }
 
@@ -1941,7 +1961,7 @@
           if (intlRoot.i18n) {
             var option = {
               customLoad: function(lng, ns, options, loadComplete) {
-                 loadComplete(null, data);
+                loadComplete(null, data);
               }
             };
             if (intlRoot.javaSubst) {
@@ -2276,7 +2296,7 @@
       }
 
       function version() {
-        return 186;
+        return 187;
       }
 
       return {
@@ -2356,6 +2376,7 @@
         slider: slider,
         stub: stub,
         tabs: tabs,
+        transientFn: transientFn,
 
         key: {left: 37, up: 38, right: 39, down: 40, del: 46, backspace: 8, tab: 9, end: 35, home: 36, enter: 13, ctrl: 17,
           escape: 27, dot: 190, dotExtra: 110, comma: 188,
