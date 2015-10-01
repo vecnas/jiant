@@ -19,6 +19,7 @@
  1.85.1: firefox + firebug recursion glitch workaround
  1.86 jiant.registerCustomType(typeName, handler(uiElem) {}) to add user custom control types, like someView: {elem0: "customtype", typeName is string
  1.87: finally both java spring @RequestParameter and @ModelAttribute compatible arrays representation, jiant.transientFn added for non-ajaxable model fields
+ 1.88: model update() call now applies .on event handler with proper oldValue 3rd argument, add() still passes new value for both .on val and oldVal args
  */
 (function() {
   var
@@ -1119,13 +1120,13 @@
               });
               $.each(objFrom, function(key, val) {
                 if (obj[key] && $.isFunction(obj[key]) && obj[key]() != val) {
+                  toTrigger[key] = obj[key]();
                   obj[key](val, false);
-                  toTrigger[key] = true;
                   smthChanged = true;
                 }
               });
               $.each(toTrigger, function(key, val) {
-                obj[key](obj[key](), true, true);
+                obj[key](obj[key](), true, true, val);
               });
               if (smthChanged) {
                 obj[modelInnerDataField].trigger(eventName, obj);
@@ -1183,8 +1184,8 @@
                 bindFunctions(name, spec, newObj, appId);
                 $.each(item, function(name, param) {
                   if (newObj[name]) {
-                    newObj[name](param, false);
                     toTrigger[name] = param;
+                    newObj[name](param, false);
                   }
                 });
                 $.each(toTrigger, function(key, val) {
@@ -1280,12 +1281,12 @@
             var trans = funcSpec === jiant.transientFn || isTransient(funcSpec);
             collectionFunctions.push(fname);
             spec[modelInnerDataField][fname] = true;
-            obj[fname] = function(val, forceEvent, dontFireUpdate) {
+            obj[fname] = function(val, forceEvent, dontFireUpdate, oldValOverride) {
               if (arguments.length == 0) {
                 return obj[modelStorageField][fname];
               } else {
                 if (forceEvent || (obj[modelStorageField][fname] !== val && forceEvent !== false)) {
-                  var oldVal = obj[modelStorageField][fname];
+                  var oldVal = arguments.length == 4 ? oldValOverride : obj[modelStorageField][fname];
                   obj[modelStorageField][fname] = val;
                   obj[modelInnerDataField].trigger(eventName, [obj, val, oldVal]);
                   obj != spec && spec[modelInnerDataField].trigger(eventName, [obj, val, oldVal]);
@@ -2296,7 +2297,7 @@
       }
 
       function version() {
-        return 187;
+        return 188;
       }
 
       return {
