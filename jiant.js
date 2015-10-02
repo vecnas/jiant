@@ -20,6 +20,7 @@
  1.86 jiant.registerCustomType(typeName, handler(uiElem) {}) to add user custom control types, like someView: {elem0: "customtype", typeName is string
  1.87: finally both java spring @RequestParameter and @ModelAttribute compatible arrays representation, jiant.transientFn added for non-ajaxable model fields
  1.88: model update() call now applies .on event handler with proper oldValue 3rd argument, add() still passes new value for both .on val and oldVal args
+ 1.89: ajax calls return result of $.ajax, some hints printed to console for possible misuse of listBy, findBy
  */
 (function() {
   var
@@ -1066,7 +1067,7 @@
         }
       }
 
-      function bindFunctions(name, spec, obj, appId) {
+      function bindFunctions(modelName, spec, obj, appId) {
         var storage = [],
           modelStorageField = "_modelData",
           dataStorageField = "_sourceData",
@@ -1087,8 +1088,8 @@
         }
         obj[modelInnerDataField] = $({});
         $.each(spec, function(fname, funcSpec) {
-          var eventName = name + "_" + fname + "_event",
-            globalChangeEventName = appId + name + "_globalevent";
+          var eventName = modelName + "_" + fname + "_event",
+            globalChangeEventName = appId + modelName + "_globalevent";
 //      jiant.logInfo("  implementing model function " + fname);
           if (fname == modelInnerDataField) {
           } else if (fname == "all") {
@@ -1181,7 +1182,7 @@
                 newArr.push(newObj);
                 newObj[dataStorageField] = item;
                 newObj[parentModelReference] = obj;
-                bindFunctions(name, spec, newObj, appId);
+                bindFunctions(modelName, spec, newObj, appId);
                 $.each(item, function(name, param) {
                   if (newObj[name]) {
                     toTrigger[name] = param;
@@ -1225,7 +1226,12 @@
               var retVal = storage,
                 outerArgs = arguments;
               function filter(arr, fieldName, val) {
-                return $.grep(arr, function(item) {return val == undefined || item[fieldName]() == val});
+                return $.grep(arr, function(item) {
+                  if (! item[fieldName] || !$.isFunction(item[fieldName])) {
+                    errorp("findBy argument is not setter or not a function, model: !!, method: !!, method part: !!", modelName, fname, fieldName);
+                  }
+                  return val == undefined || item[fieldName]() == val;
+                });
               }
               $.each(arr, function(idx, name) {
                 var fieldName = name.substring(0, 1).toLowerCase() + name.substring(1);
@@ -1239,7 +1245,12 @@
               var retVal = storage,
                 outerArgs = arguments;
               function filter(arr, fieldName, val) {
-                return $.grep(arr, function(item) {return val == undefined || item[fieldName]() == val});
+                return $.grep(arr, function(item) {
+                  if (! item[fieldName] || !$.isFunction(item[fieldName])) {
+                    errorp("listBy argument is not setter or not a function, model: !!, method: !!, method part: !!", modelName, fname, fieldName);
+                  }
+                  return val == undefined || item[fieldName]() == val;
+                });
               }
               $.each(arr, function(idx, name) {
                 var fieldName = name.substring(0, 1).toLowerCase() + name.substring(1);
@@ -1879,7 +1890,7 @@
             settings.xhrFields = {withCredentials: true};
             settings.crossDomain = true;
           }
-          $.ajax(url, settings);
+          return $.ajax(url, settings);
         };
       }
 
@@ -2297,7 +2308,7 @@
       }
 
       function version() {
-        return 188;
+        return 189;
       }
 
       return {
