@@ -21,6 +21,7 @@
  1.87: finally both java spring @RequestParameter and @ModelAttribute compatible arrays representation, jiant.transientFn added for non-ajaxable model fields
  1.88: model update() call now applies .on event handler with proper oldValue 3rd argument, add() still passes new value for both .on val and oldVal args
  1.89: ajax calls return result of $.ajax, some hints printed to console for possible misuse of listBy, findBy
+ 1.90: proper check for param presence in ajax call to not skip arrays of 0, null and undefined
  */
 (function() {
   var
@@ -1828,7 +1829,7 @@
             }
           });
         } else {
-          if (root[path]) {
+          if (path in root) {
             if ($.isArray(root[path])) {
               root[path].push(actual);
             } else {
@@ -2308,7 +2309,7 @@
       }
 
       function version() {
-        return 189;
+        return 190;
       }
 
       return {
