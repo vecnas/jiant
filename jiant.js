@@ -22,6 +22,7 @@
  1.88: model update() call now applies .on event handler with proper oldValue 3rd argument, add() still passes new value for both .on val and oldVal args
  1.89: ajax calls return result of $.ajax, some hints printed to console for possible misuse of listBy, findBy
  1.90: proper check for param presence in ajax call to not skip arrays of 0, null and undefined
+ 1.91: date format for jiant.inputDate now could be set per application as app.dateFormat: "MM/dd/yyyy"
  */
 (function() {
   var
@@ -720,7 +721,8 @@
         } else if (elemContent === jiant.inputFloat || elemContent.inputFloatTmInner) {
           setupInputFloat(uiElem);
         } else if ((elemContent === jiant.inputDate || elemContent.inputDateTmInner) && uiElem.datepicker) {
-          uiElem.datepicker().on('changeDate', function() {uiElem.trigger("change")});
+          var dp = appRoot.dateFormat ? uiElem.datepicker({format: appRoot.dateFormat}) : uiElem.datepicker();
+          dp.on('changeDate', function() {uiElem.trigger("change")});
         } else if (elemContent === jiant.pager || elemContent.pagerTmInner) {
           setupPager(uiElem);
         } else if (elemContent === jiant.form || elemContent.formTmInner) {
@@ -2309,7 +2311,7 @@
       }
 
       function version() {
-        return 190;
+        return 191;
       }
 
       return {
