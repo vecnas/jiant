@@ -24,6 +24,7 @@
  1.90: proper check for param presence in ajax call to not skip arrays of 0, null and undefined
  1.91: date format for jiant.inputDate now could be set per application as app.dateFormat: "MM/dd/yyyy"
  1.92: internal optimization, types array could be used for element declaration: someLabel: [jiant.numLabel, "customtype"], useful for custom types
+ 1.92.1: ajax error handler tuning
  */
 (function() {
   var
@@ -1853,6 +1854,9 @@
               callback(data);
             }
           }, error: function (jqXHR, textStatus, errorText) {
+            if (0 === jqXHR.status && 'abort' === jqXHR.statusText) {
+              return;
+            }
             if (errHandler) {
               errHandler(jqXHR.responseText);
             } else {
