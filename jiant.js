@@ -23,6 +23,7 @@
  1.89: ajax calls return result of $.ajax, some hints printed to console for possible misuse of listBy, findBy
  1.90: proper check for param presence in ajax call to not skip arrays of 0, null and undefined
  1.91: date format for jiant.inputDate now could be set per application as app.dateFormat: "MM/dd/yyyy"
+ 1.92: internal optimization, types array could be used for element declaration: someLabel: [jiant.numLabel, "customtype"], useful for custom types
  */
 (function() {
   var
@@ -558,70 +559,69 @@
 // ------------ views ----------------
 
       function _bindContent(appRoot, viewRoot, viewId, viewContent, viewElem, prefix) {
-        var viewSpec = {}, typeSpec = {};
+        var typeSpec = {},
+            specials = {appPrefix: 1, impl: 1, _jiantSpec: 1};
+        viewRoot._jiantSpec = typeSpec;
         $.each(viewContent, function (componentId, componentContent) {
           typeSpec[componentId] = componentContent;
-          viewSpec[componentId] = componentId;
-          if (componentId != "appPrefix" && componentId != "impl") {
-            if (viewRoot[componentId] === jiant.lookup) {
-              jiant.logInfo("    loookup element, no checks/bindings: " + componentId);
-              viewRoot[componentId] = function() {return viewElem.find("." + prefix + componentId);};
-            } else if (viewRoot[componentId] === jiant.meta) {
-              //skipping, app meta info
-            } else if (viewRoot[componentId] === jiant.data) {
-              viewRoot[componentId] = function(val) {
-                if (arguments.length == 0) {
-                  return viewRoot.attr("data-" + componentId);
-                } else {
-                  return viewRoot.attr("data-" + componentId, val);
-                }
-              };
-              viewRoot[componentId].customRenderer = function(obj, elem, val, isUpdate, viewOrTemplate) {
-                viewRoot[componentId](val);
+          if (specials[componentId]) {
+            //skip
+          } else if (viewRoot[componentId] === jiant.lookup) {
+            jiant.logInfo("    loookup element, no checks/bindings: " + componentId);
+            viewRoot[componentId] = function() {return viewElem.find("." + prefix + componentId);};
+          } else if (viewRoot[componentId] === jiant.meta) {
+            //skipping, app meta info
+          } else if (viewRoot[componentId] === jiant.data) {
+            viewRoot[componentId] = function(val) {
+              if (arguments.length == 0) {
+                return viewRoot.attr("data-" + componentId);
+              } else {
+                return viewRoot.attr("data-" + componentId, val);
               }
-            } else if (viewRoot[componentId] === jiant.cssMarker || viewRoot[componentId] === jiant.cssFlag) {
-              var flag = viewRoot[componentId] === jiant.cssFlag,
-                prevNm = "j_prevMarkerClass_" + componentId;
-              viewRoot[componentId] = {};
-              viewRoot[componentId].customRenderer = function(obj, elem, val, isUpdate, viewOrTemplate) {
-                if (viewOrTemplate[prevNm]) {
-                  $.each(viewOrTemplate[prevNm], function(i, cls) {
-                    cls && viewOrTemplate.removeClass(cls);
-                  });
-                }
-                viewOrTemplate[prevNm] = [];
-                if (flag) {
-                  var _v = $.isArray(val) && val.length == 0 ? undefined : val;
-                  if (!!_v) {
-                    viewOrTemplate[prevNm].push(componentId);
-                    viewOrTemplate.addClass(componentId);
-                  }
-                } else {
-                  if (val !== undefined && val !== null) {
-                    if (!$.isArray(val) && val && $.isFunction(val.split)) {
-                      val = val.split(",");
-                    } else if (!$.isArray(val)) {
-                      val = [val];
-                    }
-                    $.each(val, function(i, v) {
-                      var cls = componentId + "_" + v;
-                      viewOrTemplate[prevNm].push(cls);
-                      viewOrTemplate.addClass(cls);
-                    })
-                  }
-                }
-              };
-            } else {
-              var uiElem = uiFactory.viewComponent(viewElem, viewId, prefix, componentId, componentContent);
-              ensureExists(prefix, appRoot.dirtyList, uiElem, prefix + viewId, prefix + componentId);
-              viewRoot[componentId] = uiElem;
-              setupExtras(appRoot, uiElem, componentContent, viewId, componentId, viewRoot);
-              //        logInfo("    bound UI for: " + componentId);
+            };
+            viewRoot[componentId].customRenderer = function(obj, elem, val, isUpdate, viewOrTemplate) {
+              viewRoot[componentId](val);
             }
+          } else if (viewRoot[componentId] === jiant.cssMarker || viewRoot[componentId] === jiant.cssFlag) {
+            var flag = viewRoot[componentId] === jiant.cssFlag,
+              prevNm = "j_prevMarkerClass_" + componentId;
+            viewRoot[componentId] = {};
+            viewRoot[componentId].customRenderer = function(obj, elem, val, isUpdate, viewOrTemplate) {
+              if (viewOrTemplate[prevNm]) {
+                $.each(viewOrTemplate[prevNm], function(i, cls) {
+                  cls && viewOrTemplate.removeClass(cls);
+                });
+              }
+              viewOrTemplate[prevNm] = [];
+              if (flag) {
+                var _v = $.isArray(val) && val.length == 0 ? undefined : val;
+                if (!!_v) {
+                  viewOrTemplate[prevNm].push(componentId);
+                  viewOrTemplate.addClass(componentId);
+                }
+              } else {
+                if (val !== undefined && val !== null) {
+                  if (!$.isArray(val) && val && $.isFunction(val.split)) {
+                    val = val.split(",");
+                  } else if (!$.isArray(val)) {
+                    val = [val];
+                  }
+                  $.each(val, function(i, v) {
+                    var cls = componentId + "_" + v;
+                    viewOrTemplate[prevNm].push(cls);
+                    viewOrTemplate.addClass(cls);
+                  })
+                }
+              }
+            };
+          } else {
+            var uiElem = uiFactory.viewComponent(viewElem, viewId, prefix, componentId, componentContent);
+            ensureExists(prefix, appRoot.dirtyList, uiElem, prefix + viewId, prefix + componentId);
+            viewRoot[componentId] = uiElem;
+            setupExtras(appRoot, uiElem, componentContent, viewId, componentId, viewRoot);
+            //        logInfo("    bound UI for: " + componentId);
           }
         });
-        viewRoot._jiantSpec = viewSpec;
-        viewRoot._jiantTypeSpec = typeSpec;
       }
 
       function ensureSafeExtend(spec, jqObject) {
@@ -710,37 +710,39 @@
         elem.click(function() {viewOrTm.hide()})
       }
 
-      function setupExtras(appRoot, uiElem, elemContent, key, elem, viewOrTm) {
-        if ((elemContent == jiant.tabs || elemContent.tabsTmInner) && uiElem.tabs) {
+      function setupExtras(appRoot, uiElem, elemType, key, elemKey, viewOrTm) {
+        if (elemType === jiant.tabs && uiElem.tabs) {
           uiElem.tabs();
           uiElem.refreshTabs = function() {uiElem.tabs("refresh");};
-        } else if (elemContent === jiant.ctlHide || elemContent.ctlHideTmInner) {
+        } else if (elemType === jiant.ctlHide) {
           setupCtlHide(viewOrTm, uiElem);
-        } else if (elemContent === jiant.inputInt || elemContent.inputIntTmInner) {
+        } else if (elemType === jiant.inputInt) {
           setupInputInt(uiElem);
-        } else if (elemContent === jiant.inputFloat || elemContent.inputFloatTmInner) {
+        } else if (elemType === jiant.inputFloat) {
           setupInputFloat(uiElem);
-        } else if ((elemContent === jiant.inputDate || elemContent.inputDateTmInner) && uiElem.datepicker) {
+        } else if (elemType === jiant.inputDate && uiElem.datepicker) {
           var dp = appRoot.dateFormat ? uiElem.datepicker({format: appRoot.dateFormat}) : uiElem.datepicker();
           dp.on('changeDate', function() {uiElem.trigger("change")});
-        } else if (elemContent === jiant.pager || elemContent.pagerTmInner) {
+        } else if (elemType === jiant.pager) {
           setupPager(uiElem);
-        } else if (elemContent === jiant.form || elemContent.formTmInner) {
-          setupForm(appRoot, uiElem, key, elem);
-        } else if (elemContent == jiant.containerPaged || elemContent.containerPagedTmInner) {
+        } else if (elemType === jiant.form) {
+          setupForm(appRoot, uiElem, key, elemKey);
+        } else if (elemType === jiant.containerPaged) {
           setupContainerPaged(uiElem);
-        } else if (elemContent === jiant.image || elemContent.imageTmInner) {
+        } else if (elemType === jiant.image) {
           setupImage(uiElem);
-        } else if (elemContent === jiant.nlabel || elemContent.nlabelTmInner) {
+        } else if (elemType === jiant.nlabel) {
           setupIntlProxies(appRoot, uiElem);
-        } else if (elemContent === jiant.numLabel || elemContent.numLabelTmInner) {
+        } else if (elemType === jiant.numLabel) {
           setupNumLabel(appRoot, uiElem);
-        } else if (elemContent.customType && customElementTypes[elemContent.customType]) {
-          customElementTypes[elemContent.customType](uiElem);
-        } else if (customElementTypes[elemContent]) {
-          customElementTypes[elemContent](uiElem);
+        } else if (customElementTypes[elemType]) {
+          customElementTypes[elemType](uiElem);
+        } else if ($.isArray(elemType)) {
+          $.each(elemType, function(i, tp) {
+            setupExtras(appRoot, uiElem, tp, key, elemKey, viewOrTm);
+          });
         }
-        maybeAddDevHook(uiElem, key, elem);
+        maybeAddDevHook(uiElem, key, elemKey);
       }
 
       function isServiceName(key) {
@@ -758,7 +760,7 @@
           $.each(map, function (key, elem) {
             if (spec[key].customRenderer || (data && data[key] !== undefined && data[key] !== null && !isServiceName(key))) {
               var val = data[key];
-              var elemType = viewOrTm._jiantTypeSpec[key];
+              var elemType = viewOrTm._jiantSpec[key];
               elem = obj[key];
               if ($.isFunction(val)) {
                 getRenderer(spec[key], elemType)(data, elem, val.apply(data), false, viewOrTm);
@@ -787,16 +789,16 @@
                 var backHandler = function(event) {
                   var tagName = elem[0].tagName.toLowerCase(),
                     tp = elem.attr("type"),
-                    etype = viewOrTm._jiantTypeSpec[key];
+                    etype = viewOrTm._jiantSpec[key];
                   function elem2arr(elem) {
                     var arr = [];
                     $.each(elem, function (idx, item) {!!$(item).prop("checked") && arr.push($(item).val());});
                     return arr;
                   }
                   if (val) {
-                    if (etype === jiant.inputSet || etype["inputSetTmInner"]) {
+                    if (etype === jiant.inputSet) {
                       val(elem2arr(elem));
-                    } else if (etype === jiant.inputSetAsString || etype["inputSetAsStringTmInner"]) {
+                    } else if (etype === jiant.inputSetAsString) {
                       val(elem2arr(elem).join(","));
                     } else {
                       if (tagName == "input" && tp == "checkbox") {
@@ -824,9 +826,9 @@
       function getRenderer(obj, elemType) {
         if (obj && obj.customRenderer && $.isFunction(obj.customRenderer)) {
           return obj.customRenderer;
-        } else if (elemType === jiant.inputSet || elemType["inputSetTmInner"]) {
+        } else if (elemType === jiant.inputSet) {
           return updateInputSet;
-        } else if (elemType === jiant.inputSetAsString || elemType["inputSetAsStringTmInner"]) {
+        } else if (elemType === jiant.inputSetAsString) {
           return function(obj, elem, val, isUpdate, viewOrTemplate) {
             updateInputSet(obj, elem, !!val ? val.split(",") : [], isUpdate, viewOrTemplate);
           };
@@ -895,29 +897,6 @@
 
 // ------------ templates ----------------
 
-      function calcInnerTmKey(elem) {
-        switch (elem) {
-          case (jiant.label): return "labelTmInner";
-          case (jiant.nlabel): return "nlabelTmInner";
-          case (jiant.numLabel): return "numLabelTmInner";
-          case (jiant.ctl): return "ctlTmInner";
-          case (jiant.ctlHide): return "ctlHideTmInner";
-          case (jiant.container): return "containerTmInner";
-          case (jiant.containerPaged): return "containerPagedTmInner";
-          case (jiant.form): return "formTmInner";
-          case (jiant.pager): return "pagerTmInner";
-          case (jiant.image): return "imageTmInner";
-          case (jiant.grid): return "gridTmInner";
-          case (jiant.input): return "inputTmInner";
-          case (jiant.inputSet): return "inputSetTmInner";
-          case (jiant.inputSetAsString): return "inputSetAsStringTmInner";
-          case (jiant.inputInt): return "inputIntTmInner";
-          case (jiant.inputFloat): return "inputFloatTmInner";
-          case (jiant.inputDate): return "inputDateTmInner";
-          default: return null;
-        }
-      }
-
       function parseTemplate2Text(tm, data) {
         return parseTemplate(tm, data);
       }
@@ -926,11 +905,13 @@
         $.each(root, function(tmId, tmContent) {
           var prefix = tmContent.appPrefix ? tmContent.appPrefix : (pfx ? pfx : ""),
             tm = appUiFactory.template(prefix, tmId, tmContent);
+          root[tmId]._jiantSpec = {};
           $.each(tmContent, function (componentId, elemType) {
-            if (componentId != "appPrefix" && componentId != "impl") {
+            if (! {appPrefix: 1, impl: 1, _jiantSpec: 1}[componentId]) {
+              root[tmId]._jiantSpec[componentId] = elemType;
               if (elemType === jiant.lookup) {
                 jiant.logInfo("    loookup element, no checks/bindings: " + componentId);
-                tmContent[componentId] = function() {return tmContent.find("." + prefix + componentId);};
+                //tmContent[componentId] = function() {return tmContent.find("." + prefix + componentId);};
               } else if (elemType === jiant.meta) {
                 //skipping, app meta info
               } else if (elemType === jiant.data) {
@@ -974,20 +955,14 @@
               } else {
                 var comp = appUiFactory.viewComponent(tm, tmId, prefix, componentId, elemType);
                 ensureExists(prefix, appRoot.dirtyList, comp, prefix + tmId, prefix + componentId);
-                var key = tmContent[componentId],
-                  innerTmKey = calcInnerTmKey(key);
                 tmContent[componentId] = {};
-                if (innerTmKey != null) {
-                  tmContent[componentId][innerTmKey] = true;
-                } else {
-                  tmContent[componentId].customType = key;
-                }
               }
             }
           });
           ensureExists(prefix, appRoot.dirtyList, tm, prefix + tmId);
           root[tmId].parseTemplate = function(data, subscribeForUpdates, reverseBind) {
             var retVal = $("<!-- -->" + parseTemplate(tm, data, tmId)); // add comment to force jQuery to read it as HTML fragment
+            retVal._jiantSpec = root[tmId]._jiantSpec;
             $.each(tmContent, function (elem, elemType) {
               if (elemType.jiant_data) {
                 retVal[elem] = function(val) {
@@ -999,15 +974,13 @@
                 };
               } else if (elem != "parseTemplate" && elem != "parseTemplate2Text" && elem != "appPrefix") {
                 retVal[elem] = $.merge(retVal.filter("." + prefix + elem), retVal.find("." + prefix + elem));
-                setupExtras(appRoot, retVal[elem], root[tmId][elem], tmId, elem, retVal);
+                setupExtras(appRoot, retVal[elem], root[tmId]._jiantSpec[elem], tmId, elem, retVal);
                 maybeAddDevHook(retVal[elem], tmId, elem);
               }
             });
             retVal.splice(0, 1); // remove first comment
-            retVal._jiantTypeSpec = root[tmId];
             retVal.propagate = makePropagationFunction(tmId, tmContent, retVal, retVal);
             data && retVal.propagate(data, !!subscribeForUpdates, !!reverseBind);
-            retVal._jiantSpec = root[tmId];
             $.each(listeners, function(i, l) {l.parsedTemplate && l.parsedTemplate(appRoot, root, tmId, root[tmId], data, retVal)});
             return retVal;
           };
@@ -2311,7 +2284,7 @@
       }
 
       function version() {
-        return 191;
+        return 192;
       }
 
       return {
