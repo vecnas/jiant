@@ -25,6 +25,7 @@
  1.91: date format for jiant.inputDate now could be set per application as app.dateFormat: "MM/dd/yyyy"
  1.92: internal optimization, types array could be used for element declaration: someLabel: [jiant.numLabel, "customtype"], useful for custom types
  1.92.1: ajax error handler tuning
+ 1.92.2: ajax parameters fix, when sending array of arrays
  */
 (function() {
   var
@@ -561,7 +562,7 @@
 
       function _bindContent(appRoot, viewRoot, viewId, viewContent, viewElem, prefix) {
         var typeSpec = {},
-            specials = {appPrefix: 1, impl: 1, _jiantSpec: 1};
+          specials = {appPrefix: 1, impl: 1, _jiantSpec: 1};
         viewRoot._jiantSpec = typeSpec;
         $.each(viewContent, function (componentId, componentContent) {
           typeSpec[componentId] = componentContent;
@@ -1094,10 +1095,10 @@
               var toTrigger = {};
               obj[dataStorageField] = objFrom;
               treatMissingAsNulls && $.each(obj[modelStorageField], function(key, val) {
-                objFrom[key] == undefined && (objFrom[key] = null);
+                key in objFrom || (objFrom[key] = null);
               });
               $.each(objFrom, function(key, val) {
-                if (obj[key] && $.isFunction(obj[key]) && obj[key]() != val) {
+                if (obj[key] && $.isFunction(obj[key]) && obj[key]() !== val) {
                   toTrigger[key] = obj[key]();
                   obj[key](val, false);
                   smthChanged = true;
@@ -1277,7 +1278,7 @@
                   var oldVal = arguments.length == 4 ? oldValOverride : obj[modelStorageField][fname];
                   obj[modelStorageField][fname] = val;
                   obj[modelInnerDataField].trigger(eventName, [obj, val, oldVal]);
-                  obj != spec && spec[modelInnerDataField].trigger(eventName, [obj, val, oldVal]);
+                  obj !== spec && spec[modelInnerDataField].trigger(eventName, [obj, val, oldVal]);
                   if (! dontFireUpdate) {
                     obj[modelInnerDataField].trigger(globalChangeEventName, [obj, fname, val, oldVal]);
                     eventBus.trigger(globalChangeEventName, [obj, fname, val, oldVal]);
@@ -1806,10 +1807,11 @@
           });
         } else {
           if (path in root) {
-            if ($.isArray(root[path])) {
+            if (root[path].jParsed) {
               root[path].push(actual);
             } else {
               root[path] = [root[path], actual];
+              root[path].jParsed = 1;
             }
           } else {
             root[path] = actual;
