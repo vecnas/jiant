@@ -26,6 +26,7 @@
  1.92: internal optimization, types array could be used for element declaration: someLabel: [jiant.numLabel, "customtype"], useful for custom types
  1.92.1: ajax error handler tuning
  1.92.2: ajax parameters fix, when sending array of arrays
+ 1.93: internal code optimization
  */
 (function() {
   var
@@ -284,7 +285,9 @@
             return false;
           } else if ( event.keyCode == jiant.key.end || event.keyCode == jiant.key.home || event.keyCode == jiant.key.tab || event.keyCode == jiant.key.enter) {
             input.val(fit(input.valInt(), input.j_valMin, input.j_valMax));
-          } else if (!event.ctrlKey && !event.shiftKey && (event.keyCode != jiant.key.backspace && event.keyCode != jiant.key.del && event.keyCode != jiant.key.left && event.keyCode != jiant.key.right && event.keyCode < 48 || event.keyCode > 57) && (event.keyCode < 96 || event.keyCode > 105 )) {
+          } else if (!event.ctrlKey && !event.shiftKey && (event.keyCode != jiant.key.backspace && event.keyCode != jiant.key.del
+              && event.keyCode != jiant.key.left && event.keyCode != jiant.key.right && event.keyCode < 48 || event.keyCode > 57)
+              && (event.keyCode < 96 || event.keyCode > 105 )) {
             event.preventDefault();
             return false;
           }
@@ -561,61 +564,22 @@
 // ------------ views ----------------
 
       function _bindContent(appRoot, viewRoot, viewId, viewContent, viewElem, prefix) {
-        var typeSpec = {},
-          specials = {appPrefix: 1, impl: 1, _jiantSpec: 1};
+        var typeSpec = {};
         viewRoot._jiantSpec = typeSpec;
         $.each(viewContent, function (componentId, componentContent) {
           typeSpec[componentId] = componentContent;
-          if (specials[componentId]) {
+          if (componentId in {appPrefix: 1, impl: 1, _jiantSpec: 1}) {
             //skip
           } else if (viewRoot[componentId] === jiant.lookup) {
             jiant.logInfo("    loookup element, no checks/bindings: " + componentId);
-            viewRoot[componentId] = function() {return viewElem.find("." + prefix + componentId);};
+            setupLookup(viewRoot, componentId, viewElem, prefix);
           } else if (viewRoot[componentId] === jiant.meta) {
             //skipping, app meta info
           } else if (viewRoot[componentId] === jiant.data) {
-            viewRoot[componentId] = function(val) {
-              if (arguments.length == 0) {
-                return viewRoot.attr("data-" + componentId);
-              } else {
-                return viewRoot.attr("data-" + componentId, val);
-              }
-            };
-            viewRoot[componentId].customRenderer = function(obj, elem, val, isUpdate, viewOrTemplate) {
-              viewRoot[componentId](val);
-            }
+            setupDataFunction(viewRoot, componentId);
+            viewRoot[componentId].customRenderer = function(obj, elem, val, isUpdate, viewOrTemplate) {viewRoot[componentId](val)}
           } else if (viewRoot[componentId] === jiant.cssMarker || viewRoot[componentId] === jiant.cssFlag) {
-            var flag = viewRoot[componentId] === jiant.cssFlag,
-              prevNm = "j_prevMarkerClass_" + componentId;
-            viewRoot[componentId] = {};
-            viewRoot[componentId].customRenderer = function(obj, elem, val, isUpdate, viewOrTemplate) {
-              if (viewOrTemplate[prevNm]) {
-                $.each(viewOrTemplate[prevNm], function(i, cls) {
-                  cls && viewOrTemplate.removeClass(cls);
-                });
-              }
-              viewOrTemplate[prevNm] = [];
-              if (flag) {
-                var _v = $.isArray(val) && val.length == 0 ? undefined : val;
-                if (!!_v) {
-                  viewOrTemplate[prevNm].push(componentId);
-                  viewOrTemplate.addClass(componentId);
-                }
-              } else {
-                if (val !== undefined && val !== null) {
-                  if (!$.isArray(val) && val && $.isFunction(val.split)) {
-                    val = val.split(",");
-                  } else if (!$.isArray(val)) {
-                    val = [val];
-                  }
-                  $.each(val, function(i, v) {
-                    var cls = componentId + "_" + v;
-                    viewOrTemplate[prevNm].push(cls);
-                    viewOrTemplate.addClass(cls);
-                  })
-                }
-              }
-            };
+            setupCssFlagsMarkers(viewRoot, componentId);
           } else {
             var uiElem = uiFactory.viewComponent(viewElem, viewId, prefix, componentId, componentContent);
             ensureExists(prefix, appRoot.dirtyList, uiElem, prefix + viewId, prefix + componentId);
@@ -624,6 +588,54 @@
             //        logInfo("    bound UI for: " + componentId);
           }
         });
+      }
+
+      function setupLookup(viewRoot, componentId, viewElem, prefix) {
+        viewRoot[componentId] = function() {return viewElem.find("." + prefix + componentId);};
+      }
+
+      function setupDataFunction(viewRoot, componentId) {
+        viewRoot[componentId] = function(val) {
+          if (arguments.length == 0) {
+            return viewRoot.attr("data-" + componentId);
+          } else {
+            return viewRoot.attr("data-" + componentId, val);
+          }
+        };
+      }
+
+      function setupCssFlagsMarkers(viewRoot, componentId) {
+        var flag = viewRoot[componentId] === jiant.cssFlag,
+          markerName = "j_prevMarkerClass_" + componentId;
+        viewRoot[componentId] = {};
+        viewRoot[componentId].customRenderer = function(obj, elem, val, isUpdate, viewOrTemplate) {
+          if (viewOrTemplate[markerName]) {
+            $.each(viewOrTemplate[markerName], function(i, cls) {
+              cls && viewOrTemplate.removeClass(cls);
+            });
+          }
+          viewOrTemplate[markerName] = [];
+          if (flag) {
+            var _v = $.isArray(val) && val.length == 0 ? undefined : val;
+            if (!!_v) {
+              viewOrTemplate[markerName].push(componentId);
+              viewOrTemplate.addClass(componentId);
+            }
+          } else {
+            if (val !== undefined && val !== null) {
+              if (!$.isArray(val) && val && $.isFunction(val.split)) {
+                val = val.split(",");
+              } else if (!$.isArray(val)) {
+                val = [val];
+              }
+              $.each(val, function(i, v) {
+                var cls = componentId + "_" + v;
+                viewOrTemplate[markerName].push(cls);
+                viewOrTemplate.addClass(cls);
+              })
+            }
+          }
+        };
       }
 
       function ensureSafeExtend(spec, jqObject) {
@@ -909,51 +921,19 @@
             tm = appUiFactory.template(prefix, tmId, tmContent);
           root[tmId]._jiantSpec = {};
           $.each(tmContent, function (componentId, elemType) {
-            if (! {appPrefix: 1, impl: 1, _jiantSpec: 1}[componentId]) {
+            if (!(componentId in {appPrefix: 1, impl: 1, _jiantSpec: 1})) {
               root[tmId]._jiantSpec[componentId] = elemType;
               if (elemType === jiant.lookup) {
                 jiant.logInfo("    loookup element, no checks/bindings: " + componentId);
-                //tmContent[componentId] = function() {return tmContent.find("." + prefix + componentId);};
               } else if (elemType === jiant.meta) {
                 //skipping, app meta info
               } else if (elemType === jiant.data) {
-                //skipping, data function
                 tmContent[componentId] = {jiant_data: 1};
                 tmContent[componentId].customRenderer = function(obj, elem, val, isUpdate, viewOrTemplate) {
                   viewOrTemplate[componentId](val);
                 };
               } else if (elemType === jiant.cssMarker || elemType === jiant.cssFlag) {
-                var flag = elemType === jiant.cssFlag,
-                  markerName = "j_prevMarkerClass_" + componentId;
-                tmContent[componentId] = {};
-                tmContent[componentId].customRenderer = function(obj, elem, val, isUpdate, viewOrTemplate) {
-                  if (viewOrTemplate[markerName]) {
-                    $.each(viewOrTemplate[markerName], function(i, cls) {
-                      cls && viewOrTemplate.removeClass(cls);
-                    });
-                  }
-                  viewOrTemplate[markerName] = [];
-                  if (flag) {
-                    var _v = $.isArray(val) && val.length == 0 ? undefined : val;
-                    if (!!_v) {
-                      viewOrTemplate[markerName].push(componentId);
-                      viewOrTemplate.addClass(componentId);
-                    }
-                  } else {
-                    if (val !== undefined && val !== null) {
-                      if (!$.isArray(val) && val && $.isFunction(val.split)) {
-                        val = val.split(",");
-                      } else if (!$.isArray(val)) {
-                        val = [val];
-                      }
-                      $.each(val, function(i, v) {
-                        var cls = componentId + "_" + v;
-                        viewOrTemplate[markerName].push(cls);
-                        viewOrTemplate.addClass(cls);
-                      })
-                    }
-                  }
-                };
+                setupCssFlagsMarkers(tmContent, componentId);
               } else {
                 var comp = appUiFactory.viewComponent(tm, tmId, prefix, componentId, elemType);
                 ensureExists(prefix, appRoot.dirtyList, comp, prefix + tmId, prefix + componentId);
@@ -966,15 +946,13 @@
             var retVal = $("<!-- -->" + parseTemplate(tm, data, tmId)); // add comment to force jQuery to read it as HTML fragment
             retVal._jiantSpec = root[tmId]._jiantSpec;
             $.each(tmContent, function (elem, elemType) {
-              if (elemType.jiant_data) {
-                retVal[elem] = function(val) {
-                  if (arguments.length == 0) {
-                    return retVal.attr("data-" + elem);
-                  } else {
-                    return retVal.attr("data-" + elem, val);
-                  }
-                };
-              } else if (elem != "parseTemplate" && elem != "parseTemplate2Text" && elem != "appPrefix") {
+              if (elemType === jiant.lookup) {
+                jiant.logInfo("    loookup element, no checks/bindings: " + elem);
+                setupLookup(retVal, elem, retVal, prefix);
+              } else if (elemType === jiant.meta) {
+              } else if (elemType.jiant_data) {
+                setupDataFunction(retVal, elem);
+              } else if (! (elem in {"parseTemplate": 1, "parseTemplate2Text": 1, "appPrefix": 1, "impl": 1, "_jiantSpec": 1})) {
                 retVal[elem] = $.merge(retVal.filter("." + prefix + elem), retVal.find("." + prefix + elem));
                 setupExtras(appRoot, retVal[elem], root[tmId]._jiantSpec[elem], tmId, elem, retVal);
                 maybeAddDevHook(retVal[elem], tmId, elem);
@@ -1095,7 +1073,7 @@
               var toTrigger = {};
               obj[dataStorageField] = objFrom;
               treatMissingAsNulls && $.each(obj[modelStorageField], function(key, val) {
-                key in objFrom || (objFrom[key] = null);
+                (key in objFrom) || (objFrom[key] = null);
               });
               $.each(objFrom, function(key, val) {
                 if (obj[key] && $.isFunction(obj[key]) && obj[key]() !== val) {
@@ -2290,7 +2268,7 @@
       }
 
       function version() {
-        return 192;
+        return 193;
       }
 
       return {
