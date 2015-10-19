@@ -27,6 +27,7 @@
  1.92.1: ajax error handler tuning
  1.92.2: ajax parameters fix, when sending array of arrays
  1.93: internal code optimization
+ 1.93.1: ajax parameters parsing, array of nulls
  */
 (function() {
   var
@@ -1785,7 +1786,7 @@
           });
         } else {
           if (path in root) {
-            if (root[path].jParsed) {
+            if (root[path] && root[path].jParsed) {
               root[path].push(actual);
             } else {
               root[path] = [root[path], actual];
