@@ -28,6 +28,7 @@
  1.92.2: ajax parameters fix, when sending array of arrays
  1.93: internal code optimization
  1.93.1: ajax parameters parsing, array of nulls
+ 1.94: jiant.forget - removes application from loaded list, enabling repeating calls to bindUi from same application
  */
 (function() {
   var
@@ -2215,6 +2216,15 @@
         }
       }
 
+      function forget(appOrId) {
+        var appId = extractApplicationId(appOrId);
+        uiBoundRoot[appId] && delete uiBoundRoot[appId];
+        awaitingDepends[appId] && delete awaitingDepends[appId];
+        loadedLogics[appId] && delete loadedLogics[appId];
+        lastEncodedStates[appId] && delete lastEncodedStates[appId];
+        lastStates[appId] && delete lastStates[appId];
+      }
+
       function getAwaitingDepends() {
         return awaitingDepends;
       }
@@ -2269,7 +2279,7 @@
       }
 
       function version() {
-        return 193;
+        return 194;
       }
 
       return {
@@ -2283,6 +2293,7 @@
 
         bind: bind,
         bindUi: bindUi,
+        forget: forget,
         declare: declare,
         loadLibs: loadLibs,
         goRoot: goRoot,
