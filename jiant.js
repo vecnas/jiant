@@ -29,6 +29,7 @@
  1.93: internal code optimization
  1.93.1: ajax parameters parsing, array of nulls
  1.94: jiant.forget - removes application from loaded list, enabling repeating calls to bindUi from same application
+ 1.95: jiant.modules app section added, jiant.module(name, function($, app - to register module in app, cb called before bindUi
  */
 (function() {
   var
@@ -138,7 +139,8 @@
         lastEncodedStates = {},
         loadedLogics = {},
         awaitingDepends = {},
-        externalModules = {},
+        externalDeclarations = {},
+        modules = {},
         eventBus = $({}),
         uiBoundRoot = {},
         onInitAppActions = [],
@@ -899,7 +901,7 @@
 
       function _bindViews(appRoot, root, pfx, appUiFactory) {
         $.each(root, function(viewId, viewContent) {
-          var prefix = viewContent.appPrefix ? viewContent.appPrefix : (pfx ? pfx : ""),
+          var prefix = "appPrefix" in viewContent ? viewContent.appPrefix : (pfx ? pfx : ""),
             view = appUiFactory.view(prefix, viewId, viewContent),
             viewOk = ensureExists(prefix, appRoot.dirtyList, view, prefix + viewId);
           viewOk && _bindContent(appRoot, root[viewId], viewId, viewContent, view, prefix);
@@ -919,7 +921,7 @@
 
       function _bindTemplates(appRoot, root, pfx, appUiFactory) {
         $.each(root, function(tmId, tmContent) {
-          var prefix = tmContent.appPrefix ? tmContent.appPrefix : (pfx ? pfx : ""),
+          var prefix = "appPrefix" in tmContent ? tmContent.appPrefix : (pfx ? pfx : ""),
             tm = appUiFactory.template(prefix, tmId, tmContent);
           root[tmId]._jiantSpec = {};
           $.each(tmContent, function (componentId, elemType) {
@@ -1380,7 +1382,7 @@
         var lib = typeof objOrUrlorFn === "string";
         function handle() {
           lib && jiant.info("Loaded external library " + objOrUrlorFn);
-          externalModules[name] = lib ? {} : objOrUrlorFn;
+          externalDeclarations[name] = lib ? {} : objOrUrlorFn;
           $.each(awaitingDepends, function(appId, depList) {
             copyLogic(appId, name);
           });
@@ -1399,7 +1401,7 @@
       }
 
       function copyLogic(appId, name) {
-        var obj = externalModules[name];
+        var obj = externalDeclarations[name];
         if (obj && awaitingDepends[appId] && awaitingDepends[appId][name] && uiBoundRoot[appId]) {
           uiBoundRoot[appId].logic || (uiBoundRoot[appId].logic = {});
           uiBoundRoot[appId].logic[name] || (uiBoundRoot[appId].logic[name] = {});
@@ -1410,7 +1412,7 @@
       }
 
       function checkForExternalAwaiters(appId, name) {
-        if (externalModules[name] && awaitingDepends[appId][name] && uiBoundRoot[appId]) {
+        if (externalDeclarations[name] && awaitingDepends[appId][name] && uiBoundRoot[appId]) {
           awakeAwaitingDepends(appId, name);
           loadedLogics[appId][name] = 1;
           logUnboundCount(appId, name);
@@ -1486,6 +1488,9 @@
 // ------------ states staff ----------------
 
       function _bindStates(appRoot, states, stateExternalBase, appId) {
+        if (! Object.keys(states).length) {
+          return;
+        }
         if (! $(window).hashchange) {
           var err = "No hashchange plugin and states configured. Don't use states or add hashchange plugin (supplied with jiant)";
           jiant.logError(err);
@@ -2011,6 +2016,18 @@
         }
       }
 
+
+// ------------ modules staff ----------------
+      function _loadModules(appRoot, root, appId) {
+        root && $.each(root, function(i, moduleName) {
+          if (! modules[moduleName]) {
+            errorp("Module not present on application start, application id: !!, module name: !!", appId, moduleName);
+          } else {
+            modules[moduleName]($, appRoot);
+          }
+        });
+      }
+
 // ------------ base staff ----------------
 
       function maybeSetDevModeFromQueryString() {
@@ -2045,21 +2062,30 @@
           return;
         }
         maybeShort(root, "logic", "l");
-        maybeShort(root, "intl", "i") && _bindIntl(root, root.intl, appId);
+        var intlPresent = maybeShort(root, "intl", "i");
+        maybeShort(root, "views", "v");
+        maybeShort(root, "templates", "t");
+        maybeShort(root, "ajax", "a");
+        maybeShort(root, "events", "e");
+        maybeShort(root, "semaphores", "sem");
+        maybeShort(root, "states", "s");
+        maybeShort(root, "models", "m");
+        _loadModules(root, root.modules, appId);
+        intlPresent && _bindIntl(root, root.intl, appId);
         // views after intl because of nlabel proxies
-        maybeShort(root, "views", "v") && _bindViews(root, root.views, prefix, appUiFactory);
-        maybeShort(root, "templates", "t") && _bindTemplates(root, root.templates, prefix, appUiFactory);
-        maybeShort(root, "ajax", "a") && _bindAjax(root, root.ajax, root.ajaxPrefix, root.ajaxSuffix, root.crossDomain);
-        maybeShort(root, "events", "e") && _bindEvents(root, root.events, appId);
-        maybeShort(root, "semaphores", "sem") && _bindSemaphores(root, root.semaphores, appId);
-        maybeShort(root, "states", "s") && _bindStates(root, root.states, root.stateExternalBase, appId);
-        maybeShort(root, "models", "m") && _bindModels(root, root.models, appId);
+        _bindViews(root, root.views, prefix, appUiFactory);
+        _bindTemplates(root, root.templates, prefix, appUiFactory);
+        _bindAjax(root, root.ajax, root.ajaxPrefix, root.ajaxSuffix, root.crossDomain);
+        _bindEvents(root, root.events, appId);
+        _bindSemaphores(root, root.semaphores, appId);
+        _bindStates(root, root.states, root.stateExternalBase, appId);
+        _bindModels(root, root.models, appId);
         _bindLogic(root, root.logic, appId);
         jiant.DEV_MODE && !bindingsResult && alert("Some elements not bound to HTML properly, check console" + errString);
         uiBoundRoot[appId] = root;
         loadedLogics[appId] || (loadedLogics[appId] = {});
-        $.each(externalModules, function(name, impl) {
-          loadedLogics[appId][name] || (loadedLogics[appId][name] = externalModules[name]);
+        $.each(externalDeclarations, function(name, impl) {
+          loadedLogics[appId][name] || (loadedLogics[appId][name] = externalDeclarations[name]);
           copyLogic(appId, name);
           awakeAwaitingDepends(appId, name);
         });
@@ -2152,7 +2178,7 @@
           (! loadedLogics[appId]) && (loadedLogics[appId] = {});
           dependenciesList[idx] && $.each(dependenciesList[idx], function(idx, depName) {
             (!awaitingDepends[appId][depName]) && (awaitingDepends[appId][depName] = []);
-            if ((!loadedLogics[appId][depName]) && externalModules[depName]) {
+            if ((!loadedLogics[appId][depName]) && externalDeclarations[depName]) {
               copyLogic(appId, depName);
               checkForExternalAwaiters(appId, depName);
             }
@@ -2214,6 +2240,10 @@
             cb && cb($, uiBoundRoot[appId], readyCb);
           });
         }
+      }
+
+      function module(name, cb) {
+        modules[name] = cb;
       }
 
       function forget(appOrId) {
@@ -2279,7 +2309,7 @@
       }
 
       function version() {
-        return 194;
+        return 195;
       }
 
       return {
@@ -2295,6 +2325,7 @@
         bindUi: bindUi,
         forget: forget,
         declare: declare,
+        module: module,
         loadLibs: loadLibs,
         goRoot: goRoot,
         goState: goState,
