@@ -30,6 +30,7 @@
  1.93.1: ajax parameters parsing, array of nulls
  1.94: jiant.forget - removes application from loaded list, enabling repeating calls to bindUi from same application
  1.95: jiant.modules app section added, jiant.module(name, function($, app - to register module in app, cb called before bindUi
+ 1.96: app structure rollback after forget call, app re-load onUiBound works only for modules, single UiBound triggers once  
  */
 (function() {
   var
@@ -776,9 +777,9 @@
         var fn = function(data, subscribe4updates, reverseBinding) {
           subscribe4updates = (subscribe4updates === undefined) ? true : subscribe4updates;
           $.each(map, function (key, elem) {
+            var val = data[key],
+                elemType = viewOrTm._jiantSpec[key];
             if (spec[key].customRenderer || (data && data[key] !== undefined && data[key] !== null && !isServiceName(key))) {
-              var val = data[key];
-              var elemType = viewOrTm._jiantSpec[key];
               elem = obj[key];
               if ($.isFunction(val)) {
                 getRenderer(spec[key], elemType)(data, elem, val.apply(data), false, viewOrTm);
@@ -1928,13 +1929,12 @@
 
       function loadIntl(intlRoot) {
         if (! intlRoot.url) {
-          error("Intl data url not provided, internationalization will not be loaded");
+          //error("Intl data url not provided, internationalization will not be loaded");
           return;
         }
         intlRoot.t = function(val) {};
         intlRoot.t.spec = true;
         intlRoot.t.empty = true;
-        logInfo(intlRoot);
         $.getJSON(intlRoot.url, function(data) {
           var implSpec = {};
           if (intlRoot.i18n) {
@@ -2248,6 +2248,14 @@
 
       function forget(appOrId) {
         var appId = extractApplicationId(appOrId);
+        if (uiBoundRoot[appId]) {
+          uiBoundRoot[appId].views && $.each(uiBoundRoot[appId].views, function(v, vSpec) {
+            uiBoundRoot[appId].views[v] = vSpec._jiantSpec;
+          });
+          uiBoundRoot[appId].templates && $.each(uiBoundRoot[appId].templates, function(t, tSpec) {
+            uiBoundRoot[appId].templates[t] = tSpec._jiantSpec;
+          });
+        }
         uiBoundRoot[appId] && delete uiBoundRoot[appId];
         awaitingDepends[appId] && delete awaitingDepends[appId];
         loadedLogics[appId] && delete loadedLogics[appId];
@@ -2309,7 +2317,7 @@
       }
 
       function version() {
-        return 195;
+        return 196;
       }
 
       return {
