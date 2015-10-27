@@ -30,7 +30,8 @@
  1.93.1: ajax parameters parsing, array of nulls
  1.94: jiant.forget - removes application from loaded list, enabling repeating calls to bindUi from same application
  1.95: jiant.modules app section added, jiant.module(name, function($, app - to register module in app, cb called before bindUi
- 1.96: app structure rollback after forget call, app re-load onUiBound works only for modules, single UiBound triggers once  
+ 1.96: app structure rollback after forget call, app re-load onUiBound works only for modules, single UiBound triggers once
+ 1.97: reverse binding applied only to input/textarea elements
  */
 (function() {
   var
@@ -814,7 +815,7 @@
                     $.each(elem, function (idx, item) {!!$(item).prop("checked") && arr.push($(item).val());});
                     return arr;
                   }
-                  if (val) {
+                  if (val && $.isFunction(val)) {
                     if (etype === jiant.inputSet) {
                       val(elem2arr(elem));
                     } else if (etype === jiant.inputSetAsString) {
@@ -824,13 +825,18 @@
                         val(!!elem.prop("checked"));
                       } else if (tagName == "input" && tp == "radio") {
                         val(elem2arr(elem).join(","));
-                      } else {
+                      } else if (tagName in {"input": 1,  "select": 1, "textarea": 1}) {
                         val(elem.val());
+                      } else if (tagName == "img") {
+                        val(elem.attr("src"));
+                      // no html reverse binding because no actual event for changing html
+                      //} else {
+                      //  val(elem.html());
                       }
                     }
                   }
                 };
-                elem.change && elem.val && elem.change(backHandler);
+                elem.change && elem.change(backHandler);
                 fn[key] && fn[key].push(backHandler);
               }
             }
@@ -879,19 +885,18 @@
         if (! elem || ! elem[0]) {
           return;
         }
-        var types = ["text", "hidden", undefined];
         var tagName = elem[0].tagName.toLowerCase();
-        if (tagName == "input" || tagName == "textarea" || tagName == "select") {
+        if (tagName in {"input": 1, "textarea": 1, "select": 1}) {
           var el = $(elem[0]),
             tp = el.attr("type");
-          if ($.inArray(tp, types) >= 0) {
-            (val == undefined || val == null) ? elem.val(val) : elem.val(val + "");
-          } else if (tp == "checkbox") {
+          if (tp == "checkbox") {
             elem.prop("checked", !!val);
           } else if (tp == "radio") {
             $.each(elem, function(idx, subelem) {
               $(subelem).prop("checked", subelem.value == val);
             });
+          } else {
+            (val == undefined || val == null) ? elem.val(val) : elem.val(val + "");
           }
         } else if (tagName == "img") {
           elem.attr("src", val);
@@ -2317,7 +2322,7 @@
       }
 
       function version() {
-        return 196;
+        return 197;
       }
 
       return {
