@@ -49,6 +49,7 @@
  xl.0.43: bindList, no-uifield scenario
  xl.0.44: pseudoSelect default callback show/hide toggler
  xl.0.45: pageableFilterableSortableModel proper reaction on model changes, when state used
+ xl.0.46: bindList dynamic container
  */
 
 (function() {
@@ -58,7 +59,7 @@
   var tmpJiantXl = {
 
     version: function() {
-      return 45;
+      return 46;
     },
 
     ctl2state: function(ctl, state, selectedCssClass, goProxy) {
@@ -129,6 +130,7 @@
     bindList: function(model, container, template, viewFieldSetterName, sortFn, subscribeForUpdates, reversePropagate, elemFactory) {
       function renderObj(obj) {
         var tm = $.isFunction(template) ? template(obj) : template,
+            cnt = $.isFunction(container) ? container(obj) : container,
             view = elemFactory ? elemFactory.create(obj, subscribeForUpdates, reversePropagate)
                 : tm.parseTemplate(obj, subscribeForUpdates, reversePropagate),
             appended = false;
@@ -144,7 +146,7 @@
           });
         }
         if (!appended) {
-          !elemFactory && container.append(view);
+          !elemFactory && cnt.append(view);
         }
         viewFieldSetterName && $.isFunction(obj[viewFieldSetterName]) && view && obj[viewFieldSetterName](view);
       }
@@ -226,7 +228,7 @@
           var parsedNum = parseInt(pageNum) + "";
           if (parsedNum != pageNum) {
             jiant.logError("pagedContent expects pageNum as first state parameter, passed: " + pageNum
-              + ", recommended fix: make pageNum first argument, now replacing pageNum by 0");
+                + ", recommended fix: make pageNum first argument, now replacing pageNum by 0");
             pageNum = 0;
           }
           var pageable = {"page.page": pageNum, "page": parsedNum == 0 ? 0 : parsedNum - 1};
@@ -402,9 +404,9 @@
       }
       if (! cb) {
         cb = function(selectedElem, selectedVal, prevElem, prevVal) {
-               prevVal && $(prevVal).hide();
-               selectedVal && $(selectedVal).show();
-             };
+          prevVal && $(prevVal).hide();
+          selectedVal && $(selectedVal).show();
+        };
       }
       var impl = new Impl();
       impl.setSelectClass(selectClass);
