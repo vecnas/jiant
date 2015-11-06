@@ -32,6 +32,7 @@
  1.95: jiant.modules app section added, jiant.module(name, function($, app - to register module in app, cb called before bindUi
  1.96: app structure rollback after forget call, app re-load onUiBound works only for modules, single UiBound triggers once
  1.97: reverse binding applied only to input/textarea elements
+ 1.98: proper forgetting ajax functions
  */
 (function() {
   var
@@ -1765,8 +1766,8 @@
 // ------------ ajax staff ----------------
 
       function getParamNames(func) {
-        var funStr = func.toString();
-        return funStr.slice(funStr.indexOf('(')+1, funStr.indexOf(')')).match(/([^\s,]+)/g);
+        var funcStr = func.toString();
+        return funcStr.slice(funcStr.indexOf('(') + 1, funcStr.indexOf(')')).match(/([^\s,]+)/g);
       }
 
       function _bindAjax(appRoot, root, ajaxPrefix, ajaxSuffix, crossDomain) {
@@ -1774,7 +1775,7 @@
           var params = getParamNames(funcSpec);
           params && params.length > 0 ? params.splice(params.length - 1, 1) : params = [];
           root[uri] = makeAjaxPerformer(appRoot, ajaxPrefix, ajaxSuffix, uri, params, $.isFunction(root[uri]) ? root[uri]() : undefined, crossDomain);
-          root[uri]._jiantSpec = params;
+          root[uri]._jiantSpec = funcSpec;
           $.each(listeners, function(i, l) {l.boundAjax && l.boundAjax(appRoot, root, uri, root[uri])});
         });
       }
@@ -2260,6 +2261,9 @@
           uiBoundRoot[appId].templates && $.each(uiBoundRoot[appId].templates, function(t, tSpec) {
             uiBoundRoot[appId].templates[t] = tSpec._jiantSpec;
           });
+          uiBoundRoot[appId].ajax && $.each(uiBoundRoot[appId].ajax, function(f, fSpec) {
+            uiBoundRoot[appId].ajax[f] = fSpec._jiantSpec;
+          });
         }
         uiBoundRoot[appId] && delete uiBoundRoot[appId];
         awaitingDepends[appId] && delete awaitingDepends[appId];
@@ -2322,7 +2326,7 @@
       }
 
       function version() {
-        return 197;
+        return 198;
       }
 
       return {
