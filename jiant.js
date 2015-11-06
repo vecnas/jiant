@@ -33,6 +33,7 @@
  1.96: app structure rollback after forget call, app re-load onUiBound works only for modules, single UiBound triggers once
  1.97: reverse binding applied only to input/textarea elements
  1.98: proper forgetting ajax functions
+ 1.98.1: .off for non-jquery view elements now doesn't break code
  */
 (function() {
   var
@@ -789,7 +790,7 @@
                   if (fn[key]) {
                     var off = fn[key][0];
                     off && off(fn[key][1]);
-                    fn[key][2] && elem.off("change", fn[key][2]);
+                    fn[key][2] && elem.off && elem.off("change", fn[key][2]);
                   }
                   var handler = val.on(function(obj, newVal) {getRenderer(spec[key], elemType)(data, elem, newVal, true, viewOrTm)});
                   fn[key] = [val.off, handler];
@@ -800,7 +801,7 @@
                   if (fn[key]) {
                     var off = fn[key][0];
                     off && off(fn[key][1]);
-                    fn[key][2] && elem.off("change", fn[key][2]);
+                    fn[key][2] && elem.off && elem.off("change", fn[key][2]);
                   }
                   var handler = data.on(function(obj, newVal) {getRenderer(spec[key], elemType)(data, elem, newVal, true, viewOrTm)});
                   fn[key] = [data.off, handler];
