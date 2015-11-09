@@ -34,6 +34,7 @@
  1.97: reverse binding applied only to input/textarea elements
  1.98: proper forgetting ajax functions
  1.98.1: .off for non-jquery view elements now doesn't break code
+ 1.99: model empty function for getters handles any whitespaces inside of declaration
  */
 (function() {
   var
@@ -1310,7 +1311,8 @@
       }
 
       function isEmptyFunction(funcSpec) {
-        return ("" + funcSpec).indexOf("{}") == ("" + funcSpec).length - 2
+        var s = ("" + funcSpec).replace(/\s/g, '');
+        return s.indexOf("{}") == s.length - 2;
       }
 
       function _bindModels(appRoot, models, appId) {
@@ -2327,7 +2329,7 @@
       }
 
       function version() {
-        return 198;
+        return 199;
       }
 
       return {
