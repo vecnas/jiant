@@ -35,6 +35,7 @@
  1.98: proper forgetting ajax functions
  1.98.1: .off for non-jquery view elements now doesn't break code
  1.99: model empty function for getters handles any whitespaces inside of declaration
+ 2.00: modules updated, loaded via urls, modules: {modName: modUrl, etc...}, jiant.imgBg control type addded
  */
 (function() {
   var
@@ -103,6 +104,7 @@
         },
         grid = {},
         image = {},
+        imgBg = {},
         input = {},
         inputSet = {},
         inputSetAsString = {},
@@ -856,12 +858,22 @@
           return obj.customRenderer;
         } else if (elemType === jiant.inputSet) {
           return updateInputSet;
+        } else if (elemType === jiant.imgBg) {
+          return updateImgBg;
         } else if (elemType === jiant.inputSetAsString) {
           return function(obj, elem, val, isUpdate, viewOrTemplate) {
             updateInputSet(obj, elem, !!val ? val.split(",") : [], isUpdate, viewOrTemplate);
           };
         } else {
           return updateViewElement;
+        }
+      }
+
+      function updateImgBg(obj, elem, val, isUpdate, viewOrTemplate) {
+        if (!!val) {
+          elem.css("background-image", "url(" + val + ")");
+        } else {
+          elem.css("background-image", "");
         }
       }
 
@@ -2027,14 +2039,33 @@
 
 
 // ------------ modules staff ----------------
-      function _loadModules(appRoot, root, appId) {
-        root && $.each(root, function(i, moduleName) {
+      function _loadModules(appRoot, root, appId, cb) {
+        var totalCounter = Object.keys(root).length;
+        function cbIf0() {
+          totalCounter <= 0 && cb();
+        }
+        root && $.each(root, function(moduleName, moduleUrl) {
           if (! modules[moduleName]) {
-            errorp("Module not present on application start, application id: !!, module name: !!", appId, moduleName);
+            $.ajax({
+              url: (appRoot.ajaxPrefix || "") + moduleUrl + ".js",
+              //timeout: 15000,
+              cache: true,
+              crossDomain: true,
+              dataType: "script"
+            }).done(function() {
+              modules[moduleName]($, appRoot);
+              jiant.logInfo("Loaded module " + moduleUrl + ". Remains " + (totalCounter - 1) + " module(s)");
+            }).always(function() {
+              totalCounter--;
+              cbIf0();
+            });
           } else {
             modules[moduleName]($, appRoot);
+            totalCounter--;
+            cbIf0();
           }
         });
+        cbIf0();
       }
 
 // ------------ base staff ----------------
@@ -2079,28 +2110,29 @@
         maybeShort(root, "semaphores", "sem");
         maybeShort(root, "states", "s");
         maybeShort(root, "models", "m");
-        _loadModules(root, root.modules, appId);
-        intlPresent && _bindIntl(root, root.intl, appId);
-        // views after intl because of nlabel proxies
-        _bindViews(root, root.views, prefix, appUiFactory);
-        _bindTemplates(root, root.templates, prefix, appUiFactory);
-        _bindAjax(root, root.ajax, root.ajaxPrefix, root.ajaxSuffix, root.crossDomain);
-        _bindEvents(root, root.events, appId);
-        _bindSemaphores(root, root.semaphores, appId);
-        _bindStates(root, root.states, root.stateExternalBase, appId);
-        _bindModels(root, root.models, appId);
-        _bindLogic(root, root.logic, appId);
-        jiant.DEV_MODE && !bindingsResult && alert("Some elements not bound to HTML properly, check console" + errString);
-        uiBoundRoot[appId] = root;
-        loadedLogics[appId] || (loadedLogics[appId] = {});
-        $.each(externalDeclarations, function(name, impl) {
-          loadedLogics[appId][name] || (loadedLogics[appId][name] = externalDeclarations[name]);
-          copyLogic(appId, name);
-          awakeAwaitingDepends(appId, name);
+        _loadModules(root, root.modules, appId, function() {
+          intlPresent && _bindIntl(root, root.intl, appId);
+          // views after intl because of nlabel proxies
+          _bindViews(root, root.views, prefix, appUiFactory);
+          _bindTemplates(root, root.templates, prefix, appUiFactory);
+          _bindAjax(root, root.ajax, root.ajaxPrefix, root.ajaxSuffix, root.crossDomain);
+          _bindEvents(root, root.events, appId);
+          _bindSemaphores(root, root.semaphores, appId);
+          _bindStates(root, root.states, root.stateExternalBase, appId);
+          _bindModels(root, root.models, appId);
+          _bindLogic(root, root.logic, appId);
+          jiant.DEV_MODE && !bindingsResult && alert("Some elements not bound to HTML properly, check console" + errString);
+          uiBoundRoot[appId] = root;
+          loadedLogics[appId] || (loadedLogics[appId] = {});
+          $.each(externalDeclarations, function(name, impl) {
+            loadedLogics[appId][name] || (loadedLogics[appId][name] = externalDeclarations[name]);
+            copyLogic(appId, name);
+            awakeAwaitingDepends(appId, name);
+          });
+          var appInitEvent = appId + "onAppInit" + appId;
+          eventBus.trigger(appInitEvent);
+          $.when.apply($, onInitAppActions).done(function() {eventBus.trigger(appBoundEventName(appId))});
         });
-        var appInitEvent = appId + "onAppInit" + appId;
-        eventBus.trigger(appInitEvent);
-        $.when.apply($, onInitAppActions).done(function() {eventBus.trigger(appBoundEventName(appId))});
       }
 
       function bindUi(prefix, root, devMode, viewsUrl, injectId) {
@@ -2329,7 +2361,7 @@
       }
 
       function version() {
-        return 199;
+        return 200;
       }
 
       return {
@@ -2392,6 +2424,7 @@
         form: form,
         grid: grid,
         image: image,
+        imgBg: imgBg,
         input: input,
         inputSet: inputSet,
         inputSetAsString: inputSetAsString,
