@@ -2110,6 +2110,7 @@
         maybeShort(root, "semaphores", "sem");
         maybeShort(root, "states", "s");
         maybeShort(root, "models", "m");
+        root.modules = root.modules || {};
         _loadModules(root, root.modules, appId, function() {
           intlPresent && _bindIntl(root, root.intl, appId);
           // views after intl because of nlabel proxies
