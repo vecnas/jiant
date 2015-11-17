@@ -36,7 +36,9 @@
  1.98.1: .off for non-jquery view elements now doesn't break code
  1.99: model empty function for getters handles any whitespaces inside of declaration
  2.00: modules updated, loaded via urls, modules: {modName: modUrl, etc...}, jiant.imgBg control type addded
+ 2.01: jiant.override(logicOrName, function($, app, currentImpl) - override logic implementation, may be called before bind; jiant.implement(logic, impl) added
  */
+"use strict";
 (function() {
   var
     DefaultUiFactory = function() {
@@ -130,11 +132,7 @@
         pager = {},
         slider = {},
         stub = function () {
-          var callerName = "not available";
-          if (arguments && arguments.callee && arguments.callee.caller) {
-            callerName = arguments.callee.caller.name;
-          }
-          alert("stub called from function: " + callerName);
+          jiant.logError("stub called");
         },
         tabs = {},
 
@@ -149,7 +147,7 @@
         externalDeclarations = {},
         modules = {},
         eventBus = $({}),
-        uiBoundRoot = {},
+        boundApps = {},
         onInitAppActions = [],
         uiFactory = new DefaultUiFactory(),
         statesUsed = {},
@@ -1336,6 +1334,22 @@
 
 // ------------ logic staff ----------------
 
+      function implement(logic, impl) {
+        logic.implement(impl);
+      }
+
+      function override(spec, implFn) {
+        if (spec._jAppId) {
+          var newImpl = implFn($, boundApps[spec._jAppId], spec);
+          $.each(newImpl, function(fname, fbody) {
+            spec[fname] = fbody;
+          });
+        } else {
+          spec._jOverrides = spec._jOverrides || [];
+          spec._jOverrides.push(implFn);
+        }
+      }
+
       function _bindLogic(appRoot, logics, appId) {
         $.each(logics, function(name, spec) {
           if ($.isFunction(spec)) {
@@ -1357,14 +1371,21 @@
               }
             });
             spec.implement = function(obj) {
+              spec._jAppId = appId;
               $.each(spec, function(fname, fnbody) {
-                if ($.isFunction(fnbody) && fname != "implement") {
+                if ($.isFunction(fnbody) && !(fname in {"implement": 1, "_jAppId": 1, "_jOverrides": 1})) {
                   if (! obj[fname]) {
                     jiant.logError("Logic function " + fname + " is not implemented by declared implementation");
                   } else {
                     spec[fname] = obj[fname];
                   }
                 }
+              });
+              spec._jOverrides && spec._jOverrides.length && $.each(spec._jOverrides, function(i, implFn) {
+                var newImpl = implFn($, boundApps[spec._jAppId], spec);
+                $.each(newImpl, function(fname, fbody) {
+                  spec[fname] = fbody;
+                });
               });
               (! loadedLogics[appId]) && (loadedLogics[appId] = {});
               loadedLogics[appId][name] = 1;
@@ -1424,17 +1445,17 @@
 
       function copyLogic(appId, name) {
         var obj = externalDeclarations[name];
-        if (obj && awaitingDepends[appId] && awaitingDepends[appId][name] && uiBoundRoot[appId]) {
-          uiBoundRoot[appId].logic || (uiBoundRoot[appId].logic = {});
-          uiBoundRoot[appId].logic[name] || (uiBoundRoot[appId].logic[name] = {});
-          $.each($.isFunction(obj) ? obj($, uiBoundRoot[appId]) : obj, function(fname, fspec) {
-            uiBoundRoot[appId].logic[name][fname] = fspec;
+        if (obj && awaitingDepends[appId] && awaitingDepends[appId][name] && boundApps[appId]) {
+          boundApps[appId].logic || (boundApps[appId].logic = {});
+          boundApps[appId].logic[name] || (boundApps[appId].logic[name] = {});
+          $.each($.isFunction(obj) ? obj($, boundApps[appId]) : obj, function(fname, fspec) {
+            boundApps[appId].logic[name][fname] = fspec;
           });
         }
       }
 
       function checkForExternalAwaiters(appId, name) {
-        if (externalDeclarations[name] && awaitingDepends[appId][name] && uiBoundRoot[appId]) {
+        if (externalDeclarations[name] && awaitingDepends[appId][name] && boundApps[appId]) {
           awakeAwaitingDepends(appId, name);
           loadedLogics[appId][name] = 1;
           logUnboundCount(appId, name);
@@ -1538,7 +1559,7 @@
               cb && cb.apply(cb, args);
             });
             var current = parseState(appId);
-            if (uiBoundRoot[appId] && ((name == "" && current.now.length == 0) || (current.now[0] == name))) {
+            if (boundApps[appId] && ((name == "" && current.now.length == 0) || (current.now[0] == name))) {
               var params = current.now;
               params.splice(0, 1);
               cb && cb.apply(cb, params);
@@ -1633,7 +1654,7 @@
       }
 
       function isSameStatesGroup(appId, state0, state1) {
-        var statesRoot = uiBoundRoot[appId].states;
+        var statesRoot = boundApps[appId].states;
         return (statesRoot[state0] && statesRoot[state1] && statesRoot[state0].statesGroup !== undefined
         && statesRoot[state0].statesGroup === statesRoot[state1].statesGroup);
       }
@@ -2039,6 +2060,7 @@
 
 
 // ------------ modules staff ----------------
+
       function _loadModules(appRoot, root, appId, cb) {
         var totalCounter = Object.keys(root).length;
         function cbIf0() {
@@ -2097,7 +2119,7 @@
         if (! root.id) {
           jiant.logError("!!! Application id not specified. Not recommended since 0.20. Use 'id' property of application root to specify application id");
         }
-        if (uiBoundRoot[appId]) {
+        if (boundApps[appId]) {
           jiant.logError("Application '" + appId + "' already loaded, skipping multiple bind call");
           return;
         }
@@ -2123,7 +2145,7 @@
           _bindModels(root, root.models, appId);
           _bindLogic(root, root.logic, appId);
           jiant.DEV_MODE && !bindingsResult && alert("Some elements not bound to HTML properly, check console" + errString);
-          uiBoundRoot[appId] = root;
+          boundApps[appId] = root;
           loadedLogics[appId] || (loadedLogics[appId] = {});
           $.each(externalDeclarations, function(name, impl) {
             loadedLogics[appId][name] || (loadedLogics[appId][name] = externalDeclarations[name]);
@@ -2233,7 +2255,7 @@
       function handleBoundArr(appIdArr, cb) {
         var allBound = true;
         $.each(appIdArr, function(idx, appId) {
-          if (! uiBoundRoot[appId]) {
+          if (! boundApps[appId]) {
             eventBus.one(appBoundEventName(appId), function() {
               handleBoundArr(appIdArr, cb);
             });
@@ -2254,7 +2276,7 @@
             if (! allDependsResolved) {
               return false;
             }
-            params.push(uiBoundRoot[appId]);
+            params.push(boundApps[appId]);
           });
           allDependsResolved && cb.apply(cb, params);
         }
@@ -2274,12 +2296,12 @@
         var readyCb = function() {
           deferred.resolve();
         };
-        if (uiBoundRoot[appId]) {
+        if (boundApps[appId]) {
           jiant.logError("Defining and calling onUiBound() before onAppInit().");
         } else {
           var eventId = appId + "onAppInit" + appId;
           eventBus.on(eventId, function () {
-            cb && cb($, uiBoundRoot[appId], readyCb);
+            cb && cb($, boundApps[appId], readyCb);
           });
         }
       }
@@ -2290,18 +2312,18 @@
 
       function forget(appOrId) {
         var appId = extractApplicationId(appOrId);
-        if (uiBoundRoot[appId]) {
-          uiBoundRoot[appId].views && $.each(uiBoundRoot[appId].views, function(v, vSpec) {
-            uiBoundRoot[appId].views[v] = vSpec._jiantSpec;
+        if (boundApps[appId]) {
+          boundApps[appId].views && $.each(boundApps[appId].views, function(v, vSpec) {
+            boundApps[appId].views[v] = vSpec._jiantSpec;
           });
-          uiBoundRoot[appId].templates && $.each(uiBoundRoot[appId].templates, function(t, tSpec) {
-            uiBoundRoot[appId].templates[t] = tSpec._jiantSpec;
+          boundApps[appId].templates && $.each(boundApps[appId].templates, function(t, tSpec) {
+            boundApps[appId].templates[t] = tSpec._jiantSpec;
           });
-          uiBoundRoot[appId].ajax && $.each(uiBoundRoot[appId].ajax, function(f, fSpec) {
-            uiBoundRoot[appId].ajax[f] = fSpec._jiantSpec;
+          boundApps[appId].ajax && $.each(boundApps[appId].ajax, function(f, fSpec) {
+            boundApps[appId].ajax[f] = fSpec._jiantSpec;
           });
         }
-        uiBoundRoot[appId] && delete uiBoundRoot[appId];
+        boundApps[appId] && delete boundApps[appId];
         awaitingDepends[appId] && delete awaitingDepends[appId];
         loadedLogics[appId] && delete loadedLogics[appId];
         lastEncodedStates[appId] && delete lastEncodedStates[appId];
@@ -2325,7 +2347,7 @@
 
       function visualize(appId) {
         loadLibs(["https://cdn.rawgit.com/vecnas/jiant/master/graph.js"], function() {
-          appId || $.each(uiBoundRoot, function(key, val) {
+          appId || $.each(boundApps, function(key, val) {
             appId = key;
             return false;
           });
@@ -2362,7 +2384,7 @@
       }
 
       function version() {
-        return 200;
+        return 201;
       }
 
       return {
@@ -2378,6 +2400,8 @@
         bindUi: bindUi,
         forget: forget,
         declare: declare,
+        override: override,
+        implement: implement,
         module: module,
         loadLibs: loadLibs,
         goRoot: goRoot,
