@@ -37,6 +37,7 @@
  1.99: model empty function for getters handles any whitespaces inside of declaration
  2.00: modules updated, loaded via urls, modules: {modName: modUrl, etc...}, jiant.imgBg control type addded
  2.01: jiant.override(logicOrName, function($, app, currentImpl) - override logic implementation, may be called before bind; jiant.implement(logic, impl) added
+ 2.01.1: inputSetAsString input types fix
  */
 "use strict";
 (function() {
@@ -860,7 +861,7 @@
           return updateImgBg;
         } else if (elemType === jiant.inputSetAsString) {
           return function(obj, elem, val, isUpdate, viewOrTemplate) {
-            updateInputSet(obj, elem, !!val ? val.split(",") : [], isUpdate, viewOrTemplate);
+            updateInputSet(obj, elem, !val ? [] : $.isArray(val) ? val : $.isNumeric(val) ? [val] : ("" + val).split(","), isUpdate, viewOrTemplate);
           };
         } else {
           return updateViewElement;
