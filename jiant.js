@@ -38,6 +38,7 @@
  2.00: modules updated, loaded via urls, modules: {modName: modUrl, etc...}, jiant.imgBg control type addded
  2.01: jiant.override(logicOrName, function($, app, currentImpl) - override logic implementation, may be called before bind; jiant.implement(logic, impl) added
  2.01.1: inputSetAsString input types fix
+ 2.01.2: strict mode fix for some input data parameters
  */
 "use strict";
 (function() {
@@ -782,31 +783,32 @@
         var fn = function(data, subscribe4updates, reverseBinding) {
           subscribe4updates = (subscribe4updates === undefined) ? true : subscribe4updates;
           $.each(map, function (key, elem) {
-            var val = data[key],
+            var fnKey = "_j" + key,
+                val = data[key],
                 elemType = viewOrTm._jiantSpec[key];
             if (spec[key].customRenderer || (data && data[key] !== undefined && data[key] !== null && !isServiceName(key))) {
               elem = obj[key];
               if ($.isFunction(val)) {
                 getRenderer(spec[key], elemType)(data, elem, val.apply(data), false, viewOrTm);
                 if (subscribe4updates && $.isFunction(val.on)) {
-                  if (fn[key]) {
-                    var off = fn[key][0];
-                    off && off(fn[key][1]);
-                    fn[key][2] && elem.off && elem.off("change", fn[key][2]);
+                  if (fn[fnKey]) {
+                    var off = fn[fnKey][0];
+                    off && off(fn[fnKey][1]);
+                    fn[fnKey][2] && elem.off && elem.off("change", fn[fnKey][2]);
                   }
                   var handler = val.on(function(obj, newVal) {getRenderer(spec[key], elemType)(data, elem, newVal, true, viewOrTm)});
-                  fn[key] = [val.off, handler];
+                  fn[fnKey] = [val.off, handler];
                 }
               } else {
                 getRenderer(spec[key], elemType)(data, elem, val, false, viewOrTm);
                 if (subscribe4updates && $.isFunction(data.on) && spec[key].customRenderer) {
-                  if (fn[key]) {
-                    var off = fn[key][0];
-                    off && off(fn[key][1]);
-                    fn[key][2] && elem.off && elem.off("change", fn[key][2]);
+                  if (fn[fnKey]) {
+                    var off = fn[fnKey][0];
+                    off && off(fn[fnKey][1]);
+                    fn[fnKey][2] && elem.off && elem.off("change", fn[fnKey][2]);
                   }
                   var handler = data.on(function(obj, newVal) {getRenderer(spec[key], elemType)(data, elem, newVal, true, viewOrTm)});
-                  fn[key] = [data.off, handler];
+                  fn[fnKey] = [data.off, handler];
                 }
               }
               if (reverseBinding) {
@@ -841,7 +843,7 @@
                   }
                 };
                 elem.change && elem.change(backHandler);
-                fn[key] && fn[key].push(backHandler);
+                fn[fnKey] && fn[fnKey].push(backHandler);
               }
             }
           });
