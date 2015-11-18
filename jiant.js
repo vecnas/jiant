@@ -39,6 +39,7 @@
  2.01: jiant.override(logicOrName, function($, app, currentImpl) - override logic implementation, may be called before bind; jiant.implement(logic, impl) added
  2.01.1: inputSetAsString input types fix
  2.01.2: strict mode fix for some input data parameters
+ 2.02: jSubmitAsMap could be set for ajax submitted object to enforce param[key] instead of param.key (due to spring limitations)
  */
 "use strict";
 (function() {
@@ -1830,10 +1831,17 @@
           });
         } else if ($.isPlainObject(actual)) {
           $.each(actual, function(key, value) {
+            if (key == "jSubmitAsMap") {
+              return;
+            }
             if (actual[modelInnerDataField]) { // model
               isModelAccessor(value) && !isTransient(value) && parseForAjaxCall(root, (traverse ? (path + ".") : "") + key, value(), true);
             } else {
-              parseForAjaxCall(root, (traverse ? (path + ".") : "") + key, value, true);
+              if (actual.jSubmitAsMap) {
+                parseForAjaxCall(root, (traverse ? (path + "[") : "") + key + (traverse ? "]" : ""), value, true);
+              } else {
+                parseForAjaxCall(root, (traverse ? (path + ".") : "") + key, value, true);
+              }
             }
           });
         } else {
@@ -2387,7 +2395,7 @@
       }
 
       function version() {
-        return 201;
+        return 202;
       }
 
       return {
