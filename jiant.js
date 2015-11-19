@@ -41,6 +41,7 @@
  2.01.2: strict mode fix for some input data parameters
  2.02: jSubmitAsMap could be set for ajax submitted object to enforce param[key] instead of param.key (due to spring limitations)
  2.03: jiant.bindView(appRoot, viewId, viewContent, view) added
+ 2.03.1: app.modulesPrefix used as prefix for modules load
  */
 "use strict";
 (function() {
@@ -2086,7 +2087,7 @@
         root && $.each(root, function(moduleName, moduleUrl) {
           if (! modules[moduleName]) {
             $.ajax({
-              url: (appRoot.ajaxPrefix || "") + moduleUrl + ".js",
+              url: (appRoot.modulesPrefix || "") + moduleUrl + ".js",
               //timeout: 15000,
               cache: true,
               crossDomain: true,
