@@ -42,6 +42,7 @@
  2.02: jSubmitAsMap could be set for ajax submitted object to enforce param[key] instead of param.key (due to spring limitations)
  2.03: jiant.bindView(appRoot, viewId, viewContent, view) added
  2.03.1: app.modulesPrefix used as prefix for modules load
+ 2.04: loaded modules execution order preserved, jiant.override accepts only logic, not name
  */
 "use strict";
 (function() {
@@ -1351,7 +1352,8 @@
 
       function override(spec, implFn) {
         if (spec._jAppId) {
-          var newImpl = implFn($, boundApps[spec._jAppId], spec);
+          var superImpl = $.extend(true, {}, spec),
+              newImpl = implFn($, boundApps[spec._jAppId], superImpl);
           $.each(newImpl, function(fname, fbody) {
             spec[fname] = fbody;
           });
@@ -1393,7 +1395,8 @@
                 }
               });
               spec._jOverrides && spec._jOverrides.length && $.each(spec._jOverrides, function(i, implFn) {
-                var newImpl = implFn($, boundApps[spec._jAppId], spec);
+                var superImpl = $.extend(true, {}, spec),
+                    newImpl = implFn($, boundApps[spec._jAppId], superImpl);
                 $.each(newImpl, function(fname, fbody) {
                   spec[fname] = fbody;
                 });
@@ -2080,27 +2083,34 @@
 // ------------ modules staff ----------------
 
       function _loadModules(appRoot, root, appId, cb) {
-        var totalCounter = Object.keys(root).length;
+        var totalCounter = Object.keys(root).length,
+            loading = {};
         function cbIf0() {
-          totalCounter <= 0 && cb();
+          if (totalCounter > 0) {
+            return;
+          }
+          $.each(root, function(moduleName, moduleUrl) {
+            modules[moduleName]($, appRoot);
+          });
+          cb();
         }
         root && $.each(root, function(moduleName, moduleUrl) {
-          if (! modules[moduleName]) {
+          if (!modules[moduleName]) {
+            loading[moduleName] = 1;
             $.ajax({
-              url: (appRoot.modulesPrefix || "") + moduleUrl + ".js",
+              url: (appRoot.modulesPrefix || "") + moduleUrl + ".js?" + (appRoot.modulesSuffix || ""),
               //timeout: 15000,
               cache: true,
               crossDomain: true,
               dataType: "script"
             }).done(function() {
-              modules[moduleName]($, appRoot);
-              jiant.logInfo("Loaded module " + moduleUrl + ". Remains " + (totalCounter - 1) + " module(s)");
+              delete loading[moduleName];
+              jiant.logInfo("Loaded module " + moduleUrl + ". Remains " + (totalCounter - 1) + " module(s)", loading);
             }).always(function() {
               totalCounter--;
               cbIf0();
             });
           } else {
-            modules[moduleName]($, appRoot);
             totalCounter--;
             cbIf0();
           }
@@ -2403,7 +2413,7 @@
       }
 
       function version() {
-        return 203;
+        return 204;
       }
 
       return {
