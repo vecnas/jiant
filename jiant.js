@@ -40,6 +40,7 @@
  2.01.1: inputSetAsString input types fix
  2.01.2: strict mode fix for some input data parameters
  2.02: jSubmitAsMap could be set for ajax submitted object to enforce param[key] instead of param.key (due to spring limitations)
+ 2.03: jiant.bindView(appRoot, viewId, viewContent, view) added
  */
 "use strict";
 (function() {
@@ -575,10 +576,10 @@
 
 // ------------ views ----------------
 
-      function _bindContent(appRoot, viewRoot, viewId, viewContent, viewElem, prefix) {
+      function _bindContent(appRoot, viewRoot, viewId, viewElem, prefix) {
         var typeSpec = {};
         viewRoot._jiantSpec = typeSpec;
-        $.each(viewContent, function (componentId, componentContent) {
+        $.each(viewRoot, function (componentId, componentContent) {
           typeSpec[componentId] = componentContent;
           if (componentId in {appPrefix: 1, impl: 1, _jiantSpec: 1}) {
             //skip
@@ -776,7 +777,7 @@
         return $.inArray(key, words) >= 0;
       }
 
-      function makePropagationFunction(viewId, spec, obj, viewOrTm) {
+      function makePropagationFunction(viewId, spec, viewOrTm) {
         var map = {};
         $.each(spec, function (key, elem) {
           map[key] = elem;
@@ -788,7 +789,7 @@
                 val = data[key],
                 elemType = viewOrTm._jiantSpec[key];
             if (spec[key].customRenderer || (data && data[key] !== undefined && data[key] !== null && !isServiceName(key))) {
-              elem = obj[key];
+              elem = viewOrTm[key];
               if ($.isFunction(val)) {
                 getRenderer(spec[key], elemType)(data, elem, val.apply(data), false, viewOrTm);
                 if (subscribe4updates && $.isFunction(val.on)) {
@@ -849,7 +850,7 @@
             }
           });
           if (spec.customRenderer && $.isFunction(spec.customRenderer)) {
-            spec.customRenderer(data, obj);
+            spec.customRenderer(data, viewOrTm);
           }
         };
         return fn;
@@ -922,18 +923,23 @@
         }
       }
 
-      function _bindViews(appRoot, root, pfx, appUiFactory) {
+      function _bindViews(appRoot, root, appUiFactory) {
         $.each(root, function(viewId, viewContent) {
-          var prefix = "appPrefix" in viewContent ? viewContent.appPrefix : (pfx ? pfx : ""),
-            view = appUiFactory.view(prefix, viewId, viewContent),
-            viewOk = ensureExists(prefix, appRoot.dirtyList, view, prefix + viewId);
-          viewOk && _bindContent(appRoot, root[viewId], viewId, viewContent, view, prefix);
-          ensureSafeExtend(root[viewId], view);
-          root[viewId].propagate = makePropagationFunction(viewId, viewContent, viewContent, root[viewId]);
-          $.extend(root[viewId], view);
-          maybeAddDevHook(view, viewId, undefined);
-          $.each(listeners, function(i, l) {l.boundView && l.boundView(appRoot, root, viewId, prefix, root[viewId])});
+          var prefix = "appPrefix" in viewContent ? viewContent.appPrefix : appRoot.appPrefix,
+              view = appUiFactory.view(prefix, viewId, viewContent);
+          bindView(appRoot, viewId, viewContent, view);
         });
+      }
+
+      function bindView(appRoot, viewId, viewContent, view) {
+        var prefix = "appPrefix" in viewContent ? viewContent.appPrefix : appRoot.appPrefix,
+            viewOk = ensureExists(prefix, appRoot.dirtyList, view, prefix + viewId);
+        viewOk && _bindContent(appRoot, viewContent, viewId, view, prefix);
+        ensureSafeExtend(viewContent, view);
+        viewContent.propagate = makePropagationFunction(viewId, viewContent, viewContent);
+        $.extend(viewContent, view);
+        maybeAddDevHook(view, viewId, undefined);
+        $.each(listeners, function(i, l) {l.boundView && l.boundView(appRoot, appRoot.views, viewId, prefix, viewContent)});
       }
 
 // ------------ templates ----------------
@@ -942,9 +948,9 @@
         return parseTemplate(tm, data);
       }
 
-      function _bindTemplates(appRoot, root, pfx, appUiFactory) {
+      function _bindTemplates(appRoot, root, appUiFactory) {
         $.each(root, function(tmId, tmContent) {
-          var prefix = "appPrefix" in tmContent ? tmContent.appPrefix : (pfx ? pfx : ""),
+          var prefix = "appPrefix" in tmContent ? tmContent.appPrefix : appRoot.appPrefix,
             tm = appUiFactory.template(prefix, tmId, tmContent);
           root[tmId]._jiantSpec = {};
           $.each(tmContent, function (componentId, elemType) {
@@ -986,7 +992,7 @@
               }
             });
             retVal.splice(0, 1); // remove first comment
-            retVal.propagate = makePropagationFunction(tmId, tmContent, retVal, retVal);
+            retVal.propagate = makePropagationFunction(tmId, tmContent, retVal);
             data && retVal.propagate(data, !!subscribeForUpdates, !!reverseBind);
             $.each(listeners, function(i, l) {l.parsedTemplate && l.parsedTemplate(appRoot, root, tmId, root[tmId], data, retVal)});
             return retVal;
@@ -2121,7 +2127,7 @@
         return false;
       }
 
-      function _bindUi(prefix, root, devMode, appUiFactory) {
+      function _bindUi(root, devMode, appUiFactory) {
         jiant.DEV_MODE = devMode;
         ! devMode && maybeSetDevModeFromQueryString();
         errString = "";
@@ -2147,8 +2153,8 @@
         _loadModules(root, root.modules, appId, function() {
           intlPresent && _bindIntl(root, root.intl, appId);
           // views after intl because of nlabel proxies
-          _bindViews(root, root.views, prefix, appUiFactory);
-          _bindTemplates(root, root.templates, prefix, appUiFactory);
+          _bindViews(root, root.views, appUiFactory);
+          _bindTemplates(root, root.templates, appUiFactory);
           _bindAjax(root, root.ajax, root.ajaxPrefix, root.ajaxSuffix, root.crossDomain);
           _bindEvents(root, root.events, appId);
           _bindSemaphores(root, root.semaphores, appId);
@@ -2177,6 +2183,7 @@
           root = prefix;
           prefix = root.appPrefix;
         }
+        root.appPrefix = prefix;
         if (devMode === undefined) {
           devMode = true;
         }
@@ -2194,10 +2201,10 @@
             injectionPoint = $("body");
           }
           injectionPoint.load(viewsUrl, {}, function () {
-            _bindUi(prefix, root, devMode, appUiFactory);
+            _bindUi(root, devMode, appUiFactory);
           });
         } else {
-          _bindUi(prefix, root, devMode, appUiFactory);
+          _bindUi(root, devMode, appUiFactory);
         }
         $.each(listeners, function(i, l) {l.bindCompleted && l.bindCompleted(root)});
         devMode && setTimeout(function() {
@@ -2395,7 +2402,7 @@
       }
 
       function version() {
-        return 202;
+        return 203;
       }
 
       return {
@@ -2414,6 +2421,7 @@
         override: override,
         implement: implement,
         module: module,
+        bindView: bindView,
         loadLibs: loadLibs,
         goRoot: goRoot,
         goState: goState,
