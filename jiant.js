@@ -45,6 +45,7 @@
  2.04: loaded modules execution order preserved, jiant.override accepts only logic, not name
  2.05: order of modules could be specified as modules: { m0: {url: "url", order: "3", getURLParameter return null for missing params
  2.06: viewOrTm.propagate(obj, subscr, reverse, mapping) - mapping added, maps view field to obj field: {"nameLabel": "name", asMap(mapping) to re-map names
+ 2.06.1: empty prefix used when appPrefix not specified in any way
  */
 "use strict";
 (function() {
@@ -930,14 +931,14 @@
 
       function _bindViews(appRoot, root, appUiFactory) {
         $.each(root, function(viewId, viewContent) {
-          var prefix = "appPrefix" in viewContent ? viewContent.appPrefix : appRoot.appPrefix,
+          var prefix = ("appPrefix" in viewContent) ? viewContent.appPrefix : appRoot.appPrefix,
               view = appUiFactory.view(prefix, viewId, viewContent);
           bindView(appRoot, viewId, viewContent, view);
         });
       }
 
       function bindView(appRoot, viewId, viewContent, view) {
-        var prefix = "appPrefix" in viewContent ? viewContent.appPrefix : appRoot.appPrefix,
+        var prefix = ("appPrefix" in viewContent) ? viewContent.appPrefix : appRoot.appPrefix ? appRoot.appPrefix : "",
             viewOk = ensureExists(prefix, appRoot.dirtyList, view, prefix + viewId);
         viewOk && _bindContent(appRoot, viewContent, viewId, view, prefix);
         ensureSafeExtend(viewContent, view);
@@ -955,7 +956,7 @@
 
       function _bindTemplates(appRoot, root, appUiFactory) {
         $.each(root, function(tmId, tmContent) {
-          var prefix = "appPrefix" in tmContent ? tmContent.appPrefix : appRoot.appPrefix,
+          var prefix = ("appPrefix" in tmContent) ? tmContent.appPrefix : appRoot.appPrefix,
             tm = appUiFactory.template(prefix, tmId, tmContent);
           root[tmId]._jiantSpec = {};
           $.each(tmContent, function (componentId, elemType) {
@@ -2220,7 +2221,7 @@
           root = prefix;
           prefix = root.appPrefix;
         }
-        root.appPrefix = prefix;
+        root.appPrefix = prefix || "";
         if (devMode === undefined) {
           devMode = true;
         }
