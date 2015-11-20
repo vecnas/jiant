@@ -43,6 +43,7 @@
  2.03: jiant.bindView(appRoot, viewId, viewContent, view) added
  2.03.1: app.modulesPrefix used as prefix for modules load
  2.04: loaded modules execution order preserved, jiant.override accepts only logic, not name
+ 2.05: order of modules could be specified as modules: { m0: {url: "url", order: "3", getURLParameter return null for missing params
  */
 "use strict";
 (function() {
@@ -209,7 +210,8 @@
       }
 
       function getURLParameter(name) {
-        return decodeURI((new RegExp(name + '=' + '(.+?)(&|$)').exec(location.search)||[,null])[1]);
+        var results = new RegExp('[\\?&]' + name + '=([^&#]*)').exec(window.location.href);
+        return (results !== null) ? decodeURIComponent(results[1]) : null;
       }
 
       function pick(marker) {
@@ -2089,13 +2091,32 @@
           if (totalCounter > 0) {
             return;
           }
+          var arr = [], arr2 = [];
           $.each(root, function(moduleName, moduleUrl) {
+            arr.push(moduleName);
+            arr2.push(moduleName);
+          });
+          function ord(moduleName) {
+            var moduleUrl = root[moduleName];
+            if ($.isPlainObject(moduleUrl) && $.isNumeric(moduleUrl.order)) {
+              return moduleUrl.order;
+            } else {
+              return $.inArray(moduleName, arr2);
+            }
+          }
+          arr.sort(function(a, b) {
+            return ord(a) - ord(b);
+          });
+          $.each(arr, function(i, moduleName) {
             modules[moduleName]($, appRoot);
           });
           cb();
         }
         root && $.each(root, function(moduleName, moduleUrl) {
           if (!modules[moduleName]) {
+            if ($.isPlainObject(moduleUrl)) {
+              moduleUrl = moduleUrl.url;
+            }
             loading[moduleName] = 1;
             $.ajax({
               url: (appRoot.modulesPrefix || "") + moduleUrl + ".js?" + (appRoot.modulesSuffix || ""),
@@ -2413,7 +2434,7 @@
       }
 
       function version() {
-        return 204;
+        return 205;
       }
 
       return {
