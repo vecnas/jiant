@@ -1278,7 +1278,7 @@
             obj[fname] = function (mapping) {
               var ret = {};
               $.each(obj[modelStorageField], function(key, val) {
-                ret[key] = obj[modelStorageField][(mapping && mapping[key]) ? mapping[key] : key];
+                ret[(mapping && mapping[key]) ? mapping[key] : key] = obj[modelStorageField][key];
               });
               return ret;
             }
