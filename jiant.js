@@ -44,6 +44,7 @@
  2.03.1: app.modulesPrefix used as prefix for modules load
  2.04: loaded modules execution order preserved, jiant.override accepts only logic, not name
  2.05: order of modules could be specified as modules: { m0: {url: "url", order: "3", getURLParameter return null for missing params
+ 2.06: viewOrTm.propagate(obj, subscr, reverse, mapping) - mapping added, maps view field to obj field: {"nameLabel": "name", asMap(mapping) to re-map names
  */
 "use strict";
 (function() {
@@ -786,13 +787,13 @@
         $.each(spec, function (key, elem) {
           map[key] = elem;
         });
-        var fn = function(data, subscribe4updates, reverseBinding) {
+        var fn = function(data, subscribe4updates, reverseBinding, mapping) {
           subscribe4updates = (subscribe4updates === undefined) ? true : subscribe4updates;
           $.each(map, function (key, elem) {
             var fnKey = "_j" + key,
-                val = data[key],
+                val = data[(mapping && mapping[key]) ? mapping[key] : key],
                 elemType = viewOrTm._jiantSpec[key];
-            if (spec[key].customRenderer || (data && data[key] !== undefined && data[key] !== null && !isServiceName(key))) {
+            if (spec[key].customRenderer || (data && val !== undefined && val !== null && !isServiceName(key))) {
               elem = viewOrTm[key];
               if ($.isFunction(val)) {
                 getRenderer(spec[key], elemType)(data, elem, val.apply(data), false, viewOrTm);
@@ -1273,8 +1274,12 @@
             }
           } else if (fname == "asMap") {
             collectionFunctions.push(fname);
-            obj[fname] = function () {
-              return obj[modelStorageField];
+            obj[fname] = function (mapping) {
+              var ret = {};
+              $.each(obj[modelStorageField], function(key, val) {
+                ret[key] = obj[modelStorageField][(mapping && mapping[key]) ? mapping[key] : key];
+              });
+              return ret;
             }
           } else if (fname == "data") {
             collectionFunctions.push(fname);
@@ -2434,7 +2439,7 @@
       }
 
       function version() {
-        return 205;
+        return 206;
       }
 
       return {
