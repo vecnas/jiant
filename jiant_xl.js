@@ -50,6 +50,7 @@
  xl.0.44: pseudoSelect default callback show/hide toggler
  xl.0.45: pageableFilterableSortableModel proper reaction on model changes, when state used
  xl.0.46: bindList dynamic container
+ xl.0.47: renderList one more param: appendMode - to not clear container
  */
 
 (function() {
@@ -59,7 +60,7 @@
   var tmpJiantXl = {
 
     version: function() {
-      return 46;
+      return 47;
     },
 
     ctl2state: function(ctl, state, selectedCssClass, goProxy) {
@@ -249,10 +250,10 @@
       };
     },
 
-    renderList: function(list, container, tm, perItemCb, noItemsLabel, subscribeForUpdates) {
+    renderList: function(list, container, tm, perItemCb, noItemsLabel, subscribeForUpdates, appendMode) {
       return function() {
         noItemsLabel && (list.length ? noItemsLabel.hide() : noItemsLabel.show());
-        container.empty();
+        !appendMode && container.empty();
         $.each(list, function(idx, item) {
           var elem = tm.parseTemplate(item, subscribeForUpdates);
           container.append(elem);
