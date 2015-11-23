@@ -46,6 +46,7 @@
  2.05: order of modules could be specified as modules: { m0: {url: "url", order: "3", getURLParameter return null for missing params
  2.06: viewOrTm.propagate(obj, subscr, reverse, mapping) - mapping added, maps view field to obj field: {"nameLabel": "name", asMap(mapping) to re-map names
  2.06.1: empty prefix used when appPrefix not specified in any way
+ 2.07: collection functions attached to add() result
  */
 "use strict";
 (function() {
@@ -1163,11 +1164,11 @@
           } else if (fname == "add") {
             obj[fname] = function(arr) {
               if (arr == undefined || arr == null) {
-                return;
+                return attachCollectionFunctions([], collectionFunctions);
               }
               arr = $.isArray(arr) ? arr : [arr];
               if (arr.length == 0) {
-                return;
+                return attachCollectionFunctions([], collectionFunctions);
               }
               var newArr = [];
               function fn(item) {
@@ -1196,7 +1197,7 @@
               $.each(arr, function(idx, item) {
                 newArr[idx].update && newArr[idx].update(item); // todo: replace by just trigger update event
               });
-              return newArr;
+              return attachCollectionFunctions(newArr, collectionFunctions);
             };
             assignOnOffHandlers(obj, eventName, fname);
           } else if (fname == "remove") {
@@ -1251,8 +1252,7 @@
                 var fieldName = name.substring(0, 1).toLowerCase() + name.substring(1);
                 retVal = filter(retVal, fieldName, outerArgs[idx]);
               });
-              attachCollectionFunctions(retVal, collectionFunctions);
-              return retVal;
+              return attachCollectionFunctions(retVal, collectionFunctions);
             }
           } else if (fname.indexOf("set") == 0 && fname.length > 3) {
             collectionFunctions.push(fname);
@@ -1330,6 +1330,7 @@
             return ret;
           }
         });
+        return arr;
       }
 
       function isTransient(fn) {
@@ -2440,7 +2441,7 @@
       }
 
       function version() {
-        return 206;
+        return 207;
       }
 
       return {
