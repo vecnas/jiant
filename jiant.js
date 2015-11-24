@@ -48,6 +48,7 @@
  2.06.1: empty prefix used when appPrefix not specified in any way
  2.07: collection functions attached to add() result
  2.07.1: ajax check for "error" status when user leaves page
+ 2.08: parseTemplate one more arg, mapping: parseTemplate(obj, subscribeForUpdates, reversePropagate, mapping), functions called during parse
  */
 "use strict";
 (function() {
@@ -251,8 +252,14 @@
         return val;
       }
 
-      function parseTemplate(that, data, tmId) {
+      function parseTemplate(that, data, tmId, mapping) {
         data = data || {};
+        if (mapping) {
+          data = $.extend(true, {}, data);
+          $.each(mapping, function(key, val) {
+            data[key] = data[val];
+          });
+        }
         var str = $.trim($(that).html()),
           _tmplCache = {},
           err = "";
@@ -271,7 +278,7 @@
                 .replace(/'(?=[^#]*#>)/g, "\t")
                 .split("'").join("\\'")
                 .split("\t").join("'")
-                .replace(/!! (.+?)!! /g, "',$1,'")
+                .replace(/!! (.+?)!! /g, "', $.isFunction($1) ? $1() : $1,'")
                 .split("!?").join("');")
                 .split("?!").join("p.push('")
               + "');}return p.join('');";
@@ -983,8 +990,8 @@
             }
           });
           ensureExists(prefix, appRoot.dirtyList, tm, prefix + tmId);
-          root[tmId].parseTemplate = function(data, subscribeForUpdates, reverseBind) {
-            var retVal = $("<!-- -->" + parseTemplate(tm, data, tmId)); // add comment to force jQuery to read it as HTML fragment
+          root[tmId].parseTemplate = function(data, subscribeForUpdates, reverseBind, mapping) {
+            var retVal = $("<!-- -->" + parseTemplate(tm, data, tmId, mapping)); // add comment to force jQuery to read it as HTML fragment
             retVal._jiantSpec = root[tmId]._jiantSpec;
             $.each(tmContent, function (elem, elemType) {
               if (elemType === jiant.lookup) {
@@ -1001,7 +1008,7 @@
             });
             retVal.splice(0, 1); // remove first comment
             retVal.propagate = makePropagationFunction(tmId, tmContent, retVal);
-            data && retVal.propagate(data, !!subscribeForUpdates, !!reverseBind);
+            data && retVal.propagate(data, !!subscribeForUpdates, !!reverseBind, mapping);
             $.each(listeners, function(i, l) {l.parsedTemplate && l.parsedTemplate(appRoot, root, tmId, root[tmId], data, retVal)});
             return retVal;
           };
@@ -2442,7 +2449,7 @@
       }
 
       function version() {
-        return 207;
+        return 208;
       }
 
       return {
