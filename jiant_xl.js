@@ -51,6 +51,7 @@
  xl.0.45: pageableFilterableSortableModel proper reaction on model changes, when state used
  xl.0.46: bindList dynamic container
  xl.0.47: renderList one more param: appendMode - to not clear container
+ xl.0.48: bindList one more arg, mapping - passed to parseTemplate
  */
 
 (function() {
@@ -60,7 +61,7 @@
   var tmpJiantXl = {
 
     version: function() {
-      return 47;
+      return 48;
     },
 
     ctl2state: function(ctl, state, selectedCssClass, goProxy) {
@@ -128,12 +129,12 @@
       };
     },
 
-    bindList: function(model, container, template, viewFieldSetterName, sortFn, subscribeForUpdates, reversePropagate, elemFactory) {
+    bindList: function(model, container, template, viewFieldSetterName, sortFn, subscribeForUpdates, reversePropagate, elemFactory, mapping) {
       function renderObj(obj) {
         var tm = $.isFunction(template) ? template(obj) : template,
             cnt = $.isFunction(container) ? container(obj) : container,
             view = elemFactory ? elemFactory.create(obj, subscribeForUpdates, reversePropagate)
-                : tm.parseTemplate(obj, subscribeForUpdates, reversePropagate),
+                : tm.parseTemplate(obj, subscribeForUpdates, reversePropagate, mapping),
             appended = false;
         viewFieldSetterName = viewFieldSetterName || "viewFieldSetterXL";
         if (viewFieldSetterName && sortFn && $.isFunction(sortFn) && model.all) {
