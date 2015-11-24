@@ -47,6 +47,7 @@
  2.06: viewOrTm.propagate(obj, subscr, reverse, mapping) - mapping added, maps view field to obj field: {"nameLabel": "name", asMap(mapping) to re-map names
  2.06.1: empty prefix used when appPrefix not specified in any way
  2.07: collection functions attached to add() result
+ 2.07.1: ajax check for "error" status when user leaves page
  */
 "use strict";
 (function() {
@@ -1914,7 +1915,7 @@
               callback(data);
             }
           }, error: function (jqXHR, textStatus, errorText) {
-            if (0 === jqXHR.status && 'abort' === jqXHR.statusText) {
+            if (0 === jqXHR.status && ('abort' === jqXHR.statusText || 'error' === jqXHR.statusText)) {
               return;
             }
             if (errHandler) {
