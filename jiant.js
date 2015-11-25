@@ -51,6 +51,7 @@
  2.08: parseTemplate one more arg, mapping: parseTemplate(obj, subscribeForUpdates, reversePropagate, mapping), functions called during parse
  2.09: model defaults could be specified via model: { field0, field1, defaults: { field0: 1, field1: "a"
  2.09.1: getParamNames is public as getFunctionParamNames(fn)
+ 2.09.2: getDeclaredName(ajax) return declared ajax function name
  */
 "use strict";
 (function() {
@@ -1854,6 +1855,10 @@
         var funcStr = func.toString();
         return funcStr.slice(funcStr.indexOf('(') + 1, funcStr.indexOf(')')).match(/([^\s,]+)/g);
       }
+      
+      function getDeclaredName(obj) {
+        return !!obj ? obj._jiantSpecName : undefined;        
+      }
 
       function _bindAjax(appRoot, root, ajaxPrefix, ajaxSuffix, crossDomain) {
         $.each(root, function(uri, funcSpec) {
@@ -1861,6 +1866,7 @@
           params && params.length > 0 ? params.splice(params.length - 1, 1) : params = [];
           root[uri] = makeAjaxPerformer(appRoot, ajaxPrefix, ajaxSuffix, uri, params, $.isFunction(root[uri]) ? root[uri]() : undefined, crossDomain);
           root[uri]._jiantSpec = funcSpec;
+          root[uri]._jiantSpecName = uri;
           $.each(listeners, function(i, l) {l.boundAjax && l.boundAjax(appRoot, root, uri, root[uri])});
         });
       }
@@ -2521,6 +2527,7 @@
         asObjArray: asObjArray,
         nvl: nvl,
         getFunctionParamNames : getParamNames,
+        getDeclaredName: getDeclaredName,
 
         addListener: addListener,
         removeListener: removeListener,
