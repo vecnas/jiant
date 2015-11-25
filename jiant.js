@@ -49,6 +49,7 @@
  2.07: collection functions attached to add() result
  2.07.1: ajax check for "error" status when user leaves page
  2.08: parseTemplate one more arg, mapping: parseTemplate(obj, subscribeForUpdates, reversePropagate, mapping), functions called during parse
+ 2.09: model defaults could be specified via model: { field0, field1, defaults: { field0: 1, field1: "a"
  */
 "use strict";
 (function() {
@@ -1086,6 +1087,7 @@
         spec.add || (spec.add = function(obj) {});
         spec.remove || (spec.remove = function(obj) {});
         spec.asMap || (spec.asMap = function(obj) {});
+        spec.defaults || (spec.defaults = {});
         if (spec.updateAll && spec.id) {
           if (! spec.update) spec.update = function(val) {};
           if (! spec.findById) spec.findById = function(val) {};
@@ -1096,6 +1098,7 @@
             globalChangeEventName = appId + modelName + "_globalevent";
 //      jiant.logInfo("  implementing model function " + fname);
           if (fname == modelInnerDataField) {
+          } else if (fname == "defaults" && $.isPlainObject(funcSpec)) {
           } else if (fname == "all") {
             obj[fname] = function() {
               var retVal = [];
@@ -1124,14 +1127,18 @@
                 (key in objFrom) || (objFrom[key] = null);
               });
               $.each(objFrom, function(key, val) {
-                if (obj[key] && $.isFunction(obj[key]) && obj[key]() !== val) {
-                  toTrigger[key] = obj[key]();
-                  obj[key](val, false);
-                  smthChanged = true;
-                }
+                  if (isModelAccessor(obj[key])) {
+                    val = $.isFunction(val) ? val() : val;
+                    var oldVal = obj[key]();
+                    if (oldVal !== val) {
+                      toTrigger[key] = oldVal;
+                      obj[key](val, false);
+                      smthChanged = true;
+                    }
+                  }
               });
-              $.each(toTrigger, function(key, val) {
-                obj[key](obj[key](), true, true, val);
+              $.each(toTrigger, function(key, oldVal) {
+                obj[key](obj[key](), true, true, oldVal);
               });
               if (smthChanged) {
                 obj[modelInnerDataField].trigger(eventName, obj);
@@ -1187,10 +1194,13 @@
                 newObj[dataStorageField] = item;
                 newObj[parentModelReference] = obj;
                 bindFunctions(modelName, spec, newObj, appId);
-                $.each(item, function(name, param) {
-                  if (newObj[name]) {
-                    toTrigger[name] = param;
-                    newObj[name](param, false);
+                $.each(item, function(name, val) {
+                  if (isModelAccessor(newObj[name])) {
+                    val = $.isFunction(val) ? val() : val;
+                    if (newObj[name]) {
+                      toTrigger[name] = val;
+                      newObj[name](val, false);
+                    }
                   }
                 });
                 $.each(toTrigger, function(key, val) {
@@ -1198,7 +1208,7 @@
                 });
               }
               $.each(arr, function(idx, item) {
-                fn(item);
+                fn($.extend({}, spec.defaults, item));
               });
               obj[modelInnerDataField].trigger(eventName, [newArr]);
               eventBus.trigger(globalChangeEventName, [newArr, fname]);
@@ -1325,6 +1335,13 @@
             obj[fname] = funcSpec;
           }
         });
+        spec === obj && $.each(spec.defaults, function(key, val) {
+          val = $.isFunction(val) ? val(obj) : val;
+          if (isModelAccessor(obj[key])) {
+            obj[key](val);
+          }
+        });
+
       }
 
       function attachCollectionFunctions(arr, collectionFunctions) {
@@ -1346,7 +1363,7 @@
       }
 
       function isModelAccessor(fn) {
-        return fn.jiant_accessor;
+        return fn && fn.jiant_accessor && $.isFunction(fn);
       }
 
       function isEmptyFunction(funcSpec) {
@@ -2449,7 +2466,7 @@
       }
 
       function version() {
-        return 208;
+        return 209;
       }
 
       return {
