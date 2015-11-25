@@ -50,6 +50,7 @@
  2.07.1: ajax check for "error" status when user leaves page
  2.08: parseTemplate one more arg, mapping: parseTemplate(obj, subscribeForUpdates, reversePropagate, mapping), functions called during parse
  2.09: model defaults could be specified via model: { field0, field1, defaults: { field0: 1, field1: "a"
+ 2.09.1: getParamNames is public as getFunctionParamNames(fn)
  */
 "use strict";
 (function() {
@@ -2519,6 +2520,7 @@
         pick: pick,
         asObjArray: asObjArray,
         nvl: nvl,
+        getFunctionParamNames : getParamNames,
 
         addListener: addListener,
         removeListener: removeListener,
