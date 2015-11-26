@@ -52,6 +52,7 @@
  xl.0.46: bindList dynamic container
  xl.0.47: renderList one more param: appendMode - to not clear container
  xl.0.48: bindList one more arg, mapping - passed to parseTemplate
+ xl.0.49: renderList one more arg, mapping - passed to parseTemplate
  */
 
 (function() {
@@ -61,7 +62,7 @@
   var tmpJiantXl = {
 
     version: function() {
-      return 48;
+      return 49;
     },
 
     ctl2state: function(ctl, state, selectedCssClass, goProxy) {
@@ -251,12 +252,12 @@
       };
     },
 
-    renderList: function(list, container, tm, perItemCb, noItemsLabel, subscribeForUpdates, appendMode) {
+    renderList: function(list, container, tm, perItemCb, noItemsLabel, subscribeForUpdates, appendMode, mapping) {
       return function() {
         noItemsLabel && (list.length ? noItemsLabel.hide() : noItemsLabel.show());
         !appendMode && container.empty();
         $.each(list, function(idx, item) {
-          var elem = tm.parseTemplate(item, subscribeForUpdates);
+          var elem = tm.parseTemplate(item, subscribeForUpdates, false, mapping);
           container.append(elem);
           perItemCb && perItemCb(item, elem, idx);
         });
