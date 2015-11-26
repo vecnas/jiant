@@ -52,6 +52,7 @@
  2.09: model defaults could be specified via model: { field0, field1, defaults: { field0: 1, field1: "a"
  2.09.1: getParamNames is public as getFunctionParamNames(fn)
  2.09.2: getDeclaredName(ajax) return declared ajax function name
+ 2.10: module naming error hint, proper oldVal === undefined passed to .add first call
  */
 "use strict";
 (function() {
@@ -1200,13 +1201,13 @@
                   if (isModelAccessor(newObj[name])) {
                     val = $.isFunction(val) ? val() : val;
                     if (newObj[name]) {
-                      toTrigger[name] = val;
+                      toTrigger[name] = undefined;
                       newObj[name](val, false);
                     }
                   }
                 });
-                $.each(toTrigger, function(key, val) {
-                  newObj[key](newObj[key](), true, true);
+                $.each(toTrigger, function(key, oldVal) {
+                  newObj[key](newObj[key](), true, true, oldVal);
                 });
               }
               $.each(arr, function(idx, item) {
@@ -1855,9 +1856,9 @@
         var funcStr = func.toString();
         return funcStr.slice(funcStr.indexOf('(') + 1, funcStr.indexOf(')')).match(/([^\s,]+)/g);
       }
-      
+
       function getDeclaredName(obj) {
-        return !!obj ? obj._jiantSpecName : undefined;        
+        return !!obj ? obj._jiantSpecName : undefined;
       }
 
       function _bindAjax(appRoot, root, ajaxPrefix, ajaxSuffix, crossDomain) {
@@ -2147,7 +2148,11 @@
             return ord(a) - ord(b);
           });
           $.each(arr, function(i, moduleName) {
-            modules[moduleName]($, appRoot);
+            if ($.isFunction(modules[moduleName])) {
+              modules[moduleName]($, appRoot);
+            } else {
+              jiant.logError("Not loaded module " + moduleName + ". Possible error - module name in js file doesn't match declared in app.modules section");
+            }
           });
           cb();
         }
@@ -2473,7 +2478,7 @@
       }
 
       function version() {
-        return 209;
+        return 210;
       }
 
       return {
