@@ -53,6 +53,7 @@
  xl.0.47: renderList one more param: appendMode - to not clear container
  xl.0.48: bindList one more arg, mapping - passed to parseTemplate
  xl.0.49: renderList one more arg, mapping - passed to parseTemplate
+ xl.0.50: filterableData: function(model, ajax, filterModel, updateOnModel) added
  */
 
 (function() {
@@ -62,7 +63,7 @@
   var tmpJiantXl = {
 
     version: function() {
-      return 49;
+      return 50;
     },
 
     ctl2state: function(ctl, state, selectedCssClass, goProxy) {
@@ -163,6 +164,18 @@
           obj[viewFieldSetterName] && (elemFactory ? elemFactory.remove(obj[viewFieldSetterName]()) : obj[viewFieldSetterName]().remove());
         });
       };
+    },
+
+    filterableData: function(model, ajax, filterModel, updateOnModel) {
+      function refresh() {
+        ajax(filterModel, function(data) {
+          model.updateAll(data, true);
+        });
+      }
+      if (updateOnModel && filterModel && filterModel.on) {
+        filterModel.on(refresh);
+      }
+      return refresh;
     },
 
     pageableFilterableSortableModel: function(model, ajax, state, pager, filterSortModel) {
