@@ -55,6 +55,7 @@
  2.10: module naming error hint, proper oldVal === undefined passed to .add first call
  2.11: setX and others check for X uppercase, sumX auto-function added, return sum of all x fields in collection (sumXAndY also valid)
  2.12: model.repo {} should be used for model collection functions. both old mixed and new separated formats supported
+ 2.13: defaults for states introduced to specify default value for undefined, it overrides states groups
  */
 "use strict";
 (function() {
@@ -1640,7 +1641,7 @@
           states[""] = {};
         }
         $.each(states, function(name, stateSpec) {
-          stateSpec.go = go(name, stateSpec.root, stateExternalBase, appId);
+          stateSpec.go = go(name, stateSpec.root, stateSpec, stateExternalBase, appId);
           stateSpec.start = function(cb) {
             var trace;
             $.each(listeners, function(i, l) {l.stateStartRegisterHandler && l.stateStartRegisterHandler(appRoot, name, stateSpec)});
@@ -1711,7 +1712,9 @@
         }
       }
 
-      function go(stateId, root, stateExternalBase, appId) {
+      function go(stateId, root, stateSpec, stateExternalBase, appId) {
+        var defaults = stateSpec.defaults,
+            params = stateSpec.go ? getParamNames(stateSpec.go) : [];
         return function() {
           var parsed = parseState(appId),
             prevState = parsed.now;
@@ -1719,6 +1722,8 @@
           $.each(arguments, function(idx, arg) {
             if (arg != undefined) {
               parsed.now.push(pack(arg));
+            } else if (idx < params.length && defaults && (params[idx] in defaults)) {
+              parsed.now.push(defaults[params[idx]]);
             } else if ((prevState[0] == stateId || isSameStatesGroup(appId, prevState[0], stateId)) && prevState[idx + 1] != undefined) {
 //              info("reusing prev state param: " + prevState[idx + 1]);
               parsed.now.push(pack(prevState[idx + 1]));
@@ -1726,6 +1731,13 @@
               parsed.now.push(pack(arg));
             }
           });
+          for (var i = arguments.length; i < params.length; i++) {
+            if ((params[i] in defaults)) {
+              parsed.now.push(defaults[params[i]]);
+            } else {
+              parsed.now.push(pack(undefined));
+            }
+          }
           if (prevState && (prevState[0] == stateId || isSameStatesGroup(appId, prevState[0], stateId))) {
             var argLen = arguments.length;
             while (argLen < prevState.length - 1) {
@@ -2521,7 +2533,7 @@
       }
 
       function version() {
-        return 212;
+        return 213;
       }
 
       return {
