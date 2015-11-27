@@ -54,6 +54,7 @@
  2.09.2: getDeclaredName(ajax) return declared ajax function name
  2.10: module naming error hint, proper oldVal === undefined passed to .add first call
  2.11: setX and others check for X uppercase, sumX auto-function added, return sum of all x fields in collection (sumXAndY also valid)
+ 2.12: model.repo {} should be used for model collection functions. both old mixed and new separated formats supported
  */
 "use strict";
 (function() {
@@ -1026,9 +1027,9 @@
 
 // ------------ model staff ----------------
 
-      function assignAsapHandler(obj, eventName, fname) {
-        obj[fname].asap = function(cb) {
-          var val = obj[fname]();
+      function assignAsapHandler(fnRoot, obj, eventName, fname) {
+        fnRoot[fname].asap = function(cb) {
+          var val = fnRoot[fname]();
           if (val != undefined) {
             cb && cb.apply(cb, [obj, val]);
           } else {
@@ -1041,7 +1042,7 @@
         };
       }
 
-      function assignOnOffHandlers(obj, eventName, fname, eventObject) {
+      function assignOnOffHandlers(fnRoot, obj, eventName, fname, eventObject) {
         eventObject = eventObject ? eventObject : obj[modelInnerDataField];
         var fn = function (cb) {
             var handler = function (evt) {
@@ -1054,25 +1055,25 @@
                 evt.stopImmediatePropagation();
               }
             };
-            (fname ? obj[fname] : obj).listenersCount++;
+            (fname ? fnRoot[fname] : fnRoot).listenersCount++;
 //            jiant.logError("adding for " + eventName + " " + fname);
             eventObject.on(eventName, handler);
             return handler;
           },
           fnOff = function (handler) {
-            (fname ? obj[fname] : obj).listenersCount--;
+            (fname ? fnRoot[fname] : fnRoot).listenersCount--;
             var res = eventObject.off(eventName, handler);
             return res;
           };
         if (fname) {
-          obj[fname].on = fn;
-          obj[fname].off = fnOff;
-          obj[fname].listenersCount = 0;
-          assignAsapHandler(obj, eventName, fname);
+          fnRoot[fname].on = fn;
+          fnRoot[fname].off = fnOff;
+          fnRoot[fname].listenersCount = 0;
+          assignAsapHandler(fnRoot, obj, eventName, fname);
         } else {
-          obj.on = fn;
-          obj.off = fnOff;
-          obj.listenersCount = 0;
+          fnRoot.on = fn;
+          fnRoot.off = fnOff;
+          fnRoot.listenersCount = 0;
         }
       }
 
@@ -1081,34 +1082,40 @@
           modelStorageField = "_modelData",
           dataStorageField = "_sourceData",
           parentModelReference = "_parentModel",
-          collectionFunctions = [];
+          collectionFunctions = [],
+          specMode = spec === obj,
+          repoMode = spec.repo && $.isPlainObject(spec.repo),
+          repoRoot = repoMode ? spec.repo : spec;
         obj[modelStorageField] = {};
-        spec.on || (spec.on = function(obj) {});
-        spec.off || (spec.off = function(obj) {});
-        spec.update || (spec.update = function(obj) {});
-        spec.updateAll || (spec.updateAll = function(obj) {});
-        spec.reset || (spec.reset = function(obj) {});
-        spec.add || (spec.add = function(obj) {});
-        spec.remove || (spec.remove = function(obj) {});
-        spec.asMap || (spec.asMap = function(obj) {});
+        $.each(["on", "off", "update", "reset", "remove", "asMap"], function(i, nm) {
+          spec[nm] || (spec[nm] = function(obj) {});
+        });
         spec.defaults || (spec.defaults = {});
-        if (spec.updateAll && spec.id) {
-          if (! spec.update) spec.update = function(val) {};
-          if (! spec.findById) spec.findById = function(val) {};
+        $.each(["updateAll", "add", "all", "remove"], function(i, nm) {
+          repoRoot[nm] || (repoRoot[nm] = function(obj) {});
+        });
+        if (repoRoot.updateAll && spec.id) {
+          repoRoot.findById || (repoRoot.findById = function(val) {});
         }
         obj[modelInnerDataField] = $({});
+        if (specMode && repoMode) {
+          $.each(repoRoot, function(fname, funcSpec) {
+            bindFn(repoRoot, fname, funcSpec);
+          });
+        }
         $.each(spec, function(fname, funcSpec) {
+          bindFn(obj, fname, funcSpec);
+        });
+        function bindFn(fnRoot, fname, funcSpec) {
           var eventName = modelName + "_" + fname + "_event",
-            globalChangeEventName = appId + modelName + "_globalevent";
-//      jiant.logInfo("  implementing model function " + fname);
+            globalChangeEventName = appId + modelName + "_globalevent",
+              repoObjMode = repoMode && fnRoot !== spec.repo;
           if (fname == modelInnerDataField) {
           } else if (fname == "defaults" && $.isPlainObject(funcSpec)) {
           } else if (fname == "repo" && $.isPlainObject(funcSpec)) {
-            //if (obj === spec) {
-            //  bindFunctions(modelName, spec, spec.repo, appId);
-            //}
-          } else if (fname == "all") {
-            obj[fname] = function() {
+          } else if (fname == "all" && !repoObjMode) {
+            if (! specMode) {return}
+            fnRoot[fname] = function() {
               var retVal = [];
               $.each(storage, function(idx, obj) {
                 retVal.push(obj);
@@ -1118,16 +1125,17 @@
             };
           } else if (fname == "off") {
             //assigned for fname="on"
+            collectionFunctions.push(fname);
           } else if (fname == "on") {
             collectionFunctions.push(fname);
-            if (obj === spec) {
-              assignOnOffHandlers(obj, globalChangeEventName, undefined, eventBus);
+            if (specMode) {
+              assignOnOffHandlers(obj, obj, globalChangeEventName, undefined, eventBus);
             } else {
-              assignOnOffHandlers(obj, globalChangeEventName, undefined);
+              assignOnOffHandlers(obj, obj, globalChangeEventName, undefined);
             }
           } else if (fname == "update") {
             collectionFunctions.push(fname);
-            obj[fname] = function(objFrom, treatMissingAsNulls) {
+            fnRoot[fname] = function(objFrom, treatMissingAsNulls) {
               var smthChanged = false;
               var toTrigger = {};
               obj[dataStorageField] = objFrom;
@@ -1154,9 +1162,10 @@
                 eventBus.trigger(globalChangeEventName, [obj, fname]);
               }
             };
-            assignOnOffHandlers(obj, eventName, fname);
-          } else if (fname == "updateAll") {
-            obj[fname] = function(arr, removeMissing, matcherCb) {
+            assignOnOffHandlers(obj, obj, eventName, fname);
+          } else if (fname == "updateAll" && !repoObjMode) {
+            if (! specMode) {return}
+            fnRoot[fname] = function(arr, removeMissing, matcherCb) {
               arr = $.isArray(arr) ? arr : [arr];
               matcherCb = matcherCb ? matcherCb : function(modelObj, outerObj) {return modelObj.id ? modelObj.id() == outerObj.id : false;};
               var toRemove = [];
@@ -1177,15 +1186,15 @@
                 matchingObj && oldItem.update(matchingObj);
               });
               removeMissing && $.each(toRemove, function(idx, item) {
-                obj.remove(item);
+                fnRoot.remove(item);
               });
-              toAdd.length > 0 && obj.add(toAdd);
+              toAdd.length > 0 && fnRoot.add(toAdd);
             };
-            assignOnOffHandlers(obj, eventName, fname);
           } else if (fname == "addAll") {
             alert("JIANT: Model function 'addAll' removed since 1.37, use previous versions or replace it by 'add'");
-          } else if (fname == "add") {
-            obj[fname] = function(arr) {
+          } else if (fname == "add" && !repoObjMode) {
+            if (! specMode) {return}
+            fnRoot[fname] = function(arr) {
               if (arr == undefined || arr == null) {
                 return attachCollectionFunctions([], collectionFunctions);
               }
@@ -1225,11 +1234,11 @@
               });
               return attachCollectionFunctions(newArr, collectionFunctions);
             };
-            assignOnOffHandlers(obj, eventName, fname);
+            assignOnOffHandlers(fnRoot, obj, eventName, fname);
           } else if (fname == "remove") {
             collectionFunctions.push(fname);
-            obj[fname] = function(elem) {
-              if (elem == undefined || elem == null) {
+            fnRoot[fname] = function(elem) {
+              if (arguments.length == 0) {
                 obj[parentModelReference].remove(obj);
                 return;
               }
@@ -1241,10 +1250,11 @@
               }
               return elem;
             };
-            assignOnOffHandlers(obj, eventName, fname);
-          } else if (fname.indexOf("sum") == 0 && fname.length > 3 && isUpperCaseChar(fname, 3)) {
+            assignOnOffHandlers(fnRoot, obj, eventName, fname);
+          } else if (fname.indexOf("sum") == 0 && fname.length > 3 && isUpperCaseChar(fname, 3) && !repoObjMode) {
+            if (! specMode) {return}
             var arr = fname.substring(3).split("And");
-            obj[fname] = function() {
+            fnRoot[fname] = function() {
               function subsum(all, fieldName) {
                 var ret;
                 $.each(all, function(i, item) {
@@ -1263,9 +1273,10 @@
               });
               return ret;
             }
-          } else if (fname.indexOf("findBy") == 0 && fname.length > 6 && isUpperCaseChar(fname, 6)) {
+          } else if (fname.indexOf("findBy") == 0 && fname.length > 6 && isUpperCaseChar(fname, 6) && !repoObjMode) {
+            if (! specMode) {return}
             var arr = fname.substring(6).split("And");
-            obj[fname] = function() {
+            fnRoot[fname] = function() {
               var retVal = storage,
                 outerArgs = arguments;
               function filter(arr, fieldName, val) {
@@ -1282,9 +1293,10 @@
               });
               return retVal[0];
             }
-          } else if (fname.indexOf("listBy") == 0 && fname.length > 6 && isUpperCaseChar(fname, 6)) {
+          } else if (fname.indexOf("listBy") == 0 && fname.length > 6 && isUpperCaseChar(fname, 6) && !repoObjMode) {
+            if (! specMode) {return}
             var arr = fname.substring(6).split("And");
-            obj[fname] = function() {
+            fnRoot[fname] = function() {
               var retVal = storage,
                 outerArgs = arguments;
               function filter(arr, fieldName, val) {
@@ -1304,7 +1316,7 @@
           } else if (fname.indexOf("set") == 0 && fname.length > 3 && isUpperCaseChar(fname, 3)) {
             collectionFunctions.push(fname);
             var arr = fname.substring(3).split("And");
-            obj[fname] = function() {
+            fnRoot[fname] = function() {
               var outerArgs = arguments,
                 newVals = {};
               $.each(arr, function(idx, name) {
@@ -1315,14 +1327,14 @@
               return newVals;
             }
           } else if (fname == "reset") {
-            obj[fname] = function (val) {
+            fnRoot[fname] = function (val) {
               $.each(obj, function(name, fn) {
                 isModelAccessor(fn) && fn(val, true);
               });
             }
           } else if (fname == "asMap") {
             collectionFunctions.push(fname);
-            obj[fname] = function (mapping) {
+            fnRoot[fname] = function (mapping) {
               var ret = {};
               $.each(obj[modelStorageField], function(key, val) {
                 ret[(mapping && mapping[key]) ? mapping[key] : key] = obj[modelStorageField][key];
@@ -1331,14 +1343,14 @@
             }
           } else if (fname == "data") {
             collectionFunctions.push(fname);
-            obj[fname] = function () {
+            fnRoot[fname] = function () {
               return obj[dataStorageField];
             }
           } else if (isEmptyFunction(funcSpec) || spec[modelInnerDataField][fname]) {
             var trans = funcSpec === jiant.transientFn || isTransient(funcSpec);
             collectionFunctions.push(fname);
             spec[modelInnerDataField][fname] = true;
-            obj[fname] = function(val, forceEvent, dontFireUpdate, oldValOverride) {
+            fnRoot[fname] = function(val, forceEvent, dontFireUpdate, oldValOverride) {
               if (arguments.length == 0) {
                 return obj[modelStorageField][fname];
               } else {
@@ -1357,14 +1369,14 @@
                 return obj[modelStorageField][fname];
               }
             };
-            obj[fname].jiant_accessor = 1;
-            obj[fname].transient_fn = trans;
-            assignOnOffHandlers(obj, eventName, fname);
+            fnRoot[fname].jiant_accessor = 1;
+            fnRoot[fname].transient_fn = trans;
+            assignOnOffHandlers(obj, obj, eventName, fname);
           } else if (fname != "_modelData") {
-            obj[fname] = funcSpec;
+            fnRoot[fname] = funcSpec;
           }
-        });
-        spec === obj && $.each(spec.defaults, function(key, val) {
+        }
+        specMode && $.each(spec.defaults, function(key, val) {
           val = $.isFunction(val) ? val(obj) : val;
           if (isModelAccessor(obj[key])) {
             obj[key](val);
@@ -2509,7 +2521,7 @@
       }
 
       function version() {
-        return 211;
+        return 212;
       }
 
       return {
