@@ -53,6 +53,7 @@
  2.09.1: getParamNames is public as getFunctionParamNames(fn)
  2.09.2: getDeclaredName(ajax) return declared ajax function name
  2.10: module naming error hint, proper oldVal === undefined passed to .add first call
+ 2.11: setX and others check for X uppercase, sumX auto-function added, return sum of all x fields in collection (sumXAndY also valid)
  */
 "use strict";
 (function() {
@@ -1102,6 +1103,10 @@
 //      jiant.logInfo("  implementing model function " + fname);
           if (fname == modelInnerDataField) {
           } else if (fname == "defaults" && $.isPlainObject(funcSpec)) {
+          } else if (fname == "repo" && $.isPlainObject(funcSpec)) {
+            //if (obj === spec) {
+            //  bindFunctions(modelName, spec, spec.repo, appId);
+            //}
           } else if (fname == "all") {
             obj[fname] = function() {
               var retVal = [];
@@ -1237,7 +1242,28 @@
               return elem;
             };
             assignOnOffHandlers(obj, eventName, fname);
-          } else if (fname.indexOf("findBy") == 0 && fname.length > 6) {
+          } else if (fname.indexOf("sum") == 0 && fname.length > 3 && isUpperCaseChar(fname, 3)) {
+            var arr = fname.substring(3).split("And");
+            obj[fname] = function() {
+              function subsum(all, fieldName) {
+                var ret;
+                $.each(all, function(i, item) {
+                  if (item[fieldName] && $.isFunction(item[fieldName])) {
+                    var val = item[fieldName]();
+                    ret = ret === undefined ? val : val === undefined ? undefined : (ret + val);
+                  }
+                });
+                return ret;
+              }
+              var ret;
+              $.each(arr, function(idx, name) {
+                var fieldName = name.substring(0, 1).toLowerCase() + name.substring(1);
+                var perField = subsum(storage, fieldName);
+                ret = ret === undefined ? perField : perField === undefined ? undefined : (ret + perField);
+              });
+              return ret;
+            }
+          } else if (fname.indexOf("findBy") == 0 && fname.length > 6 && isUpperCaseChar(fname, 6)) {
             var arr = fname.substring(6).split("And");
             obj[fname] = function() {
               var retVal = storage,
@@ -1256,7 +1282,7 @@
               });
               return retVal[0];
             }
-          } else if (fname.indexOf("listBy") == 0 && fname.length > 6) {
+          } else if (fname.indexOf("listBy") == 0 && fname.length > 6 && isUpperCaseChar(fname, 6)) {
             var arr = fname.substring(6).split("And");
             obj[fname] = function() {
               var retVal = storage,
@@ -1275,7 +1301,7 @@
               });
               return attachCollectionFunctions(retVal, collectionFunctions);
             }
-          } else if (fname.indexOf("set") == 0 && fname.length > 3) {
+          } else if (fname.indexOf("set") == 0 && fname.length > 3 && isUpperCaseChar(fname, 3)) {
             collectionFunctions.push(fname);
             var arr = fname.substring(3).split("And");
             obj[fname] = function() {
@@ -1359,6 +1385,11 @@
           }
         });
         return arr;
+      }
+
+      function isUpperCaseChar(s, pos) {
+        var sub = s.substring(pos, pos + 1);
+        return sub !== sub.toLowerCase();
       }
 
       function isTransient(fn) {
@@ -2478,7 +2509,7 @@
       }
 
       function version() {
-        return 210;
+        return 211;
       }
 
       return {
