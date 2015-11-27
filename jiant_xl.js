@@ -54,6 +54,7 @@
  xl.0.48: bindList one more arg, mapping - passed to parseTemplate
  xl.0.49: renderList one more arg, mapping - passed to parseTemplate
  xl.0.50: filterableData: function(model, ajax, filterModel, updateOnModel) added
+ xl.0.51: jiant 2.12 model.repo compatible
  */
 
 (function() {
@@ -63,7 +64,7 @@
   var tmpJiantXl = {
 
     version: function() {
-      return 50;
+      return 51;
     },
 
     ctl2state: function(ctl, state, selectedCssClass, goProxy) {
@@ -139,8 +140,8 @@
                 : tm.parseTemplate(obj, subscribeForUpdates, reversePropagate, mapping),
             appended = false;
         viewFieldSetterName = viewFieldSetterName || "viewFieldSetterXL";
-        if (viewFieldSetterName && sortFn && $.isFunction(sortFn) && model.all) {
-          $.each(model.all(), function(i, item) {
+        if (viewFieldSetterName && sortFn && $.isFunction(sortFn) && (model.repo || model).all) {
+          $.each((model.repo || model).all(), function(i, item) {
             var order = sortFn(obj, item);
             if (item[viewFieldSetterName] && item[viewFieldSetterName]() && order < 0) {
               !elemFactory && view.insertBefore(item[viewFieldSetterName]()[0]);
@@ -155,21 +156,22 @@
         viewFieldSetterName && $.isFunction(obj[viewFieldSetterName]) && view && obj[viewFieldSetterName](view);
       }
       return function() {
-        model.add && model.add.on(function(arr) {
+        (model.repo || model).add && (model.repo || model).add.on(function(arr) {
           $.each(arr, function(idx, obj) {
             renderObj(obj);
           });
         });
-        model.remove && model.remove.on(function(obj) {
+        (model.repo || model).remove && (model.repo || model).remove.on(function(obj) {
           obj[viewFieldSetterName] && (elemFactory ? elemFactory.remove(obj[viewFieldSetterName]()) : obj[viewFieldSetterName]().remove());
         });
       };
     },
 
-    filterableData: function(model, ajax, filterModel, updateOnModel) {
+    filterableData: function(model, ajax, filterModel, updateOnModel, completeCb) {
       function refresh() {
         ajax(filterModel, function(data) {
-          model.updateAll(data, true);
+          (model.repo || model).updateAll(data, true);
+          completeCb && completeCb(data);
         });
       }
       if (updateOnModel && filterModel && filterModel.on) {
@@ -186,7 +188,7 @@
         filterSortModel && filterSortModel.sort && filterSortModel.sort()
         && (pageable["page.sort"] = filterSortModel.sort(), pageable["sort"] = filterSortModel.sort());
         ajax(filterSortModel, pageable, function(data) {
-          model.updateAll(data.content, true);
+          (model.repo || model).updateAll(data.content, true);
           pager && pager.updatePager(data);
         });
       }
