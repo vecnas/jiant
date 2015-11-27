@@ -56,6 +56,7 @@
  2.11: setX and others check for X uppercase, sumX auto-function added, return sum of all x fields in collection (sumXAndY also valid)
  2.12: model.repo {} should be used for model collection functions. both old mixed and new separated formats supported
  2.13: defaults for states introduced to specify default value for undefined, it overrides states groups
+ 2.13.1: no-defaults state fix
  */
 "use strict";
 (function() {
@@ -1731,11 +1732,13 @@
               parsed.now.push(pack(arg));
             }
           });
-          for (var i = arguments.length; i < params.length; i++) {
-            if ((params[i] in defaults)) {
-              parsed.now.push(defaults[params[i]]);
-            } else {
-              parsed.now.push(pack(undefined));
+          if (defaults) {
+            for (var i = arguments.length; i < params.length; i++) {
+              if ((params[i] in defaults)) {
+                parsed.now.push(defaults[params[i]]);
+              } else {
+                parsed.now.push(pack(undefined));
+              }
             }
           }
           if (prevState && (prevState[0] == stateId || isSameStatesGroup(appId, prevState[0], stateId))) {
