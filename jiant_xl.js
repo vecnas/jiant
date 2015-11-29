@@ -55,6 +55,7 @@
  xl.0.49: renderList one more arg, mapping - passed to parseTemplate
  xl.0.50: filterableData: function(model, ajax, filterModel, updateOnModel) added
  xl.0.51: jiant 2.12 model.repo compatible
+ xl.0.52: jiant 2.14 models with custom repo field compatible
  */
 
 (function() {
@@ -64,7 +65,7 @@
   var tmpJiantXl = {
 
     version: function() {
-      return 51;
+      return 52;
     },
 
     ctl2state: function(ctl, state, selectedCssClass, goProxy) {
@@ -140,8 +141,8 @@
                 : tm.parseTemplate(obj, subscribeForUpdates, reversePropagate, mapping),
             appended = false;
         viewFieldSetterName = viewFieldSetterName || "viewFieldSetterXL";
-        if (viewFieldSetterName && sortFn && $.isFunction(sortFn) && (model.repo || model).all) {
-          $.each((model.repo || model).all(), function(i, item) {
+        if (viewFieldSetterName && sortFn && $.isFunction(sortFn) && model._jiantRepoRef.all) {
+          $.each(model._jiantRepoRef.all(), function(i, item) {
             var order = sortFn(obj, item);
             if (item[viewFieldSetterName] && item[viewFieldSetterName]() && order < 0) {
               !elemFactory && view.insertBefore(item[viewFieldSetterName]()[0]);
@@ -156,12 +157,12 @@
         viewFieldSetterName && $.isFunction(obj[viewFieldSetterName]) && view && obj[viewFieldSetterName](view);
       }
       return function() {
-        (model.repo || model).add && (model.repo || model).add.on(function(arr) {
+        model._jiantRepoRef.add && model._jiantRepoRef.add.on(function(arr) {
           $.each(arr, function(idx, obj) {
             renderObj(obj);
           });
         });
-        (model.repo || model).remove && (model.repo || model).remove.on(function(obj) {
+        model._jiantRepoRef.remove && model._jiantRepoRef.remove.on(function(obj) {
           obj[viewFieldSetterName] && (elemFactory ? elemFactory.remove(obj[viewFieldSetterName]()) : obj[viewFieldSetterName]().remove());
         });
       };
@@ -170,7 +171,7 @@
     filterableData: function(model, ajax, filterModel, updateOnModel, completeCb) {
       function refresh() {
         ajax(filterModel, function(data) {
-          (model.repo || model).updateAll(data, true);
+          model._jiantRepoRef.updateAll(data, true);
           completeCb && completeCb(data);
         });
       }
@@ -188,7 +189,7 @@
         filterSortModel && filterSortModel.sort && filterSortModel.sort()
         && (pageable["page.sort"] = filterSortModel.sort(), pageable["sort"] = filterSortModel.sort());
         ajax(filterSortModel, pageable, function(data) {
-          (model.repo || model).updateAll(data.content, true);
+          model._jiantRepoRef.updateAll(data.content, true);
           pager && pager.updatePager(data);
         });
       }
