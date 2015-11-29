@@ -264,8 +264,8 @@
           } else if ( event.keyCode == jiant.key.end || event.keyCode == jiant.key.home || event.keyCode == jiant.key.tab || event.keyCode == jiant.key.enter) {
             input.val(fit(input.valInt(), input.j_valMin, input.j_valMax));
           } else if (!event.ctrlKey && !event.shiftKey && (event.keyCode != jiant.key.backspace && event.keyCode != jiant.key.del
-              && event.keyCode != jiant.key.left && event.keyCode != jiant.key.right && event.keyCode < 48 || event.keyCode > 57)
-              && (event.keyCode < 96 || event.keyCode > 105 )) {
+            && event.keyCode != jiant.key.left && event.keyCode != jiant.key.right && event.keyCode < 48 || event.keyCode > 57)
+            && (event.keyCode < 96 || event.keyCode > 105 )) {
             event.preventDefault();
             return false;
           }
@@ -751,8 +751,8 @@
           subscribe4updates = (subscribe4updates === undefined) ? true : subscribe4updates;
           $.each(map, function (key, elem) {
             var fnKey = "_j" + key,
-                val = data[(mapping && mapping[key]) ? mapping[key] : key],
-                elemType = viewOrTm._jiantSpec[key];
+              val = data[(mapping && mapping[key]) ? mapping[key] : key],
+              elemType = viewOrTm._jiantSpec[key];
             if (spec[key].customRenderer || (data && val !== undefined && val !== null && !isServiceName(key))) {
               elem = viewOrTm[key];
               if ($.isFunction(val)) {
@@ -802,9 +802,9 @@
                         val(elem.val());
                       } else if (tagName == "img") {
                         val(elem.attr("src"));
-                      // no html reverse binding because no actual event for changing html
-                      //} else {
-                      //  val(elem.html());
+                        // no html reverse binding because no actual event for changing html
+                        //} else {
+                        //  val(elem.html());
                       }
                     }
                   }
@@ -891,14 +891,14 @@
       function _bindViews(appRoot, root, appUiFactory) {
         $.each(root, function(viewId, viewContent) {
           var prefix = ("appPrefix" in viewContent) ? viewContent.appPrefix : appRoot.appPrefix,
-              view = appUiFactory.view(prefix, viewId, viewContent);
+            view = appUiFactory.view(prefix, viewId, viewContent);
           bindView(appRoot, viewId, viewContent, view);
         });
       }
 
       function bindView(appRoot, viewId, viewContent, view) {
         var prefix = ("appPrefix" in viewContent) ? viewContent.appPrefix : appRoot.appPrefix ? appRoot.appPrefix : "",
-            viewOk = ensureExists(prefix, appRoot.dirtyList, view, prefix + viewId);
+          viewOk = ensureExists(prefix, appRoot.dirtyList, view, prefix + viewId);
         viewOk && _bindContent(appRoot, viewContent, viewId, view, prefix);
         ensureSafeExtend(viewContent, view);
         viewContent.propagate = makePropagationFunction(viewId, viewContent, viewContent);
@@ -1034,7 +1034,9 @@
         $.each(["on", "off", "update", "reset", "remove", "asMap"], function(i, nm) {
           spec[nm] || (spec[nm] = function(obj) {});
         });
-        spec.defaults || (spec.defaults = {});
+        spec[defaultsName] || (spec[defaultsName] = {});
+        spec._jiantDefaultsRef = spec[defaultsName];
+        spec._jiantRepoRef = repoRoot;
         $.each(["updateAll", "add", "all", "remove"], function(i, nm) {
           repoRoot[nm] || (repoRoot[nm] = function(obj) {});
         });
@@ -1053,7 +1055,7 @@
         function bindFn(fnRoot, fname, funcSpec) {
           var eventName = modelName + "_" + fname + "_event",
             globalChangeEventName = appId + modelName + "_globalevent",
-              repoObjMode = repoMode && fnRoot !== spec[repoName];
+            repoObjMode = repoMode && fnRoot !== spec[repoName];
           if (fname == modelInnerDataField) {
           } else if (fname == defaultsName && $.isPlainObject(funcSpec)) {
           } else if (fname == repoName && $.isPlainObject(funcSpec)) {
@@ -1087,15 +1089,15 @@
                 (key in objFrom) || (objFrom[key] = null);
               });
               $.each(objFrom, function(key, val) {
-                  if (isModelAccessor(obj[key])) {
-                    val = $.isFunction(val) ? val() : val;
-                    var oldVal = obj[key]();
-                    if (oldVal !== val) {
-                      toTrigger[key] = oldVal;
-                      obj[key](val, false);
-                      smthChanged = true;
-                    }
+                if (isModelAccessor(obj[key])) {
+                  val = $.isFunction(val) ? val() : val;
+                  var oldVal = obj[key]();
+                  if (oldVal !== val) {
+                    toTrigger[key] = oldVal;
+                    obj[key](val, false);
+                    smthChanged = true;
                   }
+                }
               });
               $.each(toTrigger, function(key, oldVal) {
                 obj[key](obj[key](), true, true, oldVal);
@@ -1320,7 +1322,7 @@
             fnRoot[fname] = funcSpec;
           }
         }
-        specMode && spec[defaultsName] && $.each(spec[defaultsName], function(key, val) {
+        specMode && $.each(spec[defaultsName], function(key, val) {
           val = $.isFunction(val) ? val(obj) : val;
           if (isModelAccessor(obj[key])) {
             obj[key](val);
@@ -1377,7 +1379,7 @@
       function override(spec, implFn) {
         if (spec._jAppId) {
           var superImpl = $.extend(true, {}, spec),
-              newImpl = implFn($, boundApps[spec._jAppId], superImpl);
+            newImpl = implFn($, boundApps[spec._jAppId], superImpl);
           $.each(newImpl, function(fname, fbody) {
             spec[fname] = fbody;
           });
@@ -1420,7 +1422,7 @@
               });
               spec._jOverrides && spec._jOverrides.length && $.each(spec._jOverrides, function(i, implFn) {
                 var superImpl = $.extend(true, {}, spec),
-                    newImpl = implFn($, boundApps[spec._jAppId], superImpl);
+                  newImpl = implFn($, boundApps[spec._jAppId], superImpl);
                 $.each(newImpl, function(fname, fbody) {
                   spec[fname] = fbody;
                 });
@@ -1657,7 +1659,7 @@
 
       function go(stateId, root, stateSpec, stateExternalBase, appId) {
         var defaults = stateSpec.defaults,
-            params = stateSpec.go ? getParamNames(stateSpec.go) : [];
+          params = stateSpec.go ? getParamNames(stateSpec.go) : [];
         return function() {
           var parsed = parseState(appId),
             prevState = parsed.now;
@@ -2126,7 +2128,7 @@
 
       function _loadModules(appRoot, root, appId, cb) {
         var totalCounter = Object.keys(root).length,
-            loading = {};
+          loading = {};
         function cbIf0() {
           if (totalCounter > 0) {
             return;
