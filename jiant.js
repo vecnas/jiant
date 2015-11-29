@@ -1,62 +1,4 @@
 /*
- 1.73: numLabel label type added, formats values as 123,456,000
- 1.74: more intellectual ajax parameters parsing, with arrays and inner objects support. COULD BE BACKWARD INCOMPATIBLE!
- 1.75: datepicker change event triggered, undefined propagated to inputs value, model.reset(val) added to reset all fields to "val" value
- 1.76: jiant.inputSet added, maps model field array value to set of checkboxes, with reverse binding. Mapped by checkbox value
- 1.77: binding of array to cssMarker now produces multiple classes, related to array elements: class="marker_val0, marker_val1"
- 1.78: jiant.nvl(val, defVal, path) added, returns defVal, if val is null or undefined, path is optional, val[path], may be function
- 1.79: ajax call parsing tuned
- 1.80: jiant.inputSetAsString added, same as inputSet, but uses comma-separated string instead of array
- 1.81: cssMarker splits value by ","
- 1.81.1: cssMarker split fix
- 1.82: added pager.val([value]) method to set pager page programmatically
- 1.83: more spring-friendly way for arrays presentation in ajax calls
- 1.83.1: cssMarker one more split fix
- 1.83.2: cssMarker 3rd tuning, hope last
- 1.84: pager first and last elements now have classes pager_first, pager_last, for better customization
- 1.84.1: rounding of odd page radiuses
- 1.85: rollback of 1.83, it breaks submit of model.all(), reverse bind of radio inputs to model
- 1.85.1: firefox + firebug recursion glitch workaround
- 1.86 jiant.registerCustomType(typeName, handler(uiElem) {}) to add user custom control types, like someView: {elem0: "customtype", typeName is string
- 1.87: finally both java spring @RequestParameter and @ModelAttribute compatible arrays representation, jiant.transientFn added for non-ajaxable model fields
- 1.88: model update() call now applies .on event handler with proper oldValue 3rd argument, add() still passes new value for both .on val and oldVal args
- 1.89: ajax calls return result of $.ajax, some hints printed to console for possible misuse of listBy, findBy
- 1.90: proper check for param presence in ajax call to not skip arrays of 0, null and undefined
- 1.91: date format for jiant.inputDate now could be set per application as app.dateFormat: "MM/dd/yyyy"
- 1.92: internal optimization, types array could be used for element declaration: someLabel: [jiant.numLabel, "customtype"], useful for custom types
- 1.92.1: ajax error handler tuning
- 1.92.2: ajax parameters fix, when sending array of arrays
- 1.93: internal code optimization
- 1.93.1: ajax parameters parsing, array of nulls
- 1.94: jiant.forget - removes application from loaded list, enabling repeating calls to bindUi from same application
- 1.95: jiant.modules app section added, jiant.module(name, function($, app - to register module in app, cb called before bindUi
- 1.96: app structure rollback after forget call, app re-load onUiBound works only for modules, single UiBound triggers once
- 1.97: reverse binding applied only to input/textarea elements
- 1.98: proper forgetting ajax functions
- 1.98.1: .off for non-jquery view elements now doesn't break code
- 1.99: model empty function for getters handles any whitespaces inside of declaration
- 2.00: modules updated, loaded via urls, modules: {modName: modUrl, etc...}, jiant.imgBg control type addded
- 2.01: jiant.override(logicOrName, function($, app, currentImpl) - override logic implementation, may be called before bind; jiant.implement(logic, impl) added
- 2.01.1: inputSetAsString input types fix
- 2.01.2: strict mode fix for some input data parameters
- 2.02: jSubmitAsMap could be set for ajax submitted object to enforce param[key] instead of param.key (due to spring limitations)
- 2.03: jiant.bindView(appRoot, viewId, viewContent, view) added
- 2.03.1: app.modulesPrefix used as prefix for modules load
- 2.04: loaded modules execution order preserved, jiant.override accepts only logic, not name
- 2.05: order of modules could be specified as modules: { m0: {url: "url", order: "3", getURLParameter return null for missing params
- 2.06: viewOrTm.propagate(obj, subscr, reverse, mapping) - mapping added, maps view field to obj field: {"nameLabel": "name", asMap(mapping) to re-map names
- 2.06.1: empty prefix used when appPrefix not specified in any way
- 2.07: collection functions attached to add() result
- 2.07.1: ajax check for "error" status when user leaves page
- 2.08: parseTemplate one more arg, mapping: parseTemplate(obj, subscribeForUpdates, reversePropagate, mapping), functions called during parse
- 2.09: model defaults could be specified via model: { field0, field1, defaults: { field0: 1, field1: "a"
- 2.09.1: getParamNames is public as getFunctionParamNames(fn)
- 2.09.2: getDeclaredName(ajax) return declared ajax function name
- 2.10: module naming error hint, proper oldVal === undefined passed to .add first call
- 2.11: setX and others check for X uppercase, sumX auto-function added, return sum of all x fields in collection (sumXAndY also valid)
- 2.12: model.repo {} should be used for model collection functions. both old mixed and new separated formats supported
- 2.13: defaults for states introduced to specify default value for undefined, it overrides states groups
- 2.13.1: no-defaults state fix
  */
 "use strict";
 (function() {
@@ -1079,15 +1021,15 @@
         }
       }
 
-      function bindFunctions(modelName, spec, obj, appId) {
+      function bindFunctions(modelName, spec, obj, appId, defaultsName, repoName) {
         var storage = [],
           modelStorageField = "_modelData",
           dataStorageField = "_sourceData",
           parentModelReference = "_parentModel",
           collectionFunctions = [],
           specMode = spec === obj,
-          repoMode = spec.repo && $.isPlainObject(spec.repo),
-          repoRoot = repoMode ? spec.repo : spec;
+          repoMode = spec[repoName] && $.isPlainObject(spec[repoName]),
+          repoRoot = repoMode ? spec[repoName] : spec;
         obj[modelStorageField] = {};
         $.each(["on", "off", "update", "reset", "remove", "asMap"], function(i, nm) {
           spec[nm] || (spec[nm] = function(obj) {});
@@ -1111,10 +1053,10 @@
         function bindFn(fnRoot, fname, funcSpec) {
           var eventName = modelName + "_" + fname + "_event",
             globalChangeEventName = appId + modelName + "_globalevent",
-              repoObjMode = repoMode && fnRoot !== spec.repo;
+              repoObjMode = repoMode && fnRoot !== spec[repoName];
           if (fname == modelInnerDataField) {
-          } else if (fname == "defaults" && $.isPlainObject(funcSpec)) {
-          } else if (fname == "repo" && $.isPlainObject(funcSpec)) {
+          } else if (fname == defaultsName && $.isPlainObject(funcSpec)) {
+          } else if (fname == repoName && $.isPlainObject(funcSpec)) {
           } else if (fname == "all" && !repoObjMode) {
             if (! specMode) {return}
             fnRoot[fname] = function() {
@@ -1227,7 +1169,7 @@
                 });
               }
               $.each(arr, function(idx, item) {
-                fn($.extend({}, spec.defaults, item));
+                fn($.extend({}, spec[defaultsName], item));
               });
               obj[modelInnerDataField].trigger(eventName, [newArr]);
               eventBus.trigger(globalChangeEventName, [newArr, fname]);
@@ -1378,7 +1320,7 @@
             fnRoot[fname] = funcSpec;
           }
         }
-        specMode && $.each(spec.defaults, function(key, val) {
+        specMode && spec[defaultsName] && $.each(spec[defaultsName], function(key, val) {
           val = $.isFunction(val) ? val(obj) : val;
           if (isModelAccessor(obj[key])) {
             obj[key](val);
@@ -1421,7 +1363,7 @@
 
       function _bindModels(appRoot, models, appId) {
         $.each(models, function(name, spec) {
-          bindFunctions(name, spec, spec, appId);
+          bindFunctions(name, spec, spec, appId, appRoot["modelDefaultsFieldName"] || "defaults", appRoot["modelRepoFieldName"] || "repo");
           $.each(listeners, function(i, l) {l.boundModel && l.boundModel(appRoot, models, name, models[name])});
         });
       }
@@ -2536,7 +2478,7 @@
       }
 
       function version() {
-        return 213;
+        return 214;
       }
 
       return {
