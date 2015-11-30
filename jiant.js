@@ -1,5 +1,6 @@
 /*
 2.15: absolute urls for modules support, repo/defaults names per model, not app (redone 2.14), via jiantDefaults or jiantRepo flag inside of section
+2.15.1: minor fix for already loaded all modules
  */
 "use strict";
 (function() {
@@ -2170,7 +2171,9 @@
           });
           cb();
         }
+        var modulesUsed = false;
         root && $.each(root, function(moduleName, moduleUrl) {
+          modulesUsed = true;
           if (!modules[moduleName]) {
             if ($.isPlainObject(moduleUrl)) {
               moduleUrl = moduleUrl.url;
@@ -2194,7 +2197,7 @@
             cbIf0();
           }
         });
-        cbIf0();
+        !modulesUsed && cbIf0();
       }
 
 // ------------ base staff ----------------
