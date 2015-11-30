@@ -1,4 +1,5 @@
 /*
+2.15: absolute urls for modules support, repo/defaults names per model, not app (redone 2.14), via jiantDefaults or jiantRepo flag inside of section
  */
 "use strict";
 (function() {
@@ -334,8 +335,8 @@
         }
         elem.submitForm = function(url, cb) {
           url = url ? url : elem.attr("action");
-          url = (appRoot.ajaxPrefix ? appRoot.ajaxPrefix : jiant.AJAX_PREFIX ? jiant.AJAX_PREFIX : "") + url;
-          url = url + (appRoot.ajaxSuffix ? appRoot.ajaxSuffix : jiant.AJAX_SUFFIX ? jiant.AJAX_SUFFIX : "");
+          url = isCouldBePrefixed(url) ? ((appRoot.ajaxPrefix ? appRoot.ajaxPrefix : jiant.AJAX_PREFIX ? jiant.AJAX_PREFIX : "") + url) : url;
+          url = isCouldBePrefixed(url) ? (url + (appRoot.ajaxSuffix ? appRoot.ajaxSuffix : jiant.AJAX_SUFFIX ? jiant.AJAX_SUFFIX : "")) : url;
           var data = {
             type: "POST",
             url: url,
@@ -1365,9 +1366,20 @@
 
       function _bindModels(appRoot, models, appId) {
         $.each(models, function(name, spec) {
-          bindFunctions(name, spec, spec, appId, appRoot["modelDefaultsFieldName"] || "defaults", appRoot["modelRepoFieldName"] || "repo");
+          bindFunctions(name, spec, spec, appId, getCustomName(spec, "jiantDefaults") || "defaults", getCustomName(spec, "jiantRepo") || "repo");
           $.each(listeners, function(i, l) {l.boundModel && l.boundModel(appRoot, models, name, models[name])});
         });
+      }
+
+      function getCustomName(spec, name) {
+        var nm;
+        $.each(spec, function(key, val) {
+          if ($.isPlainObject(val) && val[name]) {
+            nm = key;
+            return false;
+          }
+        });
+        return nm;
       }
 
 // ------------ logic staff ----------------
@@ -1935,7 +1947,7 @@
           }
           var pfx = (ajaxPrefix || ajaxPrefix == "") ? ajaxPrefix : jiant.AJAX_PREFIX,
             sfx = (ajaxSuffix || ajaxSuffix == "") ? ajaxSuffix : jiant.AJAX_SUFFIX,
-            url = hardUrl ? hardUrl : pfx + uri + sfx,
+            url = hardUrl ? hardUrl : (pfx + uri + sfx),
             time = new Date().getTime();
           $.each(listeners, function(i, l) {l.ajaxCallStarted && l.ajaxCallStarted(appRoot, uri, url, callData)});
           var settings = {data: callData, traditional: true, success: function(data) {
@@ -2165,7 +2177,7 @@
             }
             loading[moduleName] = 1;
             $.ajax({
-              url: (appRoot.modulesPrefix || "") + moduleUrl + ".js?" + (appRoot.modulesSuffix || ""),
+              url: isCouldBePrefixed(moduleUrl) ? ((appRoot.modulesPrefix || "") + moduleUrl + ".js?" + (appRoot.modulesSuffix || "")) : moduleUrl,
               //timeout: 15000,
               cache: true,
               crossDomain: true,
@@ -2186,6 +2198,10 @@
       }
 
 // ------------ base staff ----------------
+
+      function isCouldBePrefixed(url) {
+        return ! (url.substring(0, 1) == "/" || url.substring(0, 7) == "http://" || url.substring(0, 8) == "https://");
+      }
 
       function maybeSetDevModeFromQueryString() {
         if ((window.location + "").toLowerCase().indexOf("jiant.dev_mode") >= 0) {
@@ -2480,7 +2496,7 @@
       }
 
       function version() {
-        return 214;
+        return 215;
       }
 
       return {
