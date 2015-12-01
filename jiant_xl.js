@@ -57,6 +57,7 @@
  xl.0.51: jiant 2.12 model.repo compatible
  xl.0.52: jiant 2.14 models with custom repo field compatible
  xl.0.53: filterableData one more param, singletonMode
+ xl.0.54: jiant 2.16 compatible
  */
 
 (function() {
@@ -142,8 +143,8 @@
                 : tm.parseTemplate(obj, subscribeForUpdates, reversePropagate, mapping),
             appended = false;
         viewFieldSetterName = viewFieldSetterName || "viewFieldSetterXL";
-        if (viewFieldSetterName && sortFn && $.isFunction(sortFn) && model._jiantRepoRef.all) {
-          $.each(model._jiantRepoRef.all(), function(i, item) {
+        if (viewFieldSetterName && sortFn && $.isFunction(sortFn) && model[jiant.refs.modelRepoRefName].all) {
+          $.each(model[jiant.refs.modelRepoRefName].all(), function(i, item) {
             var order = sortFn(obj, item);
             if (item[viewFieldSetterName] && item[viewFieldSetterName]() && order < 0) {
               !elemFactory && view.insertBefore(item[viewFieldSetterName]()[0]);
@@ -158,12 +159,12 @@
         viewFieldSetterName && $.isFunction(obj[viewFieldSetterName]) && view && obj[viewFieldSetterName](view);
       }
       return function() {
-        model._jiantRepoRef.add && model._jiantRepoRef.add.on(function(arr) {
+        model[jiant.refs.modelRepoRefName].add && model[jiant.refs.modelRepoRefName].add.on(function(arr) {
           $.each(arr, function(idx, obj) {
             renderObj(obj);
           });
         });
-        model._jiantRepoRef.remove && model._jiantRepoRef.remove.on(function(obj) {
+        model[jiant.refs.modelRepoRefName].remove && model[jiant.refs.modelRepoRefName].remove.on(function(obj) {
           obj[viewFieldSetterName] && (elemFactory ? elemFactory.remove(obj[viewFieldSetterName]()) : obj[viewFieldSetterName]().remove());
         });
       };
@@ -172,7 +173,7 @@
     filterableData: function(model, ajax, filterModel, updateOnModel, completeCb, singletonMode) {
       function refresh() {
         ajax(filterModel, function(data) {
-          model._jiantRepoRef[singletonMode ? "update" : "updateAll"](data, true);
+          singletonMode ? model.update(data) : model[jiant.refs.modelRepoRefName].updateAll(data, true);
           completeCb && completeCb(data);
         });
       }
@@ -190,7 +191,7 @@
         filterSortModel && filterSortModel.sort && filterSortModel.sort()
         && (pageable["page.sort"] = filterSortModel.sort(), pageable["sort"] = filterSortModel.sort());
         ajax(filterSortModel, pageable, function(data) {
-          model._jiantRepoRef.updateAll(data.content, true);
+          model[jiant.refs.modelRepoRefName].updateAll(data.content, true);
           pager && pager.updatePager(data);
         });
       }
