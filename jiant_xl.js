@@ -56,6 +56,7 @@
  xl.0.50: filterableData: function(model, ajax, filterModel, updateOnModel) added
  xl.0.51: jiant 2.12 model.repo compatible
  xl.0.52: jiant 2.14 models with custom repo field compatible
+ xl.0.53: filterableData one more param, singletonMode
  */
 
 (function() {
@@ -65,7 +66,7 @@
   var tmpJiantXl = {
 
     version: function() {
-      return 52;
+      return 53;
     },
 
     ctl2state: function(ctl, state, selectedCssClass, goProxy) {
@@ -168,10 +169,10 @@
       };
     },
 
-    filterableData: function(model, ajax, filterModel, updateOnModel, completeCb) {
+    filterableData: function(model, ajax, filterModel, updateOnModel, completeCb, singletonMode) {
       function refresh() {
         ajax(filterModel, function(data) {
-          model._jiantRepoRef.updateAll(data, true);
+          model._jiantRepoRef[singletonMode ? "update" : "updateAll"](data, true);
           completeCb && completeCb(data);
         });
       }
