@@ -3,6 +3,7 @@
 2.15.1: minor fix for already loaded all modules
 2.16: jiant.flags, jiant.refs for public reflection
 2.16.1: states defaults/undefineds mix fix
+2.16.2: warning about old model repo format
  */
 "use strict";
 (function() {
@@ -1034,6 +1035,9 @@
           specMode = spec === obj,
           repoMode = spec[repoName] && $.isPlainObject(spec[repoName]),
           repoRoot = repoMode ? spec[repoName] : spec;
+        if (!repoMode) {
+          jiant.errorp("App !!, model !! uses deprecated model repository format, switch to new, with repo {} section", appId, modelName);
+        }
         obj[modelStorageField] = {};
         $.each(["on", "off", "update", "reset", "remove", "asMap"], function(i, nm) {
           spec[nm] || (spec[nm] = function(obj) {});
