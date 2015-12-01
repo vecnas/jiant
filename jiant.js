@@ -1,6 +1,7 @@
 /*
 2.15: absolute urls for modules support, repo/defaults names per model, not app (redone 2.14), via jiantDefaults or jiantRepo flag inside of section
 2.15.1: minor fix for already loaded all modules
+2.16: jiant.flags, jiant.refs for public reflection
  */
 "use strict";
 (function() {
@@ -1037,8 +1038,8 @@
           spec[nm] || (spec[nm] = function(obj) {});
         });
         spec[defaultsName] || (spec[defaultsName] = {});
-        spec._jiantDefaultsRef = spec[defaultsName];
-        spec._jiantRepoRef = repoRoot;
+        spec[jiant.refs.modelDefaultsRefName] = spec[defaultsName];
+        spec[jiant.refs.modelRepoRefName] = repoRoot;
         $.each(["updateAll", "add", "all", "remove"], function(i, nm) {
           repoRoot[nm] || (repoRoot[nm] = function(obj) {});
         });
@@ -1898,17 +1899,16 @@
           });
         } else if ($.isPlainObject(actual)) {
           $.each(actual, function(key, value) {
-            if (key == "jSubmitAsMap") {
+            if (key === jiant.flags.ajaxSubmitAsMap) {
               return;
             }
+            var subpath = actual[jiant.flags.ajaxSubmitAsMap]
+                ? (traverse ? (path + "[") : "") + key + (traverse ? "]" : "")
+                : (traverse ? (path + ".") : "") + key;
             if (actual[modelInnerDataField]) { // model
-              isModelAccessor(value) && !isTransient(value) && parseForAjaxCall(root, (traverse ? (path + ".") : "") + key, value(), true);
+              isModelAccessor(value) && !isTransient(value) && parseForAjaxCall(root, subpath, value(), true);
             } else {
-              if (actual.jSubmitAsMap) {
-                parseForAjaxCall(root, (traverse ? (path + "[") : "") + key + (traverse ? "]" : ""), value, true);
-              } else {
-                parseForAjaxCall(root, (traverse ? (path + ".") : "") + key, value, true);
-              }
+              parseForAjaxCall(root, subpath, value, true);
             }
           });
         } else {
@@ -2499,7 +2499,7 @@
       }
 
       function version() {
-        return 215;
+        return 216;
       }
 
       return {
@@ -2588,6 +2588,15 @@
         stub: stub,
         tabs: tabs,
         transientFn: transientFn,
+
+        flags: {
+          ajaxSubmitAsMap: "_jiantFlagSubmitAsMap"
+        },
+
+        refs: {
+          modelRepoRefName: "_jiantRepoRef",
+          modelDefaultsRefName: "_jiantDefaultsRef"
+        },
 
         key: {left: 37, up: 38, right: 39, down: 40, del: 46, backspace: 8, tab: 9, end: 35, home: 36, enter: 13, ctrl: 17,
           escape: 27, dot: 190, dotExtra: 110, comma: 188,
