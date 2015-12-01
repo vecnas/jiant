@@ -2,6 +2,7 @@
 2.15: absolute urls for modules support, repo/defaults names per model, not app (redone 2.14), via jiantDefaults or jiantRepo flag inside of section
 2.15.1: minor fix for already loaded all modules
 2.16: jiant.flags, jiant.refs for public reflection
+2.16.1: states defaults/undefineds mix fix
  */
 "use strict";
 (function() {
@@ -1695,15 +1696,22 @@
               if ((params[i] in defaults)) {
                 parsed.now.push(defaults[params[i]]);
               } else {
-                parsed.now.push(pack(undefined));
+                parsed.now.push(undefined);
               }
             }
           }
           if (prevState && (prevState[0] == stateId || isSameStatesGroup(appId, prevState[0], stateId))) {
-            var argLen = arguments.length;
-            while (argLen < prevState.length - 1) {
+            var argLen = arguments.length + 1;
+            while (argLen < prevState.length) {
 //              info("pushing prev state param: " + prevState[argLen]);
-              parsed.now.push(pack(prevState[++argLen]));
+              if (argLen < parsed.now.length) {
+                if (parsed.now[argLen] == undefined) {
+                  parsed.now[argLen] = pack(prevState[argLen]);
+                }
+              } else {
+                parsed.now.push(pack(prevState[argLen]));
+              }
+              argLen++;
             }
           }
           if (root) {
