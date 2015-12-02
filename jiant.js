@@ -4,6 +4,7 @@
 2.16: jiant.flags, jiant.refs for public reflection
 2.16.1: states defaults/undefineds mix fix
 2.16.2: warning about old model repo format
+2.16.3: refs used as functions: model[jiant.refs.modelRepoRefName]() to avoid problems with $.extend
  */
 "use strict";
 (function() {
@@ -1043,8 +1044,8 @@
           spec[nm] || (spec[nm] = function(obj) {});
         });
         spec[defaultsName] || (spec[defaultsName] = {});
-        spec[jiant.refs.modelDefaultsRefName] = spec[defaultsName];
-        spec[jiant.refs.modelRepoRefName] = repoRoot;
+        spec[jiant.refs.modelDefaultsRefName] = function() { return spec[defaultsName]};
+        spec[jiant.refs.modelRepoRefName] = function() {return repoRoot};
         $.each(["updateAll", "add", "all", "remove"], function(i, nm) {
           repoRoot[nm] || (repoRoot[nm] = function(obj) {});
         });
@@ -1060,6 +1061,7 @@
         $.each(spec, function(fname, funcSpec) {
           bindFn(obj, fname, funcSpec);
         });
+        jiant.logInfo(modelName, repoMode);
         function bindFn(fnRoot, fname, funcSpec) {
           var eventName = modelName + "_" + fname + "_event",
             globalChangeEventName = appId + modelName + "_globalevent",
@@ -1164,7 +1166,8 @@
                 newArr.push(newObj);
                 newObj[dataStorageField] = item;
                 newObj[parentModelReference] = obj;
-                bindFunctions(modelName, spec, newObj, appId);
+                //bindFunctions(modelName, spec, newObj, appId);
+                bindFunctions(modelName, spec, newObj, appId, defaultsName, repoName);
                 $.each(item, function(name, val) {
                   if (isModelAccessor(newObj[name])) {
                     val = $.isFunction(val) ? val() : val;
@@ -1183,7 +1186,7 @@
               });
               obj[modelInnerDataField].trigger(eventName, [newArr]);
               eventBus.trigger(globalChangeEventName, [newArr, fname]);
-              $.each(arr, function(idx, item) {
+              $.each(newArr, function(idx, item) {
                 newArr[idx].update && newArr[idx].update(item); // todo: replace by just trigger update event
               });
               return attachCollectionFunctions(newArr, collectionFunctions);
