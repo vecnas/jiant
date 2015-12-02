@@ -1061,7 +1061,6 @@
         $.each(spec, function(fname, funcSpec) {
           bindFn(obj, fname, funcSpec);
         });
-        jiant.logInfo(modelName, repoMode);
         function bindFn(fnRoot, fname, funcSpec) {
           var eventName = modelName + "_" + fname + "_event",
             globalChangeEventName = appId + modelName + "_globalevent",
