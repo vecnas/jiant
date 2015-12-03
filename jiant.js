@@ -6,6 +6,7 @@
 2.16.2: warning about old model repo format
 2.16.3: refs used as functions: model[jiant.refs.modelRepoRefName]() to avoid problems with $.extend
 2.16.4: template data copy protection vs infinite recursion
+2.17: jquery names intersection bug fix in models
  */
 "use strict";
 (function() {
@@ -1303,10 +1304,10 @@
             fnRoot[fname] = function () {
               return obj[dataStorageField];
             }
-          } else if (isEmptyFunction(funcSpec) || spec[modelInnerDataField][fname]) {
+          } else if (isEmptyFunction(funcSpec) || spec[modelInnerDataField]["_jiantGetter_" + fname]) {
             var trans = funcSpec === jiant.transientFn || isTransient(funcSpec);
             collectionFunctions.push(fname);
-            spec[modelInnerDataField][fname] = true;
+            spec[modelInnerDataField]["_jiantGetter_" + fname] = true;
             fnRoot[fname] = function(val, forceEvent, dontFireUpdate, oldValOverride) {
               if (arguments.length == 0) {
                 return obj[modelStorageField][fname];
@@ -2514,7 +2515,7 @@
       }
 
       function version() {
-        return 216;
+        return 217;
       }
 
       return {
