@@ -7,6 +7,7 @@
 2.16.3: refs used as functions: model[jiant.refs.modelRepoRefName]() to avoid problems with $.extend
 2.16.4: template data copy protection vs infinite recursion
 2.17: jquery names intersection bug fix in models
+2.18: supplier methods of model (starting with "return") results passed to ajax call, jiant.isModelSupplier and jiant.isModelAccessor for testing model fields
  */
 "use strict";
 (function() {
@@ -1070,6 +1071,8 @@
           if (fname == modelInnerDataField) {
           } else if (fname == defaultsName && $.isPlainObject(funcSpec)) {
           } else if (fname == repoName && $.isPlainObject(funcSpec)) {
+          } else if (fname == jiant.refs.modelDefaultsRefName) {
+          } else if (fname == jiant.refs.modelRepoRefName) {
           } else if (fname == "all" && !repoObjMode) {
             if (! specMode) {return}
             fnRoot[fname] = function() {
@@ -1332,6 +1335,9 @@
             assignOnOffHandlers(obj, obj, eventName, fname);
           } else if (fname != "_modelData") {
             fnRoot[fname] = funcSpec;
+            if (isSupplierFunction(funcSpec)) {
+              fnRoot[fname].jiant_supplier = 1;
+            }
           }
         }
         specMode && $.each(spec[defaultsName], function(key, val) {
@@ -1370,9 +1376,18 @@
         return fn && fn.jiant_accessor && $.isFunction(fn);
       }
 
+      function isModelSupplier(fn) {
+        return fn && fn.jiant_supplier && $.isFunction(fn);
+      }
+
       function isEmptyFunction(funcSpec) {
         var s = ("" + funcSpec).replace(/\s/g, '');
         return s.indexOf("{}") == s.length - 2;
+      }
+
+      function isSupplierFunction(funcSpec) {
+        var s = ("" + funcSpec).replace(/\s/g, '');
+        return s.indexOf("function(){return") == 0;
       }
 
       function _bindModels(appRoot, models, appId) {
@@ -1922,7 +1937,7 @@
                 ? (traverse ? (path + "[") : "") + key + (traverse ? "]" : "")
                 : (traverse ? (path + ".") : "") + key;
             if (actual[modelInnerDataField]) { // model
-              isModelAccessor(value) && !isTransient(value) && parseForAjaxCall(root, subpath, value(), true);
+              (isModelAccessor(value) || isModelSupplier(value)) && !isTransient(value) && parseForAjaxCall(root, subpath, value(), true);
             } else {
               parseForAjaxCall(root, subpath, value, true);
             }
@@ -2515,7 +2530,7 @@
       }
 
       function version() {
-        return 217;
+        return 218;
       }
 
       return {
@@ -2544,6 +2559,8 @@
         getCurrentState: getCurrentState,
         setUiFactory: setUiFactory,
         visualize: visualize,
+        isModelSupplier: isModelSupplier,
+        isModelAccessor: isModelAccessor,
 
         handleErrorFn: defaultAjaxErrorsHandle,
         registerCustomType: registerCustomType,
