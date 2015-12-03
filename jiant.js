@@ -8,6 +8,7 @@
 2.16.4: template data copy protection vs infinite recursion
 2.17: jquery names intersection bug fix in models
 2.18: supplier methods of model (starting with "return") results passed to ajax call, jiant.isModelSupplier and jiant.isModelAccessor for testing model fields
+2.18.1: proper context for supplier call to support this.
  */
 "use strict";
 (function() {
@@ -1937,7 +1938,7 @@
                 ? (traverse ? (path + "[") : "") + key + (traverse ? "]" : "")
                 : (traverse ? (path + ".") : "") + key;
             if (actual[modelInnerDataField]) { // model
-              (isModelAccessor(value) || isModelSupplier(value)) && !isTransient(value) && parseForAjaxCall(root, subpath, value(), true);
+              (isModelAccessor(value) || isModelSupplier(value)) && !isTransient(value) && parseForAjaxCall(root, subpath, value.apply(actual), true);
             } else {
               parseForAjaxCall(root, subpath, value, true);
             }
