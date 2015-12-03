@@ -5,6 +5,7 @@
 2.16.1: states defaults/undefineds mix fix
 2.16.2: warning about old model repo format
 2.16.3: refs used as functions: model[jiant.refs.modelRepoRefName]() to avoid problems with $.extend
+2.16.4: template data copy protection vs infinite recursion
  */
 "use strict";
 (function() {
@@ -211,7 +212,7 @@
       function parseTemplate(that, data, tmId, mapping) {
         data = data || {};
         if (mapping) {
-          data = $.extend(true, {}, data);
+          data = $.extend({}, data);
           $.each(mapping, function(key, val) {
             data[key] = data[val];
           });
