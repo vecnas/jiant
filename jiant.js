@@ -9,6 +9,7 @@
 2.17: jquery names intersection bug fix in models
 2.18: supplier methods of model (starting with "return") results passed to ajax call, jiant.isModelSupplier and jiant.isModelAccessor for testing model fields
 2.18.1: proper context for supplier call to support this.
+2.18.2: no-repo error shown only for spec and as info
  */
 "use strict";
 (function() {
@@ -1040,8 +1041,8 @@
           specMode = spec === obj,
           repoMode = spec[repoName] && $.isPlainObject(spec[repoName]),
           repoRoot = repoMode ? spec[repoName] : spec;
-        if (!repoMode) {
-          jiant.errorp("App !!, model !! uses deprecated model repository format, switch to new, with repo {} section", appId, modelName);
+        if (specMode && !repoMode) {
+          jiant.infop("App !!, model !! uses deprecated model repository format, switch to new, with repo {} section", appId, modelName);
         }
         obj[modelStorageField] = {};
         $.each(["on", "off", "update", "reset", "remove", "asMap"], function(i, nm) {
