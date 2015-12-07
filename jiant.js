@@ -1,15 +1,16 @@
 /*
-2.15: absolute urls for modules support, repo/defaults names per model, not app (redone 2.14), via jiantDefaults or jiantRepo flag inside of section
-2.15.1: minor fix for already loaded all modules
-2.16: jiant.flags, jiant.refs for public reflection
-2.16.1: states defaults/undefineds mix fix
-2.16.2: warning about old model repo format
-2.16.3: refs used as functions: model[jiant.refs.modelRepoRefName]() to avoid problems with $.extend
-2.16.4: template data copy protection vs infinite recursion
-2.17: jquery names intersection bug fix in models
-2.18: supplier methods of model (starting with "return") results passed to ajax call, jiant.isModelSupplier and jiant.isModelAccessor for testing model fields
-2.18.1: proper context for supplier call to support this.
-2.18.2: no-repo error shown only for spec and as info
+ 2.15: absolute urls for modules support, repo/defaults names per model, not app (redone 2.14), via jiantDefaults or jiantRepo flag inside of section
+ 2.15.1: minor fix for already loaded all modules
+ 2.16: jiant.flags, jiant.refs for public reflection
+ 2.16.1: states defaults/undefineds mix fix
+ 2.16.2: warning about old model repo format
+ 2.16.3: refs used as functions: model[jiant.refs.modelRepoRefName]() to avoid problems with $.extend
+ 2.16.4: template data copy protection vs infinite recursion
+ 2.17: jquery names intersection bug fix in models
+ 2.18: supplier methods of model (starting with "return") results passed to ajax call, jiant.isModelSupplier and jiant.isModelAccessor for testing model fields
+ 2.18.1: proper context for supplier call to support this.
+ 2.18.2: no-repo error shown only for spec and as info
+ 2.19: asMap(mapping, deep) - to iterate model recursively, jiant.isModel - to check is object model, jiant.packForState, jiant.unpackForState are public
  */
 "use strict";
 (function() {
@@ -1297,10 +1298,19 @@
             }
           } else if (fname == "asMap") {
             collectionFunctions.push(fname);
-            fnRoot[fname] = function (mapping) {
+            fnRoot[fname] = function (mapping, deep) {
               var ret = {};
-              $.each(obj[modelStorageField], function(key, val) {
-                ret[(mapping && mapping[key]) ? mapping[key] : key] = obj[modelStorageField][key];
+              $.each(fnRoot, function(key) {
+                var actualKey = (mapping && mapping[key]) ? mapping[key] : key,
+                    fn = fnRoot[actualKey];
+                if (isModelAccessor(fn) || isModelSupplier(fn)) {
+                  var val = fn.apply(fnRoot);
+                  if (isModel(val)) {
+                    ret[actualKey] = val.asMap(mapping, deep);
+                  } else {
+                    val !== undefined && (ret[actualKey] = val);
+                  }
+                }
               });
               return ret;
             }
@@ -1380,6 +1390,10 @@
 
       function isModelSupplier(fn) {
         return fn && fn.jiant_supplier && $.isFunction(fn);
+      }
+
+      function isModel(obj) {
+        return !!obj && !!obj[modelInnerDataField];
       }
 
       function isEmptyFunction(funcSpec) {
@@ -1936,9 +1950,9 @@
               return;
             }
             var subpath = actual[jiant.flags.ajaxSubmitAsMap]
-                ? (traverse ? (path + "[") : "") + key + (traverse ? "]" : "")
-                : (traverse ? (path + ".") : "") + key;
-            if (actual[modelInnerDataField]) { // model
+              ? (traverse ? (path + "[") : "") + key + (traverse ? "]" : "")
+              : (traverse ? (path + ".") : "") + key;
+            if (isModel(actual)) { // model
               (isModelAccessor(value) || isModelSupplier(value)) && !isTransient(value) && parseForAjaxCall(root, subpath, value.apply(actual), true);
             } else {
               parseForAjaxCall(root, subpath, value, true);
@@ -2532,7 +2546,7 @@
       }
 
       function version() {
-        return 218;
+        return 219;
       }
 
       return {
@@ -2563,6 +2577,9 @@
         visualize: visualize,
         isModelSupplier: isModelSupplier,
         isModelAccessor: isModelAccessor,
+        isModel: isModel,
+        packForState: pack,
+        unpackForState: unpack,
 
         handleErrorFn: defaultAjaxErrorsHandle,
         registerCustomType: registerCustomType,
