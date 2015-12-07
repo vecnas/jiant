@@ -11,6 +11,7 @@
  2.18.1: proper context for supplier call to support this.
  2.18.2: no-repo error shown only for spec and as info
  2.19: asMap(mapping, deep) - to iterate model recursively, jiant.isModel - to check is object model, jiant.packForState, jiant.unpackForState are public
+ 2.20: defaults/repo renamed to jDefaults/jRepo for more uniqueness
  */
 "use strict";
 (function() {
@@ -1408,7 +1409,7 @@
 
       function _bindModels(appRoot, models, appId) {
         $.each(models, function(name, spec) {
-          bindFunctions(name, spec, spec, appId, getCustomName(spec, "jiantDefaults") || "defaults", getCustomName(spec, "jiantRepo") || "repo");
+          bindFunctions(name, spec, spec, appId, getCustomName(spec, "jiantDefaults") || "jDefaults", getCustomName(spec, "jiantRepo") || "jRepo");
           $.each(listeners, function(i, l) {l.boundModel && l.boundModel(appRoot, models, name, models[name])});
         });
       }
@@ -1712,7 +1713,7 @@
       }
 
       function go(stateId, root, stateSpec, stateExternalBase, appId) {
-        var defaults = stateSpec.defaults,
+        var defaults = stateSpec.jDefaults,
           params = stateSpec.go ? getParamNames(stateSpec.go) : [];
         return function() {
           var parsed = parseState(appId),
@@ -2546,7 +2547,7 @@
       }
 
       function version() {
-        return 219;
+        return 220;
       }
 
       return {
