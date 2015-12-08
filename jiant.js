@@ -12,6 +12,7 @@
  2.18.2: no-repo error shown only for spec and as info
  2.19: asMap(mapping, deep) - to iterate model recursively, jiant.isModel - to check is object model, jiant.packForState, jiant.unpackForState are public
  2.20: defaults/repo renamed to jDefaults/jRepo for more uniqueness
+ 2.21: asMap deep supports maps with models as values
  */
 "use strict";
 (function() {
@@ -1301,16 +1302,28 @@
             collectionFunctions.push(fname);
             fnRoot[fname] = function (mapping, deep) {
               var ret = {};
-              $.each(fnRoot, function(key) {
+              function val2map(ret, val, actualKey) {
+                if (isModel(val)) {
+                  ret[actualKey] = val.asMap(null, deep);
+                } else if ($.isPlainObject(val)) {
+                  ret[actualKey] = obj2map(val);
+                } else {
+                  val !== undefined && (ret[actualKey] = val);
+                }
+              }
+              function obj2map(obj) {
+                var ret = {};
+                $.each(obj, function(key, val) {
+                  val2map(ret, val, key);
+                });
+                return ret;
+              }
+              $.each(this, function(key) {
                 var actualKey = (mapping && mapping[key]) ? mapping[key] : key,
                     fn = fnRoot[actualKey];
                 if (isModelAccessor(fn) || isModelSupplier(fn)) {
                   var val = fn.apply(fnRoot);
-                  if (isModel(val)) {
-                    ret[actualKey] = val.asMap(mapping, deep);
-                  } else {
-                    val !== undefined && (ret[actualKey] = val);
-                  }
+                  val2map(ret, val, actualKey, mapping);
                 }
               });
               return ret;
@@ -2547,7 +2560,7 @@
       }
 
       function version() {
-        return 220;
+        return 221;
       }
 
       return {
