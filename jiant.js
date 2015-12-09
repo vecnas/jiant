@@ -13,6 +13,7 @@
  2.19: asMap(mapping, deep) - to iterate model recursively, jiant.isModel - to check is object model, jiant.packForState, jiant.unpackForState are public
  2.20: defaults/repo renamed to jDefaults/jRepo for more uniqueness
  2.21: asMap deep supports maps with models as values
+ 2.21.1: internal minor reorganizations
  */
 "use strict";
 (function() {
@@ -72,49 +73,10 @@
 
     tmpJiant = (function($) {
 
-      var collection = {},
-        container = {},
-        containerPaged = {},
-        ctl = {},
-        ctlHide = {},
-        form = {},
-        fn = function (param) {
-        },
-        grid = {},
-        image = {},
-        imgBg = {},
-        input = {},
-        inputSet = {},
-        inputSetAsString = {},
-        inputInt = {},
-        inputFloat = {},
-        inputDate = {},
-        label = {},
-        nlabel = {},
-        numLabel = {},
-        meta = {},
-        cssMarker = {},
-        cssFlag = {},
-        transientFn = function(val) {},
+      var
         customElementTypes = {},
-        data = function (val) {
-        },
-        lookup = function (selector) {
-        },
-        on = function (cb) {
-        },
-        goState = function (params, preserveOmitted) {
-        },
-        pager = {},
-        slider = {},
-        stub = function () {
-          jiant.logError("stub called");
-        },
-        tabs = {},
-
         bindingsResult = true,
         errString,
-
         pickTime,
         lastStates = {},
         lastEncodedStates = {},
@@ -2582,7 +2544,7 @@
         bindView: bindView,
         loadLibs: loadLibs,
         goRoot: goRoot,
-        goState: goState,
+        goState: function (params, preserveOmitted) {},
         onUiBound: onUiBound,
         onAppInit: onAppInit,
         refreshState: refreshState,
@@ -2624,36 +2586,36 @@
         addListener: addListener,
         removeListener: removeListener,
 
-        collection: collection,
-        container: container,
-        containerPaged: containerPaged,
-        ctl : ctl,
-        ctlHide : ctlHide,
-        fn: fn,
-        form: form,
-        grid: grid,
-        image: image,
-        imgBg: imgBg,
-        input: input,
-        inputSet: inputSet,
-        inputSetAsString: inputSetAsString,
-        inputDate: inputDate,
-        inputInt: inputInt,
-        inputFloat: inputFloat,
-        label: label,
-        nlabel: nlabel,
-        numLabel: numLabel,
-        meta: meta,
-        cssFlag: cssFlag,
-        cssMarker: cssMarker,
-        data: data,
-        lookup: lookup,
-        on: on,
-        pager: pager,
-        slider: slider,
-        stub: stub,
-        tabs: tabs,
-        transientFn: transientFn,
+        collection: {},
+        container: {},
+        containerPaged: {},
+        ctl: {},
+        ctlHide: {},
+        form: {},
+        grid: {},
+        image: {},
+        imgBg: {},
+        input: {},
+        inputSet: {},
+        inputSetAsString: {},
+        inputDate: {},
+        inputInt: {},
+        inputFloat: {},
+        label: {},
+        nlabel: {},
+        numLabel: {},
+        meta: {},
+        cssFlag: {},
+        cssMarker: {},
+        pager: {},
+        slider: {},
+        tabs: {},
+        fn: function (param) {},
+        data: function (val) {},
+        lookup: function (selector) {},
+        on: function (cb) {},
+        stub: function () {jiant.logError("stub called")},
+        transientFn: function(val) {},
 
         flags: {
           ajaxSubmitAsMap: "_jiantFlagSubmitAsMap"
