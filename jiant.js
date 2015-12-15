@@ -14,6 +14,7 @@
  2.20: defaults/repo renamed to jDefaults/jRepo for more uniqueness
  2.21: asMap deep supports maps with models as values
  2.21.1: internal minor reorganizations
+ 2.21.2: better values mapping for inputSetAsString
  */
 "use strict";
 (function() {
@@ -806,7 +807,7 @@
           return updateImgBg;
         } else if (elemType === jiant.inputSetAsString) {
           return function(obj, elem, val, isUpdate, viewOrTemplate) {
-            updateInputSet(obj, elem, !val ? [] : $.isArray(val) ? val : $.isNumeric(val) ? [val] : ("" + val).split(","), isUpdate, viewOrTemplate);
+            updateInputSet(obj, elem, !val ? [val] : $.isArray(val) ? val : $.isNumeric(val) ? [val] : ("" + val).split(","), isUpdate, viewOrTemplate);
           };
         } else {
           return updateViewElement;
@@ -822,13 +823,13 @@
       }
 
       function updateInputSet(obj, elem, val, isUpdate, viewOrTemplate) {
-        if (! elem || ! elem[0]) {
+        if (!elem || !elem[0]) {
           return;
         }
         $.each(elem, function(idx, item) {
           item = $(item);
           var check = item.val() === val;
-          if (! check && $.isArray(val)) {
+          if (!check && $.isArray(val)) {
             $.each(val, function(i, subval) {
               if (subval + "" == item.val() + "") {
                 check = true;
