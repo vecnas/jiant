@@ -16,6 +16,7 @@
  2.21.1: internal minor reorganizations
  2.21.2: better values mapping for inputSetAsString
  2.21.3: defaults functions now use passed object as this
+ 2.22: multiple UI elements could be bound to single jiant.pager declaration
  */
 "use strict";
 (function() {
@@ -394,11 +395,15 @@
 
       function setupPager(uiElem) {
         var pagerBus = $({}),
-          root = $("<ul></ul>"),
+          roots = [],
           lastPage = 0,
           lastTotalCls;
-        root.addClass("pagination");
-        uiElem.append(root);
+        $.each(uiElem, function(i, elem) {
+          var root = $("<ul></ul>");
+          root.addClass("pagination");
+          $(elem).append(root);
+          roots.push(root);
+        });
         uiElem.onValueChange = function(callback) {
           pagerBus.on("ValueChange", callback);
         };
@@ -414,33 +419,35 @@
           }
         };
         uiElem.updatePager = function(page) {
-          root.empty();
-          lastTotalCls && root.removeClass(lastTotalCls);
-          lastTotalCls = "totalPages_" + page.totalPages;
-          root.addClass(lastTotalCls);
-          var from = Math.max(0, page.number - Math.round(jiant.PAGER_RADIUS / 2)),
-            to = Math.min(page.number + Math.round(jiant.PAGER_RADIUS / 2), page.totalPages);
-          if (from > 0) {
-            addPageCtl(1, "pager_first");
-            addPageCtl(-1, "disabled emptyPlaceholder");
-          }
-          for (var i = from; i < to; i++) {
-            var cls = "";
-            if (i == page.number) {
-              cls += " active";
+          $.each(roots, function(idx, root) {
+            root.empty();
+            lastTotalCls && root.removeClass(lastTotalCls);
+            lastTotalCls = "totalPages_" + page.totalPages;
+            root.addClass(lastTotalCls);
+            var from = Math.max(0, page.number - Math.round(jiant.PAGER_RADIUS / 2)),
+              to = Math.min(page.number + Math.round(jiant.PAGER_RADIUS / 2), page.totalPages);
+            if (from > 0) {
+              addPageCtl(root, 1, "pager_first");
+              addPageCtl(root, -1, "disabled emptyPlaceholder");
             }
-            addPageCtl(i + 1, cls);
-          }
-          var clsLast = "";
-          if (to < page.totalPages - 1) {
-            addPageCtl(-1, "disabled emptyPlaceholder");
-            clsLast = "pager_last";
-          }
-          if (to < page.totalPages) {
-            addPageCtl(page.totalPages, clsLast);
-          }
+            for (var i = from; i < to; i++) {
+              var cls = "";
+              if (i == page.number) {
+                cls += " active";
+              }
+              addPageCtl(root, i + 1, cls);
+            }
+            var clsLast = "";
+            if (to < page.totalPages - 1) {
+              addPageCtl(root, -1, "disabled emptyPlaceholder");
+              clsLast = "pager_last";
+            }
+            if (to < page.totalPages) {
+              addPageCtl(root, page.totalPages, clsLast);
+            }
+          });
         };
-        function addPageCtl(value, ctlClass) {
+        function addPageCtl(root, value, ctlClass) {
           var ctl = $(parseTemplate($("<b><li class='!!ctlClass!!' style='cursor: pointer;'><a>!!label!!</a></li></b>"),
             {label: value != -1 ? value : "...", ctlClass: ctlClass}));
           root.append(ctl);
@@ -2524,7 +2531,7 @@
       }
 
       function version() {
-        return 221;
+        return 222;
       }
 
       return {
