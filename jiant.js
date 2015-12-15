@@ -15,6 +15,7 @@
  2.21: asMap deep supports maps with models as values
  2.21.1: internal minor reorganizations
  2.21.2: better values mapping for inputSetAsString
+ 2.21.3: defaults functions now use passed object as this
  */
 "use strict";
 (function() {
@@ -1142,7 +1143,7 @@
                 bindFunctions(modelName, spec, newObj, appId, defaultsName, repoName);
                 $.each(item, function(name, val) {
                   if (isModelAccessor(newObj[name])) {
-                    val = $.isFunction(val) ? val() : val;
+                    val = $.isFunction(val) ? val.apply(item) : val;
                     if (newObj[name]) {
                       toTrigger[name] = undefined;
                       newObj[name](val, false);
