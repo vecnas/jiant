@@ -17,6 +17,7 @@
  2.21.2: better values mapping for inputSetAsString
  2.21.3: defaults functions now use passed object as this
  2.22: multiple UI elements could be bound to single jiant.pager declaration
+ 2.23: added model field .onAndNow method, similar to asap, but subscribes for all field updates
  */
 "use strict";
 (function() {
@@ -973,36 +974,34 @@
 
       function assignOnOffHandlers(fnRoot, obj, eventName, fname, eventObject) {
         eventObject = eventObject ? eventObject : obj[modelInnerDataField];
-        var fn = function (cb) {
-            var handler = function (evt) {
-//              jiant.logError(eventName + " " + fname, eventObject);
-              var args = $.makeArray(arguments);
-              args.splice(0, 1);
-              //        args.splice(0, 2);
-              var res = cb && cb.apply(cb, args);
-              if (res === false) {
-                evt.stopImmediatePropagation();
-              }
-            };
-            (fname ? fnRoot[fname] : fnRoot).listenersCount++;
-//            jiant.logError("adding for " + eventName + " " + fname);
-            eventObject.on(eventName, handler);
-            return handler;
-          },
-          fnOff = function (handler) {
-            (fname ? fnRoot[fname] : fnRoot).listenersCount--;
-            var res = eventObject.off(eventName, handler);
-            return res;
+        var tgt = (fname ? fnRoot[fname] : fnRoot);
+        tgt.on = function (cb) {
+          var handler = function (evt) {
+            var args = $.makeArray(arguments);
+            args.splice(0, 1);
+            //        args.splice(0, 2);
+            var res = cb && cb.apply(cb, args);
+            if (res === false) {
+              evt.stopImmediatePropagation();
+            }
           };
+          tgt.listenersCount++;
+          eventObject.on(eventName, handler);
+          return handler;
+        };
+        tgt.off = function (handler) {
+          tgt.listenersCount--;
+          return eventObject.off(eventName, handler);
+        };
+        tgt.listenersCount = 0;
         if (fname) {
-          fnRoot[fname].on = fn;
-          fnRoot[fname].off = fnOff;
-          fnRoot[fname].listenersCount = 0;
+          tgt.onAndNow = function(cb) {
+            tgt.asap(function() {
+              cb.apply(tgt, arguments);
+              tgt.on(cb);
+            });
+          };
           assignAsapHandler(fnRoot, obj, eventName, fname);
-        } else {
-          fnRoot.on = fn;
-          fnRoot.off = fnOff;
-          fnRoot.listenersCount = 0;
         }
       }
 
@@ -2531,7 +2530,7 @@
       }
 
       function version() {
-        return 222;
+        return 223;
       }
 
       return {
