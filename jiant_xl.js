@@ -59,6 +59,7 @@
  xl.0.53: filterableData one more param, singletonMode
  xl.0.54: jiant 2.16 compatible
  xl.0.55: jiant 2.16.3 compatible
+ xl.0.56: amd compatible, anonymous model declared in amd environment
  */
 
 (function() {
@@ -68,7 +69,7 @@
   var tmpJiantXl = {
 
     version: function() {
-      return 55;
+      return 56;
     },
 
     ctl2state: function(ctl, state, selectedCssClass, goProxy) {
@@ -444,7 +445,13 @@
 
   };
 
-  if (! (window.jiant && window.jiant.xl && window.jiant.xl.version && window.jiant.xl.version() >= tmpJiantXl.version())) {
+  if ( typeof define === "function" && define.amd ) {
+    define(["jquery", "jiant"], function ($, jiant) {
+      window.jiant.xl = tmpJiantXl;
+      jiant.xl = tmpJiantXl;
+      return tmpJiantXl;
+    } );
+  } else {
     window.jiant.xl = tmpJiantXl;
   }
 
