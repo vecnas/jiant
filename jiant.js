@@ -19,6 +19,7 @@
  2.22: multiple UI elements could be bound to single jiant.pager declaration
  2.23: added model field .onAndNow method, similar to asap, but subscribes for all field updates
  2.24: restructure, amd compatible, anonymous model declared in amd environment
+ 2.25: further amd integration, amdConfig could be passed as last parameter for bindUi call, modules used as array for require call
  */
 "use strict";
 (function() {
@@ -2172,7 +2173,25 @@
 
 // ------------ modules staff ----------------
 
-  function _loadModules(appRoot, root, appId, cb) {
+  function _loadModules(appRoot, root, appId, amdConfig, cb) {
+    if ($.isPlainObject(root)) {
+      _loadModulesObj(appRoot, root, appId, cb);
+    } else if ($.isArray(root)) {
+      _loadModulesArr(appRoot, root, appId, amdConfig, cb);
+    }
+  }
+
+  function _loadModulesArr(appRoot, root, appId, amdConfig, cb) {
+    if (!amdConfig || typeof amdConfig !== "function") {
+      jiant.logError("Modules not loaded - no amdConfig context passed, pass it via bindUi(appRoot, amdConfig)");
+      cb();
+    } else {
+      amdConfig(root, cb);
+    }
+  }
+
+  function _loadModulesObj(appRoot, root, appId, cb) {
+    jiant.logError("Old modules format, replace it by array and requirejs loader");
     var totalCounter = Object.keys(root).length,
       loading = {};
     function cbIf0() {
@@ -2257,7 +2276,7 @@
     return false;
   }
 
-  function _bindUi(root, devMode, appUiFactory) {
+  function _bindUi(root, devMode, appUiFactory, amdConfig) {
     jiant.DEV_MODE = devMode;
     ! devMode && maybeSetDevModeFromQueryString();
     errString = "";
@@ -2280,7 +2299,7 @@
     maybeShort(root, "states", "s");
     maybeShort(root, "models", "m");
     root.modules = root.modules || {};
-    _loadModules(root, root.modules, appId, function() {
+    _loadModules(root, root.modules, appId, amdConfig, function() {
       intlPresent && _bindIntl(root, root.intl, appId);
       // views after intl because of nlabel proxies
       _bindViews(root, root.views, appUiFactory);
@@ -2305,7 +2324,7 @@
     });
   }
 
-  function bindUi(prefix, root, devMode, viewsUrl, injectId) {
+  function bindUi(prefix, root, devMode, viewsUrl, injectId, amdConfig) {
     if ($.isPlainObject(prefix)) { // no prefix syntax
       injectId = viewsUrl;
       viewsUrl = devMode;
@@ -2316,6 +2335,10 @@
     root.appPrefix = prefix || "";
     if (devMode === undefined) {
       devMode = true;
+    }
+    amdConfig = arguments[arguments.length - 1];
+    if (typeof amdConfig === "string" || amdConfig === root) {
+      amdConfig = undefined;
     }
     $.each(listeners, function(i, l) {l.bindStarted && l.bindStarted(root)});
     var appUiFactory = root.uiFactory ? root.uiFactory : uiFactory;
@@ -2331,10 +2354,10 @@
         injectionPoint = $("body");
       }
       injectionPoint.load(viewsUrl, {}, function () {
-        _bindUi(root, devMode, appUiFactory);
+        _bindUi(root, devMode, appUiFactory, amdConfig);
       });
     } else {
-      _bindUi(root, devMode, appUiFactory);
+      _bindUi(root, devMode, appUiFactory, amdConfig);
     }
     $.each(listeners, function(i, l) {l.bindCompleted && l.bindCompleted(root)});
     devMode && setTimeout(function() {
@@ -2532,7 +2555,7 @@
   }
 
   function version() {
-    return 224;
+    return 225;
   }
 
   function Jiant() {}
