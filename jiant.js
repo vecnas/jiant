@@ -20,9 +20,13 @@
  2.23: added model field .onAndNow method, similar to asap, but subscribes for all field updates
  2.24: restructure, amd compatible, anonymous model declared in amd environment
  2.25: further amd integration, amdConfig could be passed as last parameter for bindUi call, modules used as array for require call
+ 2.26: fixed non-singleton scenario, jiant.getApps() returns currently loaded applications 
  */
 "use strict";
 (function() {
+  if (window.jiant) {
+    return;
+  }
 
   var
     DefaultUiFactory = function() {
@@ -1310,7 +1314,7 @@
           }
           $.each(this, function(key) {
             var actualKey = (mapping && mapping[key]) ? mapping[key] : key,
-                fn = fnRoot[actualKey];
+              fn = fnRoot[actualKey];
             if (isModelAccessor(fn) || isModelSupplier(fn)) {
               var val = fn.apply(fnRoot);
               val2map(ret, val, actualKey, mapping);
@@ -2182,7 +2186,9 @@
   }
 
   function _loadModulesArr(appRoot, root, appId, amdConfig, cb) {
-    if (!amdConfig || typeof amdConfig !== "function") {
+    if (root.length == 0) {
+      cb();
+    } else if (!amdConfig || typeof amdConfig !== "function") {
       jiant.logError("Modules not loaded - no amdConfig context passed, pass it via bindUi(appRoot, amdConfig)");
       cb();
     } else {
@@ -2191,7 +2197,7 @@
   }
 
   function _loadModulesObj(appRoot, root, appId, cb) {
-    jiant.logError("Old modules format, replace it by array and requirejs loader");
+    jiant.logError("Old modules format, replace it by array and requirejs loader, app: " + appId);
     var totalCounter = Object.keys(root).length,
       loading = {};
     function cbIf0() {
@@ -2298,7 +2304,7 @@
     maybeShort(root, "semaphores", "sem");
     maybeShort(root, "states", "s");
     maybeShort(root, "models", "m");
-    root.modules = root.modules || {};
+    root.modules = root.modules || [];
     _loadModules(root, root.modules, appId, amdConfig, function() {
       intlPresent && _bindIntl(root, root.intl, appId);
       // views after intl because of nlabel proxies
@@ -2555,7 +2561,7 @@
   }
 
   function version() {
-    return 225;
+    return 226;
   }
 
   function Jiant() {}
@@ -2617,6 +2623,7 @@
     nvl: nvl,
     getFunctionParamNames : getParamNames,
     getDeclaredName: getDeclaredName,
+    getApps: function() {return boundApps},
 
     addListener: addListener,
     removeListener: removeListener,
@@ -2668,7 +2675,10 @@
   };
 
   if ( typeof define === "function" && define.amd ) {
-  	define(["jquery"], function ($) {
+    define(["jquery"], function ($) {
+      if (window.jiant) {
+        return window.jiant;
+      }
       init($);
       window.jiant = new Jiant();
       return window.jiant
