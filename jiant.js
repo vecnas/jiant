@@ -22,14 +22,19 @@
  2.25: further amd integration, amdConfig could be passed as last parameter for bindUi call, modules used as array for require call
  2.26: fixed non-singleton scenario, jiant.getApps() returns currently loaded applications
  2.27: jiant.module means define, name ignored, modules usage in any way require amd, object modules declaration supported, loadApp() added
+ 2.27.1: restructure code
  */
 "use strict";
-(function() {
-  if (window.jiant) {
-    return;
+(function(factory) {
+  if (typeof define === 'function' && define.amd) {
+    define(['jquery'], factory);
+  } else {
+    factory(jQuery);
   }
-
+}(function($) {
+  
   var
+
     DefaultUiFactory = function() {
 
       function view(prefix, viewId, viewContent) {
@@ -93,14 +98,13 @@
     awaitingDepends = {},
     externalDeclarations = {},
     modules = {},
-    eventBus,
+    eventBus = $({}),
     boundApps = {},
     onInitAppActions = [],
     uiFactory = new DefaultUiFactory(),
     statesUsed = {},
     listeners = [],
     modelInnerDataField = "jiant_innerData",
-    jqRef,
     replacementMap = {
       ";" : ";;",
       "," : ";1",
@@ -114,14 +118,9 @@
     }, reverseMap = {},
     replacementRegex = /;|,|=|\||\{|\}|:|#/gi,
     reverseRegex = /;;|;1|;2|;3|;4|;5|;6|;7/gi;
-
-  function init($) {
-    jqRef = $;
-    eventBus = $({});
-    $.each(replacementMap, function(key, val) {
-      reverseMap[val] = key;
-    });
-  }
+  $.each(replacementMap, function(key, val) {
+    reverseMap[val] = key;
+  });
 
   function randomIntBetween(from, to) {
     return Math.floor((Math.random()*(to - from + 1)) + from);
@@ -2474,7 +2473,7 @@
     _deps.push(appUri);
     var loaderBase = require.config(cfg);
     loaderBase(_deps, function () {
-      var cfgApp = jqRef.extend(true, {context: appUri}, cfg),
+      var cfgApp = $.extend(true, {context: appUri}, cfg),
           ldr = require.config(cfgApp),
           arr = ["app"];
       for (var i = 0; i < _deps.length; i++) {
@@ -2685,18 +2684,6 @@
 
   };
 
-  if ( typeof define === "function" && define.amd ) {
-    define(["jquery"], function ($) {
-      if (window.jiant) {
-        return window.jiant;
-      }
-      init($);
-      window.jiant = new Jiant();
-      return window.jiant
-    });
-  } else {
-    init($);
-    window.jiant = new Jiant();
-  }
+  return window.jiant = new Jiant();
 
-})();
+}));
