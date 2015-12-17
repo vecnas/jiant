@@ -20,7 +20,8 @@
  2.23: added model field .onAndNow method, similar to asap, but subscribes for all field updates
  2.24: restructure, amd compatible, anonymous model declared in amd environment
  2.25: further amd integration, amdConfig could be passed as last parameter for bindUi call, modules used as array for require call
- 2.26: fixed non-singleton scenario, jiant.getApps() returns currently loaded applications 
+ 2.26: fixed non-singleton scenario, jiant.getApps() returns currently loaded applications
+ 2.27: jiant.module means define, name ignored, modules usage in any way require amd, object modules declaration supported, loadApp() added
  */
 "use strict";
 (function() {
@@ -99,6 +100,7 @@
     statesUsed = {},
     listeners = [],
     modelInnerDataField = "jiant_innerData",
+    jqRef,
     replacementMap = {
       ";" : ";;",
       "," : ";1",
@@ -114,6 +116,7 @@
     reverseRegex = /;;|;1|;2|;3|;4|;5|;6|;7/gi;
 
   function init($) {
+    jqRef = $;
     eventBus = $({});
     $.each(replacementMap, function(key, val) {
       reverseMap[val] = key;
@@ -2178,84 +2181,47 @@
 // ------------ modules staff ----------------
 
   function _loadModules(appRoot, root, appId, amdConfig, cb) {
-    if ($.isPlainObject(root)) {
-      _loadModulesObj(appRoot, root, appId, cb);
-    } else if ($.isArray(root)) {
-      _loadModulesArr(appRoot, root, appId, amdConfig, cb);
+    if (! (typeof define === "function" && define.amd) ) {
+      jiant.logError("To use modules, add requirejs or other amd library");
+      cb();
+    } else if (!amdConfig || typeof amdConfig !== "function") {
+      jiant.logError("Modules not loaded - no amdConfig context passed, pass it via bindUi(appRoot, amdConfig)");
+      cb();
+    } else {
+      if ($.isPlainObject(root)) {
+        _loadModulesObj(appRoot, root, appId, amdConfig, cb);
+      } else if ($.isArray(root)) {
+        _loadModulesArr(appRoot, root, appId, amdConfig, cb);
+      }
     }
   }
 
   function _loadModulesArr(appRoot, root, appId, amdConfig, cb) {
     if (root.length == 0) {
       cb();
-    } else if (!amdConfig || typeof amdConfig !== "function") {
-      jiant.logError("Modules not loaded - no amdConfig context passed, pass it via bindUi(appRoot, amdConfig)");
-      cb();
     } else {
       amdConfig(root, cb);
     }
   }
 
-  function _loadModulesObj(appRoot, root, appId, cb) {
-    jiant.logError("Old modules format, replace it by array and requirejs loader, app: " + appId);
-    var totalCounter = Object.keys(root).length,
-      loading = {};
-    function cbIf0() {
-      if (totalCounter > 0) {
-        return;
+  function _loadModulesObj(appRoot, root, appId, amdConfig, cb) {
+    var arr = [], i = 0;
+    $.each(root, function(moduleName, moduleSpec) {
+      moduleSpec = $.isPlainObject(moduleSpec) ? moduleSpec : {url: moduleSpec};
+      if (! "order" in moduleSpec) {
+        moduleSpec.order = i;
       }
-      var arr = [], arr2 = [];
-      $.each(root, function(moduleName, moduleUrl) {
-        arr.push(moduleName);
-        arr2.push(moduleName);
-      });
-      function ord(moduleName) {
-        var moduleUrl = root[moduleName];
-        if ($.isPlainObject(moduleUrl) && $.isNumeric(moduleUrl.order)) {
-          return moduleUrl.order;
-        } else {
-          return $.inArray(moduleName, arr2);
-        }
-      }
-      arr.sort(function(a, b) {
-        return ord(a) - ord(b);
-      });
-      $.each(arr, function(i, moduleName) {
-        if ($.isFunction(modules[moduleName])) {
-          modules[moduleName]($, appRoot);
-        } else {
-          jiant.logError("Not loaded module " + moduleName + ". Possible error - module name in js file doesn't match declared in app.modules section");
-        }
-      });
-      cb();
-    }
-    var modulesUsed = false;
-    root && $.each(root, function(moduleName, moduleUrl) {
-      modulesUsed = true;
-      if (!modules[moduleName]) {
-        if ($.isPlainObject(moduleUrl)) {
-          moduleUrl = moduleUrl.url;
-        }
-        loading[moduleName] = 1;
-        $.ajax({
-          url: isCouldBePrefixed(moduleUrl) ? ((appRoot.modulesPrefix || "") + moduleUrl + ".js?" + (appRoot.modulesSuffix || "")) : moduleUrl,
-          //timeout: 15000,
-          cache: true,
-          crossDomain: true,
-          dataType: "script"
-        }).done(function() {
-          delete loading[moduleName];
-          jiant.logInfo("Loaded module " + moduleUrl + ". Remains " + (totalCounter - 1) + " module(s)", loading);
-        }).always(function() {
-          totalCounter--;
-          cbIf0();
-        });
-      } else {
-        totalCounter--;
-        cbIf0();
-      }
+      arr.push(moduleSpec);
+      i++;
     });
-    !modulesUsed && cbIf0();
+    arr.sort(function(a, b) {
+      return a.order - b.order;
+    });
+    loadNextDep(arr, 0);
+    function loadNextDep(arr, idx) {
+      var fn = (idx == arr.length - 1) ? cb : function() {loadNextDep(arr, idx + 1)};
+      amdConfig([arr[idx].url], fn);
+    }
   }
 
 // ------------ base staff ----------------
@@ -2345,6 +2311,15 @@
     amdConfig = arguments[arguments.length - 1];
     if (typeof amdConfig === "string" || amdConfig === root) {
       amdConfig = undefined;
+    }
+    if (typeof viewsUrl !== "string") {
+      viewsUrl = undefined;
+    }
+    if (typeof injectId !== "string") {
+      injectId = undefined;
+    }
+    if (typeof devMode !== "boolean") {
+      devMode = undefined;
     }
     $.each(listeners, function(i, l) {l.bindStarted && l.bindStarted(root)});
     var appUiFactory = root.uiFactory ? root.uiFactory : uiFactory;
@@ -2484,8 +2459,43 @@
   }
 
   function module(name, cb) {
-    modules[name] = cb;
+    if ( typeof define === "function" && define.amd ) {
+      define(["jquery", "app"], cb);
+    } else {
+      logError("Module " + name + " not loaded, no amd library found");
+    }
   }
+
+  function loadApp(cfg, appUri, deps, p0, p1, p2) {
+    var _deps = [];
+    for (var i = 0; i < deps.length; i++) {
+      _deps.push(deps[i]);
+    }
+    _deps.push(appUri);
+    var loaderBase = require.config(cfg);
+    loaderBase(_deps, function () {
+      var cfgApp = jqRef.extend(true, {context: appUri}, cfg),
+          ldr = require.config(cfgApp),
+          arr = ["app"];
+      for (var i = 0; i < _deps.length; i++) {
+        arr.push(_deps[i]);
+        injectContext(_deps[i], arguments[i]);
+      }
+      define("app", arguments[arguments.length - 1]);
+      ldr(arr, function(app) {
+        bindUi(app, p0, p1, p2, ldr);
+      });
+    });
+  }
+
+  function injectContext(moduleId, module){
+    var m = module;
+    if(typeof module === 'function') {
+      m = function() {return module};
+    }
+    define(moduleId, m ? m : {});
+  }
+
 
   function forget(appOrId) {
     var appId = extractApplicationId(appOrId);
@@ -2561,7 +2571,7 @@
   }
 
   function version() {
-    return 226;
+    return 227;
   }
 
   function Jiant() {}
@@ -2577,6 +2587,7 @@
 
     bind: bind,
     bindUi: bindUi,
+    loadApp: loadApp,
     forget: forget,
     declare: declare,
     override: override,
