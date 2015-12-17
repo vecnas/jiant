@@ -23,6 +23,7 @@
  2.26: fixed non-singleton scenario, jiant.getApps() returns currently loaded applications
  2.27: jiant.module means define, name ignored, modules usage in any way require amd, object modules declaration supported, loadApp() added
  2.27.1: restructure code
+ 2.28: modules could be set as arr of objects for folders structure: [{"shared": ["m0", "m1"]} is same as ["shared/m0", "shared/m1"]
  */
 "use strict";
 (function(factory) {
@@ -32,7 +33,7 @@
     factory(jQuery);
   }
 }(function($) {
-  
+
   var
 
     DefaultUiFactory = function() {
@@ -2179,6 +2180,22 @@
 
 // ------------ modules staff ----------------
 
+  function parsePaths(arr) {
+    var ret = [];
+    $.each(arr, function(i, item) {
+      if (typeof item === "string") {
+        ret.push(item);
+      } else {
+        $.each(item, function(path, sub) {
+          $.each(sub, function(j, subItem) {
+            ret.push(path + "/" + subItem);
+          })
+        });
+      }
+    });
+    return ret;
+  }
+
   function _loadModules(appRoot, root, appId, amdConfig, cb) {
     if (! (typeof define === "function" && define.amd) ) {
       jiant.logError("To use modules, add requirejs or other amd library");
@@ -2199,7 +2216,7 @@
     if (root.length == 0) {
       cb();
     } else {
-      amdConfig(root, cb);
+      amdConfig(parsePaths(root), cb);
     }
   }
 
@@ -2570,7 +2587,7 @@
   }
 
   function version() {
-    return 227;
+    return 228;
   }
 
   function Jiant() {}
