@@ -24,6 +24,7 @@
  2.27: jiant.module means define, name ignored, modules usage in any way require amd, object modules declaration supported, loadApp() added
  2.27.1: restructure code
  2.28: modules could be set as arr of objects for folders structure: [{"shared": ["m0", "m1"]} is same as ["shared/m0", "shared/m1"]
+ 2.28.1: jiant.registerCustomType("tp", function(elem, view, app) - custom type handler extra parameters 
  */
 "use strict";
 (function(factory) {
@@ -741,7 +742,7 @@
     } else if (elemType === jiant.numLabel) {
       setupNumLabel(appRoot, uiElem);
     } else if (customElementTypes[elemType]) {
-      customElementTypes[elemType](uiElem);
+      customElementTypes[elemType](uiElem, viewOrTm, appRoot);
     } else if ($.isArray(elemType)) {
       $.each(elemType, function(i, tp) {
         setupExtras(appRoot, uiElem, tp, key, elemKey, viewOrTm);
