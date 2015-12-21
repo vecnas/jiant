@@ -24,7 +24,8 @@
  2.27: jiant.module means define, name ignored, modules usage in any way require amd, object modules declaration supported, loadApp() added
  2.27.1: restructure code
  2.28: modules could be set as arr of objects for folders structure: [{"shared": ["m0", "m1"]} is same as ["shared/m0", "shared/m1"]
- 2.28.1: jiant.registerCustomType("tp", function(elem, view, app) - custom type handler extra parameters 
+ 2.28.1: jiant.registerCustomType("tp", function(elem, view, app) - custom type handler extra parameters
+ 2.29: error in console if onUiBound(undefined) called, modules executed if function returned from define: function($, app, jiant)
  */
 "use strict";
 (function(factory) {
@@ -1523,8 +1524,8 @@
       declare(pseudoName, url);
     });
     var pseudoAppName = "app" + new Date().getTime() + Math.random();
-    jiant.onUiBound(pseudoAppName, pseudoDeps, cb);
-    jiant.bindUi({id: pseudoAppName}, devMode);
+    onUiBound(pseudoAppName, pseudoDeps, cb);
+    bindUi({id: pseudoAppName}, devMode);
   }
 
   function declare(name, objOrUrlorFn) {
@@ -2217,7 +2218,12 @@
     if (root.length == 0) {
       cb();
     } else {
-      amdConfig(parsePaths(root), cb);
+      amdConfig(parsePaths(root), function() {
+        $.each(arguments, function(i, module) {
+          module && typeof module === "function" && module($, appRoot, window.jiant);
+        });
+        cb();
+      });
     }
   }
 
@@ -2403,7 +2409,9 @@
     }
     $.each(listeners, function(i, l) {l.onUiBoundCalled && l.onUiBoundCalled(appIdArr, dependenciesList, cb)});
     $.each(appIdArr, function(idx, appId) {
-      if ($.isPlainObject(appId)) {
+      if (appId === undefined || appId === null) {
+        logError("Called onUiBound with undefined application, apps array is ", appIdArr);
+      } else if ($.isPlainObject(appId)) {
         appId = appId.id;
         appIdArr[idx] = appId;
       }
@@ -2555,7 +2563,7 @@
         appId = key;
         return false;
       });
-      jiant.onUiBound(appId, ["jiantVisualizer"], function($, app) {
+      onUiBound(appId, ["jiantVisualizer"], function($, app) {
         app.logic.jiantVisualizer.visualize($, app);
       });
     }, true);
@@ -2588,7 +2596,7 @@
   }
 
   function version() {
-    return 228;
+    return 229;
   }
 
   function Jiant() {}
@@ -2702,6 +2710,6 @@
 
   };
 
-  return window.jiant = new Jiant();
+  return window.jiant || (window.jiant = new Jiant());
 
 }));
