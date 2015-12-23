@@ -26,6 +26,7 @@
  2.28: modules could be set as arr of objects for folders structure: [{"shared": ["m0", "m1"]} is same as ["shared/m0", "shared/m1"]
  2.28.1: jiant.registerCustomType("tp", function(elem, view, app) - custom type handler extra parameters
  2.29: error in console if onUiBound(undefined) called, modules executed if function returned from define: function($, app, jiant)
+ 2.30: removed loadApp, requirejs usage; modules returned to pre-2.24, other functionality remains, module dependencies not supported yet
  */
 "use strict";
 (function(factory) {
@@ -2198,53 +2199,140 @@
     return ret;
   }
 
-  function _loadModules(appRoot, root, appId, amdConfig, cb) {
-    if (! (typeof define === "function" && define.amd) ) {
-      jiant.logError("To use modules, add requirejs or other amd library");
-      cb();
-    } else if (!amdConfig || typeof amdConfig !== "function") {
-      jiant.logError("Modules not loaded - no amdConfig context passed, pass it via bindUi(appRoot, amdConfig)");
-      cb();
+  function _loadModules(appRoot, root, appId, cb) {
+    var modules2load;
+    if ($.isPlainObject(root)) {
+      modules2load = parseObjectModules(root, appId);
+    } else if ($.isArray(root)) {
+      modules2load = parseArrayModules(root, appId);
     } else {
-      if ($.isPlainObject(root)) {
-        _loadModulesObj(appRoot, root, appId, amdConfig, cb);
-      } else if ($.isArray(root)) {
-        _loadModulesArr(appRoot, root, appId, amdConfig, cb);
-      }
+      logError("Unrecognized modules type", root);
+    }
+    jiant.logInfo("Modules for application " + appId + ":", modules2load);
+    if (Object.keys(modules2load).length) {
+      loadModules(appRoot, appId, modules2load, cb);
+    } else {
+      cb();
     }
   }
 
-  function _loadModulesArr(appRoot, root, appId, amdConfig, cb) {
-    if (root.length == 0) {
-      cb();
-    } else {
-      amdConfig(parsePaths(root), function() {
-        $.each(arguments, function(i, module) {
-          module && typeof module === "function" && module($, appRoot, window.jiant);
-        });
-        cb();
+  function loadModules(appRoot, appId, modules2load, cb) {
+    var totalCounter = Object.keys(modules2load).length,
+      loading = {};
+    function cbIf0() {
+      if (totalCounter > 0) {
+        return;
+      }
+      appRoot.modules = modules2load;
+      var arr = [];
+      $.each(modules2load, function(moduleName, moduleSpec) {
+        arr.push(moduleSpec);
       });
+      arr.sort(function(a, b) {
+        return a.order - b.order;
+      });
+      $.each(arr, function(i, moduleSpec) {
+        if ($.isFunction(modules[moduleSpec.name])) {
+          appRoot.modules[moduleSpec.name] = modules[moduleSpec.name]($, appRoot, moduleSpec);
+        } else {
+          jiant.logError("Application " + appId + ". Not loaded module " + moduleSpec.name
+            + ". Possible error - module name in js file doesn't match declared in app.modules section");
+        }
+      });
+      cb();
     }
+    cbIf0();
+    $.each(modules2load, function(key, moduleSpec) {
+      var moduleName = moduleSpec.name;
+      if (!modules[moduleName]) {
+        loading[moduleName] = 1;
+        var url = isCouldBePrefixed(moduleSpec.path) ? ((appRoot.modulesPrefix || "") + moduleSpec.path + ".js?" + (appRoot.modulesSuffix || "")) : moduleSpec.path;
+        $.ajax({
+          url: url,
+          //timeout: 15000,
+          cache: true,
+          crossDomain: true,
+          dataType: "script"
+        }).done(function() {
+          delete loading[moduleName];
+          //jiant.logInfo("Loaded module " + moduleUrl + ". Remains " + (totalCounter - 1) + " module(s)", loading);
+        }).always(function() {
+          totalCounter--;
+          cbIf0();
+        });
+      } else {
+        totalCounter--;
+        cbIf0();
+      }
+    });
   }
 
-  function _loadModulesObj(appRoot, root, appId, amdConfig, cb) {
-    var arr = [], i = 0;
-    $.each(root, function(moduleName, moduleSpec) {
-      moduleSpec = $.isPlainObject(moduleSpec) ? moduleSpec : {url: moduleSpec};
-      if (! "order" in moduleSpec) {
-        moduleSpec.order = i;
+  function parseArrayModules(root, appId) {
+    var ret = {}, j = 0;
+    $.each(root, function(i, module) {
+      if (typeof module === "string") {
+        parseObjModule(module, {path: module}, ret, appId, j);
+      } else {
+        $.each(module, function(key, val) {
+          if (typeof val === "string") {
+            parseObjModule(val, {path: key + "/" + val}, ret, appId, j);
+          } else if ($.isArray(val)) {
+            $.each(val, function(i, subval) {
+              if (typeof subval === "string") {
+                parseObjModule(subval, {path: key + "/" + subval}, ret, appId, j);
+              } else {
+                $.each(subval, function(k, v) {
+                  v.path = v.path || (key + "/" + k);
+                  parseObjModule(k, v, ret, appId, j);
+                  j++;
+                });
+              }
+              j++;
+            });
+          } else {
+            parseObjModule(key, val, ret, appId, j);
+          }
+          j++;
+        });
       }
-      arr.push(moduleSpec);
+      j++;
+    });
+    return ret;
+  }
+
+  function parseObjectModules(root, appId) {
+    var ret = {}, i = 0;
+    $.each(root, function(name, module) {
+      if (typeof module === "string") {
+        parseObjModule(name, {path: module}, ret, appId, i);
+      } else {
+        parseObjModule(name, module, ret, appId, i);
+      }
       i++;
     });
-    arr.sort(function(a, b) {
-      return a.order - b.order;
-    });
-    loadNextDep(arr, 0);
-    function loadNextDep(arr, idx) {
-      var fn = (idx == arr.length - 1) ? cb : function() {loadNextDep(arr, idx + 1)};
-      amdConfig([arr[idx].url], fn);
+    return ret;
+  }
+
+  function parseObjModule(name, module, ret, appId, j) {
+    var mname = module.name || name;
+    ret[mname] && errorp("Application !! . Duplicate logical module dependency, logical module name must be unique, name: !!", appId, mname);
+    ret[mname] = module;
+    "order" in module || (module.order = j);
+    "path" in module || (module.path = name);
+    module.name = mname;
+  }
+
+  function module(name, deps, cb) {
+    if (arguments.length < 3) {
+      cb = deps;
+      deps = [];
     }
+    if (modules[name] && cb != modules[name]) {
+      var nameOld = name + "_j2";
+      modules[nameOld] = modules[name];
+      errorp("Module !! already defined, overriding, old module stored as !!", name, nameOld);
+    }
+    modules[name] = cb;
   }
 
 // ------------ base staff ----------------
@@ -2271,7 +2359,7 @@
     return false;
   }
 
-  function _bindUi(root, devMode, appUiFactory, amdConfig) {
+  function _bindUi(root, devMode, appUiFactory) {
     jiant.DEV_MODE = devMode;
     ! devMode && maybeSetDevModeFromQueryString();
     errString = "";
@@ -2293,8 +2381,8 @@
     maybeShort(root, "semaphores", "sem");
     maybeShort(root, "states", "s");
     maybeShort(root, "models", "m");
-    root.modules = root.modules || [];
-    _loadModules(root, root.modules, appId, amdConfig, function() {
+    root.modules = root.modules || {};
+    _loadModules(root, root.modules, appId, function() {
       intlPresent && _bindIntl(root, root.intl, appId);
       // views after intl because of nlabel proxies
       _bindViews(root, root.views, appUiFactory);
@@ -2319,7 +2407,7 @@
     });
   }
 
-  function bindUi(prefix, root, devMode, viewsUrl, injectId, amdConfig) {
+  function bindUi(prefix, root, devMode, viewsUrl, injectId) {
     if ($.isPlainObject(prefix)) { // no prefix syntax
       injectId = viewsUrl;
       viewsUrl = devMode;
@@ -2330,10 +2418,6 @@
     root.appPrefix = prefix || "";
     if (devMode === undefined) {
       devMode = true;
-    }
-    amdConfig = arguments[arguments.length - 1];
-    if (typeof amdConfig === "string" || amdConfig === root) {
-      amdConfig = undefined;
     }
     if (typeof viewsUrl !== "string") {
       viewsUrl = undefined;
@@ -2358,10 +2442,10 @@
         injectionPoint = $("body");
       }
       injectionPoint.load(viewsUrl, {}, function () {
-        _bindUi(root, devMode, appUiFactory, amdConfig);
+        _bindUi(root, devMode, appUiFactory);
       });
     } else {
-      _bindUi(root, devMode, appUiFactory, amdConfig);
+      _bindUi(root, devMode, appUiFactory);
     }
     $.each(listeners, function(i, l) {l.bindCompleted && l.bindCompleted(root)});
     devMode && setTimeout(function() {
@@ -2483,36 +2567,6 @@
     }
   }
 
-  function module(name, cb) {
-    if ( typeof define === "function" && define.amd ) {
-      define(["jquery", "app"], cb);
-    } else {
-      logError("Module " + name + " not loaded, no amd library found");
-    }
-  }
-
-  function loadApp(cfg, appUri, deps, p0, p1, p2) {
-    var _deps = [];
-    for (var i = 0; i < deps.length; i++) {
-      _deps.push(deps[i]);
-    }
-    _deps.push(appUri);
-    var loaderBase = require.config(cfg);
-    loaderBase(_deps, function () {
-      var cfgApp = $.extend(true, {context: appUri}, cfg),
-          ldr = require.config(cfgApp),
-          arr = ["app"];
-      for (var i = 0; i < _deps.length; i++) {
-        arr.push(_deps[i]);
-        injectContext(_deps[i], arguments[i]);
-      }
-      define("app", arguments[arguments.length - 1]);
-      ldr(arr, function(app) {
-        bindUi(app, p0, p1, p2, ldr);
-      });
-    });
-  }
-
   function injectContext(moduleId, module){
     var m = module;
     if(typeof module === 'function') {
@@ -2596,7 +2650,7 @@
   }
 
   function version() {
-    return 229;
+    return 230;
   }
 
   function Jiant() {}
@@ -2612,7 +2666,6 @@
 
     bind: bind,
     bindUi: bindUi,
-    loadApp: loadApp,
     forget: forget,
     declare: declare,
     override: override,
