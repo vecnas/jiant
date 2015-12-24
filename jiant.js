@@ -27,6 +27,7 @@
  2.28.1: jiant.registerCustomType("tp", function(elem, view, app) - custom type handler extra parameters
  2.29: error in console if onUiBound(undefined) called, modules executed if function returned from define: function($, app, jiant)
  2.30: removed loadApp, requirejs usage; modules returned to pre-2.24, other functionality remains, module dependencies not supported yet
+ 2.31: module dependencies supported, jiant.module(name, deps, function($, app, moduleParams) {}), executed in given order, app.modulesTimeout sets timeout for script load
  */
 "use strict";
 (function(factory) {
@@ -2183,24 +2184,8 @@
 
 // ------------ modules staff ----------------
 
-  function parsePaths(arr) {
-    var ret = [];
-    $.each(arr, function(i, item) {
-      if (typeof item === "string") {
-        ret.push(item);
-      } else {
-        $.each(item, function(path, sub) {
-          $.each(sub, function(j, subItem) {
-            ret.push(path + "/" + subItem);
-          })
-        });
-      }
-    });
-    return ret;
-  }
-
   function _loadModules(appRoot, root, appId, cb) {
-    var modules2load;
+    var modules2load = [];
     if ($.isPlainObject(root)) {
       modules2load = parseObjectModules(root, appId);
     } else if ($.isArray(root)) {
@@ -2209,7 +2194,7 @@
       logError("Unrecognized modules type", root);
     }
     jiant.logInfo("Modules for application " + appId + ":", modules2load);
-    if (Object.keys(modules2load).length) {
+    if (modules2load.length) {
       loadModules(appRoot, appId, modules2load, cb);
     } else {
       cb();
@@ -2217,80 +2202,108 @@
   }
 
   function loadModules(appRoot, appId, modules2load, cb) {
-    var totalCounter = Object.keys(modules2load).length,
-      loading = {};
+    var loading = {};
     function cbIf0() {
-      if (totalCounter > 0) {
+      if (Object.keys(loading).length > 0) {
         return;
       }
-      appRoot.modules = modules2load;
+      appRoot.modules = {};
       var arr = [];
-      $.each(modules2load, function(moduleName, moduleSpec) {
+      $.each(modules2load, function(i, moduleSpec) {
         arr.push(moduleSpec);
       });
       arr.sort(function(a, b) {
-        return a.order - b.order;
+        var after = nvl(a.j_after[b.name], 0) - nvl(b.j_after[a.name], 0);
+        return after != 0 ? after : a.order - b.order;
       });
       $.each(arr, function(i, moduleSpec) {
         if ($.isFunction(modules[moduleSpec.name])) {
-          appRoot.modules[moduleSpec.name] = modules[moduleSpec.name]($, appRoot, moduleSpec);
+          var args = [$, appRoot, jiant, moduleSpec];
+          modules[moduleSpec.name].deps && $.each(modules[moduleSpec.name].deps, function(i, dep) {
+            args.push(appRoot.modules[typeof dep === "string" ? dep : dep.name]);
+          });
+          appRoot.modules[moduleSpec.name] = modules[moduleSpec.name].apply(this, args);
         } else {
           jiant.logError("Application " + appId + ". Not loaded module " + moduleSpec.name
-            + ". Possible error - module name in js file doesn't match declared in app.modules section");
+            + ". Possible error - module name in js file doesn't match declared in app.modules section. Load initiated by "
+              + (moduleSpec.initiatedBy ? moduleSpec.j_initiatedBy : "appication"));
         }
       });
       cb();
     }
-    cbIf0();
-    $.each(modules2load, function(key, moduleSpec) {
+    function addIfNeed(depModule) {
+      var found = false;
+      $.each(modules2load, function(i, moduleSpec) {
+        if (moduleSpec.name == depModule.name) {
+          found = true;
+        }
+      });
+      !found && modules2load.push(depModule);
+    }
+    function loadModule(moduleSpec) {
       var moduleName = moduleSpec.name;
       if (!modules[moduleName]) {
         loading[moduleName] = 1;
         var url = isCouldBePrefixed(moduleSpec.path) ? ((appRoot.modulesPrefix || "") + moduleSpec.path + ".js?" + (appRoot.modulesSuffix || "")) : moduleSpec.path;
         $.ajax({
           url: url,
-          //timeout: 15000,
+          timeout: appRoot.modulesTimeout || 15000,
           cache: true,
           crossDomain: true,
           dataType: "script"
         }).done(function() {
-          delete loading[moduleName];
-          //jiant.logInfo("Loaded module " + moduleUrl + ". Remains " + (totalCounter - 1) + " module(s)", loading);
+          if (modules[moduleName]) {
+            var deps = modules[moduleName].deps;
+            deps && $.each(deps, function(i, dep) {
+              var pos = url.lastIndexOf("/") + 1,
+                depObj = typeof dep === "string" ? {name: dep, path: url.substring(0, pos) + dep} : dep,
+                depModule = parseObjModule(depObj.name, depObj, appId, modules2load.length);
+              moduleSpec.j_after[depModule.name] = 1;
+              depModule.j_initiatedBy = moduleSpec.name;
+              addIfNeed(depModule);
+              loadModule(depModule);
+            });
+          }
+        }).fail(function() {
+          errorp("Application !!. Not loaded module !!", appId, moduleName);
         }).always(function() {
-          totalCounter--;
-          cbIf0();
+          if (loading[moduleName]) {
+            delete loading[moduleName];
+            cbIf0();
+          }
         });
-      } else {
-        totalCounter--;
-        cbIf0();
       }
+    }
+    $.each(modules2load, function(i, moduleSpec) {
+      loadModule(moduleSpec);
     });
+    cbIf0();
   }
 
   function parseArrayModules(root, appId) {
-    var ret = {}, j = 0;
+    var ret = [], j = 0;
     $.each(root, function(i, module) {
       if (typeof module === "string") {
-        parseObjModule(module, {path: module}, ret, appId, j);
+        ret.push(parseObjModule(module, {path: module}, appId, j));
       } else {
         $.each(module, function(key, val) {
           if (typeof val === "string") {
-            parseObjModule(val, {path: key + "/" + val}, ret, appId, j);
+            ret.push(parseObjModule(val, {path: key + "/" + val}, appId, j));
           } else if ($.isArray(val)) {
             $.each(val, function(i, subval) {
               if (typeof subval === "string") {
-                parseObjModule(subval, {path: key + "/" + subval}, ret, appId, j);
+                ret.push(parseObjModule(subval, {path: key + "/" + subval}, appId, j));
               } else {
                 $.each(subval, function(k, v) {
                   v.path = v.path || (key + "/" + k);
-                  parseObjModule(k, v, ret, appId, j);
+                  ret.push(parseObjModule(k, v, appId, j));
                   j++;
                 });
               }
               j++;
             });
           } else {
-            parseObjModule(key, val, ret, appId, j);
+            ret.push(parseObjModule(key, val, appId, j));
           }
           j++;
         });
@@ -2301,25 +2314,25 @@
   }
 
   function parseObjectModules(root, appId) {
-    var ret = {}, i = 0;
+    var ret = [], i = 0;
     $.each(root, function(name, module) {
       if (typeof module === "string") {
-        parseObjModule(name, {path: module}, ret, appId, i);
+        ret.push(parseObjModule(name, {path: module}, appId, i));
       } else {
-        parseObjModule(name, module, ret, appId, i);
+        ret.push(parseObjModule(name, module, appId, i));
       }
       i++;
     });
     return ret;
   }
 
-  function parseObjModule(name, module, ret, appId, j) {
+  function parseObjModule(name, module, appId, j) {
     var mname = module.name || name;
-    ret[mname] && errorp("Application !! . Duplicate logical module dependency, logical module name must be unique, name: !!", appId, mname);
-    ret[mname] = module;
     "order" in module || (module.order = j);
     "path" in module || (module.path = name);
+    module.j_after = {};
     module.name = mname;
+    return module;
   }
 
   function module(name, deps, cb) {
@@ -2327,12 +2340,13 @@
       cb = deps;
       deps = [];
     }
-    if (modules[name] && cb != modules[name]) {
+    if (modules[name] && cb + "" != modules[name] + "") {
       var nameOld = name + "_j2";
       modules[nameOld] = modules[name];
       errorp("Module !! already defined, overriding, old module stored as !!", name, nameOld);
     }
     modules[name] = cb;
+    modules[name].deps = deps;
   }
 
 // ------------ base staff ----------------
@@ -2381,7 +2395,7 @@
     maybeShort(root, "semaphores", "sem");
     maybeShort(root, "states", "s");
     maybeShort(root, "models", "m");
-    root.modules = root.modules || {};
+    root.modules = root.modules || [];
     _loadModules(root, root.modules, appId, function() {
       intlPresent && _bindIntl(root, root.intl, appId);
       // views after intl because of nlabel proxies
@@ -2567,15 +2581,6 @@
     }
   }
 
-  function injectContext(moduleId, module){
-    var m = module;
-    if(typeof module === 'function') {
-      m = function() {return module};
-    }
-    define(moduleId, m ? m : {});
-  }
-
-
   function forget(appOrId) {
     var appId = extractApplicationId(appOrId);
     if (boundApps[appId]) {
@@ -2650,7 +2655,7 @@
   }
 
   function version() {
-    return 230;
+    return 231;
   }
 
   function Jiant() {}
