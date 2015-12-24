@@ -28,6 +28,7 @@
  2.29: error in console if onUiBound(undefined) called, modules executed if function returned from define: function($, app, jiant)
  2.30: removed loadApp, requirejs usage; modules returned to pre-2.24, other functionality remains, module dependencies not supported yet
  2.31: module dependencies supported, jiant.module(name, deps, function($, app, moduleParams) {}), executed in given order, app.modulesTimeout sets timeout for script load
+ 2.32: jiant.preUiBound(app, cb) added for pre-configuration of application
  */
 "use strict";
 (function(factory) {
@@ -105,6 +106,8 @@
     modules = {},
     eventBus = $({}),
     boundApps = {},
+    bindingCurrently = {},
+    pre = {},
     onInitAppActions = [],
     uiFactory = new DefaultUiFactory(),
     statesUsed = {},
@@ -2396,6 +2399,13 @@
     maybeShort(root, "states", "s");
     maybeShort(root, "models", "m");
     root.modules = root.modules || [];
+    if (pre[appId]) {
+      $.each(pre[appId], function(i, cb) {
+        cb($, root, jiant);
+      });
+      delete pre[appId];
+    }
+    bindingCurrently[appId] = 1;
     _loadModules(root, root.modules, appId, function() {
       intlPresent && _bindIntl(root, root.intl, appId);
       // views after intl because of nlabel proxies
@@ -2415,6 +2425,7 @@
         copyLogic(appId, name);
         awakeAwaitingDepends(appId, name);
       });
+      delete bindingCurrently[appId];
       var appInitEvent = appId + "onAppInit" + appId;
       eventBus.trigger(appInitEvent);
       $.when.apply($, onInitAppActions).done(function() {eventBus.trigger(appBoundEventName(appId))});
@@ -2525,6 +2536,21 @@
       });
     });
     handleBoundArr(appIdArr, cb);
+  }
+
+  function preUiBound(appId, cb) {
+    if (typeof appId != "string") {
+      errorp("preUiBound first parameter must be application id string, got !!", typeof appId);
+      return;
+    } else if (boundApps[appId]) {
+      errorp("Application !! already bound, preUiBound should be called before bindUi", appId);
+      return;
+    } else if (bindingCurrently[appId]) {
+      errorp("Application !! binding in progress, preUiBound should be called before bindUi", appId);
+      return;
+    }
+    var arr = pre[appId] = nvl(pre[appId], []);
+    arr.push(cb);
   }
 
   function handleBoundArr(appIdArr, cb) {
@@ -2655,7 +2681,7 @@
   }
 
   function version() {
-    return 231;
+    return 232;
   }
 
   function Jiant() {}
@@ -2681,6 +2707,7 @@
     goRoot: goRoot,
     goState: function (params, preserveOmitted) {},
     onUiBound: onUiBound,
+    preUiBound: preUiBound,
     onAppInit: onAppInit,
     refreshState: refreshState,
     getCurrentState: getCurrentState,
