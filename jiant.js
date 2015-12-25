@@ -32,6 +32,7 @@
  2.33: app(app), onApp(app, deps, cb), preApp(app, cb) shorter synonyms for UiBind, app accepts only parameter - app, other moved to application definition
  2.33.1: jiant.preApp("*", cb) executed for all applications to be loaded
  2.33.2: fixed notification about non-resolved depends, it appears in console after 5 seconds in dev mode
+ 2.33.3: module load intitiated by fix
  */
 "use strict";
 (function(factory) {
@@ -2232,7 +2233,7 @@
         } else {
           jiant.logError("Application " + appId + ". Not loaded module " + moduleSpec.name
             + ". Possible error - module name in js file doesn't match declared in app.modules section. Load initiated by "
-              + (moduleSpec.initiatedBy ? moduleSpec.j_initiatedBy : "appication"));
+              + (moduleSpec.j_initiatedBy ? moduleSpec.j_initiatedBy : "appication"));
         }
       });
       cb();
