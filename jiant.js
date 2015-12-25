@@ -29,6 +29,7 @@
  2.30: removed loadApp, requirejs usage; modules returned to pre-2.24, other functionality remains, module dependencies not supported yet
  2.31: module dependencies supported, jiant.module(name, deps, function($, app, moduleParams) {}), executed in given order, app.modulesTimeout sets timeout for script load
  2.32: jiant.preUiBound(app, cb) added for pre-configuration of application
+ 2.33: app(app), onApp(app, deps, cb), preApp(app, cb) shorter synonyms for UiBind, app accepts only parameter - app, other moved to application definition
  */
 "use strict";
 (function(factory) {
@@ -2432,6 +2433,10 @@
     });
   }
 
+  function app(app) {
+    bindUi(app.appPrefix, app, app.devMode, app.viewsUrl, app.injectId);
+  }
+
   function bindUi(prefix, root, devMode, viewsUrl, injectId) {
     if ($.isPlainObject(prefix)) { // no prefix syntax
       injectId = viewsUrl;
@@ -2681,7 +2686,7 @@
   }
 
   function version() {
-    return 232;
+    return 233;
   }
 
   function Jiant() {}
@@ -2697,6 +2702,7 @@
 
     bind: bind,
     bindUi: bindUi,
+    app: app,
     forget: forget,
     declare: declare,
     override: override,
@@ -2707,7 +2713,9 @@
     goRoot: goRoot,
     goState: function (params, preserveOmitted) {},
     onUiBound: onUiBound,
+    onApp: onUiBound,
     preUiBound: preUiBound,
+    preApp: preUiBound,
     onAppInit: onAppInit,
     refreshState: refreshState,
     getCurrentState: getCurrentState,
