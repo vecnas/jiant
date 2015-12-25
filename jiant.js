@@ -31,6 +31,7 @@
  2.32: jiant.preUiBound(app, cb) added for pre-configuration of application
  2.33: app(app), onApp(app, deps, cb), preApp(app, cb) shorter synonyms for UiBind, app accepts only parameter - app, other moved to application definition
  2.33.1: jiant.preApp("*", cb) executed for all applications to be loaded
+ 2.33.2: fixed notification about non-resolved depends, it appears in console after 5 seconds in dev mode
  */
 "use strict";
 (function(factory) {
@@ -2436,6 +2437,11 @@
       var appInitEvent = appId + "onAppInit" + appId;
       eventBus.trigger(appInitEvent);
       $.when.apply($, onInitAppActions).done(function() {eventBus.trigger(appBoundEventName(appId))});
+      devMode && setTimeout(function() {
+        if (awaitingDepends[appId] && Object.keys(awaitingDepends[appId]).length > 0) {
+          logError("Some depends for application " + appId + " are not resolved", awaitingDepends[appId]);
+        }
+      }, 5000);
     });
   }
 
@@ -2484,9 +2490,6 @@
       _bindUi(root, devMode, appUiFactory);
     }
     $.each(listeners, function(i, l) {l.bindCompleted && l.bindCompleted(root)});
-    devMode && setTimeout(function() {
-      awaitingDepends.length > 0 && logError("Attention!! Some depends are not resolved", awaitingDepends);
-    }, 10000);
   }
 
   function bind(obj1, obj2) {
