@@ -30,6 +30,7 @@
  2.31: module dependencies supported, jiant.module(name, deps, function($, app, moduleParams) {}), executed in given order, app.modulesTimeout sets timeout for script load
  2.32: jiant.preUiBound(app, cb) added for pre-configuration of application
  2.33: app(app), onApp(app, deps, cb), preApp(app, cb) shorter synonyms for UiBind, app accepts only parameter - app, other moved to application definition
+ 2.33.1: jiant.preApp("*", cb) executed for all applications to be loaded
  */
 "use strict";
 (function(factory) {
@@ -2405,6 +2406,11 @@
         cb($, root, jiant);
       });
       delete pre[appId];
+    }
+    if (appId !== "*" && pre["*"]) {
+      $.each(pre["*"], function(i, cb) {
+        cb($, root, jiant);
+      });
     }
     bindingCurrently[appId] = 1;
     _loadModules(root, root.modules, appId, function() {
