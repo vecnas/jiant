@@ -2438,8 +2438,13 @@
       eventBus.trigger(appInitEvent);
       $.when.apply($, onInitAppActions).done(function() {eventBus.trigger(appBoundEventName(appId))});
       devMode && setTimeout(function() {
-        if (awaitingDepends[appId] && Object.keys(awaitingDepends[appId]).length > 0) {
-          logError("Some depends for application " + appId + " are not resolved", awaitingDepends[appId]);
+        if (awaitingDepends[appId]) {
+          $.each(awaitingDepends[appId], function(key, arr) {
+            if (arr && arr.length) {
+              logError("Some depends for application " + appId + " are not resolved", awaitingDepends[appId]);
+              return false;
+            }
+          })
         }
       }, 5000);
     });
