@@ -33,6 +33,8 @@
  2.33.1: jiant.preApp("*", cb) executed for all applications to be loaded
  2.33.2: fixed notification about non-resolved depends, it appears in console after 5 seconds in dev mode
  2.33.3: module load intitiated by fix
+ 2.33.4: sub-dependency module double-path fix
+ 2.34: transitive module deps load
  */
 "use strict";
 (function(factory) {
@@ -2219,20 +2221,23 @@
       $.each(modules2load, function(i, moduleSpec) {
         arr.push(moduleSpec);
       });
+      //arr.sort(function(a, b) {
+      //  return nvl(a.j_after[b.name], 0) - nvl(b.j_after[a.name], 0);
+      //});
       arr.sort(function(a, b) {
-        var after = nvl(a.j_after[b.name], 0) - nvl(b.j_after[a.name], 0);
-        return after != 0 ? after : a.order - b.order;
+        return nvl(a.order, 0) - nvl(b.order, 0);
       });
       $.each(arr, function(i, moduleSpec) {
-        if ($.isFunction(modules[moduleSpec.name])) {
+        var mname = moduleSpec.name;
+        if ($.isFunction(modules[mname])) {
           var args = [$, appRoot, jiant, moduleSpec];
-          modules[moduleSpec.name].deps && $.each(modules[moduleSpec.name].deps, function(i, dep) {
-            args.push(appRoot.modules[typeof dep === "string" ? dep : dep.name]);
+          $.each(modules[mname].parsedDeps, function(i, name) {
+            args.push(appRoot.modules[name]);
           });
-          appRoot.modules[moduleSpec.name] = modules[moduleSpec.name].apply(this, args);
+          appRoot.modules[mname] = modules[mname].apply(this, args);
         } else {
-          jiant.logError("Application " + appId + ". Not loaded module " + moduleSpec.name
-            + ". Possible error - module name in js file doesn't match declared in app.modules section. Load initiated by "
+          jiant.logError("Application " + appId + ". Not loaded module " + mname
+            + ". Possible error - wrong path or module name in js file doesn't match declared in app.modules section. Load initiated by "
               + (moduleSpec.j_initiatedBy ? moduleSpec.j_initiatedBy : "appication"));
         }
       });
@@ -2247,11 +2252,27 @@
       });
       !found && modules2load.push(depModule);
     }
+    function parseDep(relpath, dep, moduleSpec) {
+      var url = moduleSpec.path,
+          pos = url.lastIndexOf("/") + 1,
+          relurl = url.substring(0, pos) + relpath;
+      (relurl.lastIndexOf("/") == relurl.length - 1) || (relurl+="/");
+      var depObj = typeof dep === "string" ? {name: dep, path: relurl + dep} : dep,
+          depModule = parseObjModule(depObj.name, depObj, appId, modules2load.length);
+      moduleSpec.j_after[depModule.name] = 1;
+      depModule.order = Math.min(depModule.order, moduleSpec.order - 0.5);
+      depModule.j_initiatedBy = moduleSpec.name;
+      addIfNeed(depModule);
+      loadModule(depModule);
+      return depModule.name;
+    }
     function loadModule(moduleSpec) {
       var moduleName = moduleSpec.name;
       if (!modules[moduleName]) {
         loading[moduleName] = 1;
-        var url = isCouldBePrefixed(moduleSpec.path) ? ((appRoot.modulesPrefix || "") + moduleSpec.path + ".js?" + (appRoot.modulesSuffix || "")) : moduleSpec.path;
+        var url = isCouldBePrefixed(moduleSpec.path)
+            ? ((appRoot.modulesPrefix || "") + moduleSpec.path + ".js?" + (appRoot.modulesSuffix || ""))
+            : moduleSpec.path;
         $.ajax({
           url: url,
           timeout: appRoot.modulesTimeout || 15000,
@@ -2260,15 +2281,21 @@
           dataType: "script"
         }).done(function() {
           if (modules[moduleName]) {
-            var deps = modules[moduleName].deps;
+            var deps = modules[moduleName].deps,
+                darr = modules[moduleName].parsedDeps = [];
             deps && $.each(deps, function(i, dep) {
-              var pos = url.lastIndexOf("/") + 1,
-                depObj = typeof dep === "string" ? {name: dep, path: url.substring(0, pos) + dep} : dep,
-                depModule = parseObjModule(depObj.name, depObj, appId, modules2load.length);
-              moduleSpec.j_after[depModule.name] = 1;
-              depModule.j_initiatedBy = moduleSpec.name;
-              addIfNeed(depModule);
-              loadModule(depModule);
+              if (typeof dep === "string") {
+                darr.push(parseDep("", dep, moduleSpec))
+              } else {
+                $.each(dep, function(path, arr) {
+                  if (! $.isArray(arr)) {
+                    arr = [arr];
+                  }
+                  $.each(arr, function(i, val) {
+                    darr.push(parseDep(path, val, moduleSpec));
+                  });
+                });
+              }
             });
           }
         }).fail(function() {
@@ -2276,7 +2303,7 @@
         }).always(function() {
           if (loading[moduleName]) {
             delete loading[moduleName];
-            cbIf0();
+            cbIf0(moduleName);
           }
         });
       }
@@ -2701,7 +2728,7 @@
   }
 
   function version() {
-    return 233;
+    return 234;
   }
 
   function Jiant() {}
