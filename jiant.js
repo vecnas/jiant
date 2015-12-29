@@ -35,6 +35,7 @@
  2.33.3: module load intitiated by fix
  2.33.4: sub-dependency module double-path fix
  2.34: transitive module deps load
+ 2.35: jiant.check(bool, errMessage) - alerts error in debug mode, prints to error log always, devMode of bindUi ignored, should be set via jiant.DEV_MODE, default devMode false
  */
 "use strict";
 (function(factory) {
@@ -2408,7 +2409,6 @@
   }
 
   function _bindUi(root, devMode, appUiFactory) {
-    jiant.DEV_MODE = devMode;
     ! devMode && maybeSetDevModeFromQueryString();
     errString = "";
     bindingsResult = true;
@@ -2479,7 +2479,7 @@
   }
 
   function app(app) {
-    bindUi(app.appPrefix, app, app.devMode, app.viewsUrl, app.injectId);
+    bindUi(app.appPrefix, app, undefined, app.viewsUrl, app.injectId);
   }
 
   function bindUi(prefix, root, devMode, viewsUrl, injectId) {
@@ -2726,9 +2726,16 @@
     }
     customElementTypes[customTypeName] = handler;
   }
+  
+  function check(bool, err) {
+    if (! bool) {
+      logError(err);
+      jiant.DEV_MODE && alert(err);
+    }
+  }
 
   function version() {
-    return 234;
+    return 235;
   }
 
   function Jiant() {}
@@ -2736,7 +2743,7 @@
   Jiant.prototype = {
     AJAX_PREFIX: "",
     AJAX_SUFFIX: "",
-    DEV_MODE: true,
+    DEV_MODE: false,
     PAGER_RADIUS: 6,
     isMSIE: eval("/*@cc_on!@*/!1"),
     STATE_EXTERNAL_BASE: undefined,
@@ -2777,6 +2784,7 @@
     error: error,
     infop: infop,
     errorp: errorp,
+    check: check,
     parseTemplate: function(text, data) {return $(parseTemplate(text, data));},
     parseTemplate2Text: parseTemplate2Text,
     version: version,
