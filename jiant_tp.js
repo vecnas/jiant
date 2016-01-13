@@ -4,31 +4,10 @@
 (function() {
 
   jiant.types = {
-    inputDateTs: "inputDateTs",
     inputFloatRu: "inputFloatRu",
     inputFloatRu0: "inputFloatRu0",
     numLabel00: "numLabel00"
   };
-
-  jiant.registerCustomType(jiant.types.inputDateTs, function (elem, viewOrTm, appRoot) {
-    var oldVal = elem.val;
-    if (! appRoot.dateFormat) {
-      jiant.logError("Date format must be specified to use inputDateTs, as appRoot.dateFormat");
-      return;
-    }
-    if (! $.datepicker) {
-      jiant.logError("Datepicker required to use inputDateTs");
-      return;
-    }
-    elem.val = function (value) {
-      if (arguments.length == 0) {
-        var currVal = oldVal.apply(elem);
-        return currVal == "" ? new Date().getMilliseconds() : $.datepicker.parseDate(currVal, appRoot.dateFormat);
-      } else {
-        return oldVal.call(elem, new Date(value));
-      }
-    }
-  });
 
   jiant.registerCustomType(jiant.types.inputFloatRu, function (elem) {
     elem.change(function () {
