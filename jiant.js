@@ -37,6 +37,7 @@
  2.34: transitive module deps load
  2.35: jiant.check(bool, errMessage) - alerts error in debug mode, prints to error log always, devMode of bindUi ignored, should be set via jiant.DEV_MODE, default devMode false
  2.36: jiant.intro.isTemplate(obj) - to check is given object jiant template
+ 2.36.1: null implementation possible for logic function
  */
 "use strict";
 (function(factory) {
@@ -1495,7 +1496,7 @@
           spec._jAppId = appId;
           $.each(spec, function(fname, fnbody) {
             if ($.isFunction(fnbody) && !(fname in {"implement": 1, "_jAppId": 1, "_jOverrides": 1})) {
-              if (! obj[fname]) {
+              if (! fname in obj) {
                 jiant.logError("Logic function " + fname + " is not implemented by declared implementation");
               } else {
                 spec[fname] = obj[fname];
