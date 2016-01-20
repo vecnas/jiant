@@ -60,6 +60,7 @@
  xl.0.54: jiant 2.16 compatible
  xl.0.55: jiant 2.16.3 compatible
  xl.0.56: amd compatible, anonymous model declared in amd environment
+ xl.0.57: bindList elem factory accepts templates
  */
 
 (function() {
@@ -69,7 +70,7 @@
   var tmpJiantXl = {
 
     version: function() {
-      return 56;
+      return 57;
     },
 
     ctl2state: function(ctl, state, selectedCssClass, goProxy) {
@@ -140,23 +141,40 @@
     bindList: function(model, container, template, viewFieldSetterName, sortFn, subscribeForUpdates, reversePropagate, elemFactory, mapping) {
       function renderObj(obj) {
         var tm = $.isFunction(template) ? template(obj) : template,
-            cnt = $.isFunction(container) ? container(obj) : container,
-            view = elemFactory ? elemFactory.create(obj, subscribeForUpdates, reversePropagate)
-                : tm.parseTemplate(obj, subscribeForUpdates, reversePropagate, mapping),
-            appended = false;
+            cont = $.isFunction(container) ? container(obj) : container,
+            appended = false,
+            useTm = !!tm,
+            view;
+        if (elemFactory) {
+          if (jiant.intro.isTemplate(elemFactory.create)) {
+            tm = elemFactory.create;
+            useTm = true;
+          } else {
+            view = elemFactory.create(obj, subscribeForUpdates, reversePropagate);
+            if (jiant.intro.isTemplate(view)) {
+              tm = view;
+              useTm = true;
+            } else {
+              useTm = false;
+            }
+          }
+        }
+        if (useTm) {
+          view = tm.parseTemplate(obj, subscribeForUpdates, reversePropagate, mapping);
+        }
         viewFieldSetterName = viewFieldSetterName || "viewFieldSetterXL";
         if (viewFieldSetterName && sortFn && $.isFunction(sortFn) && model[jiant.refs.modelRepoRefName]().all) {
           $.each(model[jiant.refs.modelRepoRefName]().all(), function(i, item) {
             var order = sortFn(obj, item);
             if (item[viewFieldSetterName] && item[viewFieldSetterName]() && order < 0) {
-              !elemFactory && view.insertBefore(item[viewFieldSetterName]()[0]);
+              useTm && view.insertBefore(item[viewFieldSetterName]()[0]);
               appended = true;
               return false;
             }
           });
         }
         if (!appended) {
-          !elemFactory && cnt.append(view);
+          useTm && cont.append(view);
         }
         viewFieldSetterName && $.isFunction(obj[viewFieldSetterName]) && view && obj[viewFieldSetterName](view);
       }
