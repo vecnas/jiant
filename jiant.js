@@ -36,6 +36,7 @@
  2.33.4: sub-dependency module double-path fix
  2.34: transitive module deps load
  2.35: jiant.check(bool, errMessage) - alerts error in debug mode, prints to error log always, devMode of bindUi ignored, should be set via jiant.DEV_MODE, default devMode false
+ 2.36: jiant.intro.isTemplate(obj) - to check is given object jiant template
  */
 "use strict";
 (function(factory) {
@@ -120,6 +121,7 @@
     statesUsed = {},
     listeners = [],
     modelInnerDataField = "jiant_innerData",
+    jTypeTemplate = {},
     replacementMap = {
       ";" : ";;",
       "," : ";1",
@@ -945,8 +947,9 @@
       var prefix = ("appPrefix" in tmContent) ? tmContent.appPrefix : appRoot.appPrefix,
         tm = appUiFactory.template(prefix, tmId, tmContent);
       root[tmId]._jiantSpec = {};
+      root[tmId]._jiantType = jTypeTemplate;
       $.each(tmContent, function (componentId, elemType) {
-        if (!(componentId in {appPrefix: 1, impl: 1, _jiantSpec: 1})) {
+        if (!(componentId in {appPrefix: 1, impl: 1, _jiantSpec: 1, _jiantType: 1})) {
           root[tmId]._jiantSpec[componentId] = elemType;
           if (elemType === jiant.lookup) {
             jiant.logInfo("    loookup element, no checks/bindings: " + componentId);
@@ -2726,7 +2729,7 @@
     }
     customElementTypes[customTypeName] = handler;
   }
-  
+
   function check(bool, err) {
     if (! bool) {
       logError(err);
@@ -2735,7 +2738,7 @@
   }
 
   function version() {
-    return 235;
+    return 236;
   }
 
   function Jiant() {}
@@ -2845,6 +2848,10 @@
     refs: {
       modelRepoRefName: "_jiantRepoRef",
       modelDefaultsRefName: "_jiantDefaultsRef"
+    },
+
+    intro: {
+      isTemplate: function(obj) {return obj && obj._jiantType === jTypeTemplate}
     },
 
     key: {left: 37, up: 38, right: 39, down: 40, del: 46, backspace: 8, tab: 9, end: 35, home: 36, enter: 13, ctrl: 17,
