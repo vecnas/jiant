@@ -38,6 +38,7 @@
  2.35: jiant.check(bool, errMessage) - alerts error in debug mode, prints to error log always, devMode of bindUi ignored, should be set via jiant.DEV_MODE, default devMode false
  2.36: jiant.intro.isTemplate(obj) - to check is given object jiant template
  2.36.1: null implementation possible for logic function
+ 2.36.2: model object update event not fired fixed
  */
 "use strict";
 (function(factory) {
@@ -1134,7 +1135,7 @@
             }
           });
           $.each(toTrigger, function(key, oldVal) {
-            obj[key](obj[key](), true, true, oldVal);
+            obj[key](obj[key](), true, false, oldVal);
           });
           if (smthChanged) {
             obj[modelInnerDataField].trigger(eventName, obj);
@@ -1202,7 +1203,7 @@
               }
             });
             $.each(toTrigger, function(key, oldVal) {
-              newObj[key](newObj[key](), true, true, oldVal);
+              newObj[key](newObj[key](), true, false, oldVal);
             });
           }
           $.each(arr, function(idx, item) {
@@ -2207,7 +2208,6 @@
     } else {
       logError("Unrecognized modules type", root);
     }
-    jiant.logInfo("Modules for application " + appId + ":", modules2load);
     if (modules2load.length) {
       loadModules(appRoot, appId, modules2load, cb);
     } else {
