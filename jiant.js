@@ -39,6 +39,7 @@
  2.36: jiant.intro.isTemplate(obj) - to check is given object jiant template
  2.36.1: null implementation possible for logic function
  2.36.2: model object update event not fired fixed
+ 2.36.3: event bus proper .off
  */
 "use strict";
 (function(factory) {
@@ -1635,17 +1636,17 @@
       };
       events[name].on = function (cb) {
         events[name].listenersCount++;
-        var handler = eventBus.on(appId + name + ".event", function () {
+        var handler = function () {
           var args = $.makeArray(arguments);
           args.splice(0, 1);
           cb && cb.apply(cb, args);
-        });
+        };
+        eventBus.on(appId + name + ".event", handler);
         return handler;
       };
       events[name].off = function (handler) {
         events[name].listenersCount--;
-        var res = eventBus.off(appId + name + ".event", handler);
-        return res;
+        return eventBus.off(appId + name + ".event", handler);
       };
 
       $.each(listeners, function(i, l) {l.boundEvent && l.boundEvent(appRoot, events, name, events[name])});
