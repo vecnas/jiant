@@ -40,6 +40,7 @@
  2.36.1: null implementation possible for logic function
  2.36.2: model object update event not fired fixed
  2.36.3: event bus proper .off
+ 2.37: view/tm.off unbinds from model notifications if propagated - both direct and reverse
  */
 "use strict";
 (function(factory) {
@@ -774,7 +775,7 @@
     return $.inArray(key, words) >= 0;
   }
 
-  function makePropagationFunction(viewId, spec, viewOrTm) {
+  function assignPropagationFunction(viewId, spec, viewOrTm) {
     var map = {};
     $.each(spec, function (key, elem) {
       map[key] = elem;
@@ -850,7 +851,17 @@
         spec.customRenderer(data, viewOrTm);
       }
     };
-    return fn;
+    viewOrTm.propagate = fn;
+    viewOrTm.unpropagate = function() {
+      $.each(map, function (key, elem) {
+        var fnKey = "_j" + key;
+        if (fn[fnKey]) {
+          var off = fn[fnKey][0];
+          off && off(fn[fnKey][1]);
+          fn[fnKey][2] && elem.off && elem.off("change", fn[fnKey][2]);
+        }
+      });
+    }
   }
 
   function getRenderer(obj, elemType) {
@@ -933,7 +944,7 @@
       viewOk = ensureExists(prefix, appRoot.dirtyList, view, prefix + viewId);
     viewOk && _bindContent(appRoot, viewContent, viewId, view, prefix);
     ensureSafeExtend(viewContent, view);
-    viewContent.propagate = makePropagationFunction(viewId, viewContent, viewContent);
+    assignPropagationFunction(viewId, viewContent, viewContent);
     $.extend(viewContent, view);
     maybeAddDevHook(view, viewId, undefined);
     $.each(listeners, function(i, l) {l.boundView && l.boundView(appRoot, appRoot.views, viewId, prefix, viewContent)});
@@ -990,7 +1001,7 @@
           }
         });
         retVal.splice(0, 1); // remove first comment
-        retVal.propagate = makePropagationFunction(tmId, tmContent, retVal);
+        assignPropagationFunction(tmId, tmContent, retVal);
         data && retVal.propagate(data, !!subscribeForUpdates, !!reverseBind, mapping);
         $.each(listeners, function(i, l) {l.parsedTemplate && l.parsedTemplate(appRoot, root, tmId, root[tmId], data, retVal)});
         return retVal;
@@ -2740,7 +2751,7 @@
   }
 
   function version() {
-    return 236;
+    return 237;
   }
 
   function Jiant() {}
