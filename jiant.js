@@ -41,6 +41,7 @@
  2.36.2: model object update event not fired fixed
  2.36.3: event bus proper .off
  2.37: view/tm.off unbinds from model notifications if propagated - both direct and reverse
+ 2.37.1: set from function check fix
  */
 "use strict";
 (function(factory) {
@@ -1207,7 +1208,7 @@
             bindFunctions(modelName, spec, newObj, appId, defaultsName, repoName);
             $.each(item, function(name, val) {
               if (isModelAccessor(newObj[name])) {
-                val = $.isFunction(val) ? val.apply(item) : val;
+                val = isModelAccessor(val) ? val.apply(item) : val;
                 if (newObj[name]) {
                   toTrigger[name] = undefined;
                   newObj[name](val, false);
