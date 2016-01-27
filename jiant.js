@@ -42,6 +42,7 @@
  2.36.3: event bus proper .off
  2.37: view/tm.off unbinds from model notifications if propagated - both direct and reverse
  2.37.1: set from function check fix
+ 2.37.2: module present in modules and dependencies - proper execution order fixed
  */
 "use strict";
 (function(factory) {
@@ -2239,9 +2240,6 @@
       $.each(modules2load, function(i, moduleSpec) {
         arr.push(moduleSpec);
       });
-      //arr.sort(function(a, b) {
-      //  return nvl(a.j_after[b.name], 0) - nvl(b.j_after[a.name], 0);
-      //});
       arr.sort(function(a, b) {
         return nvl(a.order, 0) - nvl(b.order, 0);
       });
@@ -2266,6 +2264,8 @@
       $.each(modules2load, function(i, moduleSpec) {
         if (moduleSpec.name == depModule.name) {
           found = true;
+          moduleSpec.order = Math.min(moduleSpec.order, depModule.order);
+          return false;
         }
       });
       !found && modules2load.push(depModule);
