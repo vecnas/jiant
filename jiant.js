@@ -43,6 +43,7 @@
  2.37: view/tm.off unbinds from model notifications if propagated - both direct and reverse
  2.37.1: set from function check fix
  2.37.2: module present in modules and dependencies - proper execution order fixed
+ 2.38: state.replace new generated method, to replace state without keeping nav history
  */
 "use strict";
 (function(factory) {
@@ -1684,7 +1685,8 @@
       states[""] = {};
     }
     $.each(states, function(name, stateSpec) {
-      stateSpec.go = go(name, stateSpec.root, stateSpec, stateExternalBase, appId);
+      stateSpec.go = go(name, stateSpec.root, stateSpec, stateExternalBase, appId, true);
+      stateSpec.replace = go(name, stateSpec.root, stateSpec, stateExternalBase, appId, false);
       stateSpec.start = function(cb) {
         var trace;
         $.each(listeners, function(i, l) {l.stateStartRegisterHandler && l.stateStartRegisterHandler(appRoot, name, stateSpec)});
@@ -1755,7 +1757,7 @@
     }
   }
 
-  function go(stateId, root, stateSpec, stateExternalBase, appId) {
+  function go(stateId, root, stateSpec, stateExternalBase, appId, assignMode) {
     var defaults = stateSpec.jDefaults,
       params = stateSpec.go ? getParamNames(stateSpec.go) : [];
     return function() {
@@ -1807,7 +1809,7 @@
           parsed.root[idx] = pack(param);
         });
       }
-      setState(parsed, stateExternalBase, appId);
+      setState(parsed, stateExternalBase, appId, assignMode);
     };
   }
 
@@ -1825,7 +1827,7 @@
         parsed.now.push(pack(param));
         parsed.root[idx] = pack(param);
       });
-      setState(parsed, undefined, appId); // external base not used
+      setState(parsed, undefined, appId, true); // external base not used
     }
     appId && _go(appId);
     !appId && $.each(getStates(), function(appId, state) {
@@ -1833,7 +1835,7 @@
     });
   }
 
-  function setState(parsed, stateExternalBase, appId) {
+  function setState(parsed, stateExternalBase, appId, assignMode) {
     var states = getStates(),
       result = "";
     var s = parsed.now + "|" + parsed.root;
@@ -1848,8 +1850,11 @@
       result += (appId + "=" + s + "=");
     }
     var extBase = (stateExternalBase || stateExternalBase == "") ? stateExternalBase : jiant.STATE_EXTERNAL_BASE;
-//          jiant.logInfo("setting state: " + result);
-    window.location.assign((extBase ? extBase : "") + "#" + result);
+    if (assignMode) {
+      window.location.assign((extBase ? extBase : "") + "#" + result);
+    } else {
+      window.location.replace((extBase ? extBase : "") + "#" + result);
+    }
     $(window).hashchange();
   }
 
@@ -2752,7 +2757,7 @@
   }
 
   function version() {
-    return 237;
+    return 238;
   }
 
   function Jiant() {}
