@@ -61,6 +61,7 @@
  xl.0.55: jiant 2.16.3 compatible
  xl.0.56: amd compatible, anonymous model declared in amd environment
  xl.0.57: bindList elem factory accepts templates
+ xl.0.58: bindList.off unsubscribes from model updates, default app state uses state.replace
  */
 
 (function() {
@@ -70,7 +71,7 @@
   var tmpJiantXl = {
 
     version: function() {
-      return 57;
+      return 58;
     },
 
     ctl2state: function(ctl, state, selectedCssClass, goProxy) {
@@ -134,11 +135,12 @@
           var view = app.views[name + viewNameSuffix];
           view && jiant.xl.statefulViews(state, view)();
         });
-        app.states[""] && defaultState && app.states[""].start(function() {defaultState.go();});
+        app.states[""] && defaultState && app.states[""].start(function() {defaultState.replace();});
       };
     },
 
     bindList: function(model, container, template, viewFieldSetterName, sortFn, subscribeForUpdates, reversePropagate, elemFactory, mapping) {
+      var addHnd, remHnd;
       function renderObj(obj) {
         var tm = $.isFunction(template) ? template(obj) : template,
             cont = $.isFunction(container) ? container(obj) : container,
@@ -149,8 +151,8 @@
           if (jiant.intro.isTemplate(elemFactory.create)) {
             tm = elemFactory.create;
             useTm = true;
-          } else {
-            view = elemFactory.create(obj, subscribeForUpdates, reversePropagate);
+          } else if ($.isFunction(elemFactory.create)) {
+            view =  elemFactory.create(obj, subscribeForUpdates, reversePropagate);
             if (jiant.intro.isTemplate(view)) {
               tm = view;
               useTm = true;
@@ -162,8 +164,7 @@
         if (useTm) {
           view = tm.parseTemplate(obj, subscribeForUpdates, reversePropagate, mapping);
         }
-        viewFieldSetterName = viewFieldSetterName || "viewFieldSetterXL";
-        if (viewFieldSetterName && sortFn && $.isFunction(sortFn) && model[jiant.refs.modelRepoRefName]().all) {
+        if (sortFn && $.isFunction(sortFn) && model[jiant.refs.modelRepoRefName]().all) {
           $.each(model[jiant.refs.modelRepoRefName]().all(), function(i, item) {
             var order = sortFn(obj, item);
             if (item[viewFieldSetterName] && item[viewFieldSetterName]() && order < 0) {
@@ -176,18 +177,31 @@
         if (!appended) {
           useTm && cont.append(view);
         }
-        viewFieldSetterName && $.isFunction(obj[viewFieldSetterName]) && view && obj[viewFieldSetterName](view);
+        $.isFunction(obj[viewFieldSetterName]) && view && obj[viewFieldSetterName](view);
       }
-      return function() {
-        model[jiant.refs.modelRepoRefName]().add && model[jiant.refs.modelRepoRefName]().add.on(function(arr) {
-          $.each(arr, function(idx, obj) {
-            renderObj(obj);
-          });
-        });
-        model[jiant.refs.modelRepoRefName]().remove && model[jiant.refs.modelRepoRefName]().remove.on(function(obj) {
-          obj[viewFieldSetterName] && (elemFactory ? elemFactory.remove(obj[viewFieldSetterName]()) : obj[viewFieldSetterName]().remove());
+
+      var m = model[jiant.refs.modelRepoRefName](),
+          ret = function () {
+            addHnd = m.add && m.add.on(function (arr) {
+                  $.each(arr, function (idx, obj) {
+                    renderObj(obj);
+                  });
+                });
+            remHnd = m.remove && m.remove.on(function (obj) {
+                  obj[viewFieldSetterName] && (elemFactory ? elemFactory.remove(obj[viewFieldSetterName]()) : obj[viewFieldSetterName]().remove());
+                });
+            $.each(model[jiant.refs.modelRepoRefName]().all(), function(i, obj) {
+              renderObj(obj);
+            });
+          };
+      ret.off = function () {
+        addHnd && m.add.off(addHnd);
+        remHnd && m.remove.off(remHnd);
+        $.each(model[jiant.refs.modelRepoRefName]().all(), function (i, obj) {
+          $.isFunction(obj[viewFieldSetterName]) && obj[viewFieldSetterName]() && $.isFunction(obj[viewFieldSetterName]().off) && obj[viewFieldSetterName]().off();
         });
       };
+      return ret;
     },
 
     filterableData: function(model, ajax, filterModel, updateOnModel, completeCb, singletonMode) {
