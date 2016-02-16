@@ -44,6 +44,7 @@
  2.37.1: set from function check fix
  2.37.2: module present in modules and dependencies - proper execution order fixed
  2.38: state.replace new generated method, to replace state without keeping nav history
+ 2.39: element types defined as strings, to enable $.extend(app, baseApp)
  */
 "use strict";
 (function(factory) {
@@ -2757,7 +2758,7 @@
   }
 
   function version() {
-    return 238;
+    return 239;
   }
 
   function Jiant() {}
@@ -2829,30 +2830,30 @@
     addListener: addListener,
     removeListener: removeListener,
 
-    collection: {},
-    container: {},
-    containerPaged: {},
-    ctl: {},
-    ctlHide: {},
-    form: {},
-    grid: {},
-    image: {},
-    imgBg: {},
-    input: {},
-    inputSet: {},
-    inputSetAsString: {},
-    inputDate: {},
-    inputInt: {},
-    inputFloat: {},
-    label: {},
-    nlabel: {},
-    numLabel: {},
-    meta: {},
-    cssFlag: {},
-    cssMarker: {},
-    pager: {},
-    slider: {},
-    tabs: {},
+    collection: "jiant.collection",
+    container: "jiant.container",
+    containerPaged: "jiant.containerPaged",
+    ctl: "jiant.ctl",
+    ctlHide: "jiant.ctlHide",
+    form: "jiant.form",
+    grid: "jiant.grid",
+    image: "jiant.image",
+    imgBg: "jiant.imgBg",
+    input: "jiant.input",
+    inputSet: "jiant.inputSet",
+    inputSetAsString: "jiant.inputSetAsString",
+    inputDate: "jiant.inputDate",
+    inputInt: "jiant.inputInt",
+    inputFloat: "jiant.inputFloat",
+    label: "jiant.label",
+    nlabel: "jiant.nlabel",
+    numLabel: "jiant.numLabel",
+    meta: "jiant.meta",
+    cssFlag: "jiant.cssFlag",
+    cssMarker: "jiant.cssMarker",
+    pager: "jiant.pager",
+    slider: "jiant.slider",
+    tabs: "jiant.tabs",
     fn: function (param) {},
     data: function (val) {},
     lookup: function (selector) {},
