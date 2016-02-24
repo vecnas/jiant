@@ -45,6 +45,7 @@
  2.37.2: module present in modules and dependencies - proper execution order fixed
  2.38: state.replace new generated method, to replace state without keeping nav history
  2.39: element types defined as strings, to enable $.extend(app, baseApp)
+ 2.40: handler returned by model.field.on now contains .off method, hanlder.off() could be used
  */
 "use strict";
 (function(factory) {
@@ -1049,6 +1050,9 @@
       };
       tgt.listenersCount++;
       eventObject.on(eventName, handler);
+      handler.off = function() {
+        tgt.off(handler);
+      };
       return handler;
     };
     tgt.off = function (handler) {
@@ -2758,7 +2762,7 @@
   }
 
   function version() {
-    return 239;
+    return 240;
   }
 
   function Jiant() {}
