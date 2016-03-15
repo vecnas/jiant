@@ -62,6 +62,7 @@
  xl.0.56: amd compatible, anonymous model declared in amd environment
  xl.0.57: bindList elem factory accepts templates
  xl.0.58: bindList.off unsubscribes from model updates, default app state uses state.replace
+ xl.0.59: jiant.refs removed, j 2.41 compatible
  */
 
 (function() {
@@ -71,7 +72,7 @@
   var tmpJiantXl = {
 
     version: function() {
-      return 58;
+      return 59;
     },
 
     ctl2state: function(ctl, state, selectedCssClass, goProxy) {
@@ -164,8 +165,8 @@
         if (useTm) {
           view = tm.parseTemplate(obj, subscribeForUpdates, reversePropagate, mapping);
         }
-        if (sortFn && $.isFunction(sortFn) && model[jiant.refs.modelRepoRefName]().all) {
-          $.each(model[jiant.refs.modelRepoRefName]().all(), function(i, item) {
+        if (sortFn && $.isFunction(sortFn) && jiant.getRepo(model).all) {
+          $.each(jiant.getRepo(model).all(), function(i, item) {
             var order = sortFn(obj, item);
             if (item[viewFieldSetterName] && item[viewFieldSetterName]() && order < 0) {
               useTm && view.insertBefore(item[viewFieldSetterName]()[0]);
@@ -180,7 +181,7 @@
         $.isFunction(obj[viewFieldSetterName]) && view && obj[viewFieldSetterName](view);
       }
 
-      var m = model[jiant.refs.modelRepoRefName](),
+      var m = jiant.getRepo(model),
           ret = function () {
             addHnd = m.add && m.add.on(function (arr) {
                   $.each(arr, function (idx, obj) {
@@ -190,14 +191,14 @@
             remHnd = m.remove && m.remove.on(function (obj) {
                   obj[viewFieldSetterName] && (elemFactory ? elemFactory.remove(obj[viewFieldSetterName]()) : obj[viewFieldSetterName]().remove());
                 });
-            $.each(model[jiant.refs.modelRepoRefName]().all(), function(i, obj) {
+            $.each(jiant.getRepo(model).all(), function(i, obj) {
               renderObj(obj);
             });
           };
       ret.off = function () {
         addHnd && m.add.off(addHnd);
         remHnd && m.remove.off(remHnd);
-        $.each(model[jiant.refs.modelRepoRefName]().all(), function (i, obj) {
+        $.each(jiant.getRepo(model).all(), function (i, obj) {
           $.isFunction(obj[viewFieldSetterName]) && obj[viewFieldSetterName]() && $.isFunction(obj[viewFieldSetterName]().off) && obj[viewFieldSetterName]().off();
         });
       };
@@ -207,7 +208,7 @@
     filterableData: function(model, ajax, filterModel, updateOnModel, completeCb, singletonMode) {
       function refresh() {
         ajax(filterModel, function(data) {
-          singletonMode ? model.update(data) : model[jiant.refs.modelRepoRefName]().updateAll(data, true);
+          singletonMode ? model.update(data) : jiant.getRepo(model).updateAll(data, true);
           completeCb && completeCb(data);
         });
       }
@@ -225,7 +226,7 @@
         filterSortModel && filterSortModel.sort && filterSortModel.sort()
         && (pageable["page.sort"] = filterSortModel.sort(), pageable["sort"] = filterSortModel.sort());
         ajax(filterSortModel, pageable, function(data) {
-          model[jiant.refs.modelRepoRefName]().updateAll(data.content, true);
+          jiant.getRepo(model).updateAll(data.content, true);
           pager && pager.updatePager(data);
         });
       }
