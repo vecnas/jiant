@@ -47,6 +47,7 @@
  2.39: element types defined as strings, to enable $.extend(app, baseApp)
  2.40: handler returned by model.field.on now contains .off method, hanlder.off() could be used
  2.41: internal models implementation rewritten to prototypes inheritance, refs removed, modelObj.fld.on replaced by modelObj.on("fld", spec.fld.on still usable
+ 2.41.1: debug print removed
  */
 "use strict";
 (function(factory) {
@@ -809,7 +810,6 @@
             if (!$.isFunction(val)) { // ?
               actualKey = null;
             }
-            viewId == "userHeroTm" && actualKey == "name" && jiant.logInfo(data.asMap(), actualKey);
             handler = data.on(actualKey, function(obj, newVal) {
               getRenderer(spec[key], elemType)(data, elem, newVal, true, viewOrTm)
             });
