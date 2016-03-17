@@ -48,6 +48,7 @@
  2.40: handler returned by model.field.on now contains .off method, hanlder.off() could be used
  2.41: internal models implementation rewritten to prototypes inheritance, refs removed, modelObj.fld.on replaced by modelObj.on("fld", spec.fld.on still usable
  2.41.1: debug print removed
+ 2.42: collection functions optimization, handlers to fields attached as obj.fldName_on, obj.fldName_asap, obj.fldName_onAndNow, obj.fldName_off
  */
 "use strict";
 (function(factory) {
@@ -1034,6 +1035,12 @@
           this[modelStorage] = {};
           this[objectBus] = $({});
         },
+        Collection = function(data) {
+          if (data) {
+            var that = this;
+            $.each(data, function(idx, obj) {that.push(obj)});
+          }
+        },
         specBus = $({}),
         singleton = new Model(),
         objFunctions = ["on", "off", "update", "reset", "remove", "asMap"],
@@ -1084,38 +1091,36 @@
     //  ----------------------------------------------- add -----------------------------------------------
 
     repoRoot.add = function(arr) {
-      if (arr == undefined || arr == null) {
-        return attachCollectionFunctions([], collectionFunctions);
-      }
-      arr = $.isArray(arr) ? arr : [arr];
-      if (arr.length == 0) {
-        return attachCollectionFunctions([], collectionFunctions);
-      }
-      var newArr = [];
-      $.each(arr, function(idx, item) {
-        var newItem = $.extend({}, spec[defaultsName], item),
-            newObj = new Model(),
-            toTrigger = {};
-        storage.push(newObj);
-        newArr.push(newObj);
-        $.each(newItem, function(name, val) {
-          if (isModelAccessor(newObj[name])) {
-            val = isModelAccessor(val) ? val.apply(item) : val;
-            if (newObj[name]) {
-              toTrigger[name] = undefined;
-              newObj[name](val, false);
-            }
+      var newArr = new Collection();
+      if (arr != undefined && arr != null) {
+        arr = $.isArray(arr) ? arr : [arr];
+        if (arr.length != 0) {
+          $.each(arr, function(idx, item) {
+            var newItem = $.extend({}, spec[defaultsName], item),
+                newObj = new Model();
+            storage.push(newObj);
+            newArr.push(newObj);
+            $.each(newItem, function(name, val) {
+              if (isModelAccessor(newObj[name])) {
+                val = isModelAccessor(val) ? val.apply(item) : val;
+                newObj[modelStorage][name] = val;
+              }
+            });
+            $.each(newItem, function(name, val) {
+              if (isModelAccessor(newObj[name])) {
+                newObj[name](newObj[name](), true, false, undefined);
+              }
+            });
+          });
+          trigger(specBus, "add", [newArr], [newArr]);
+          if (specBus[evt("update")] || specBus[evt()]) {
+            $.each(newArr, function(idx, item) {
+              trigger(specBus, "update", [newArr[idx]], [newArr[idx], "update"]);
+            });
           }
-        });
-        $.each(toTrigger, function(key, oldVal) {
-          newObj[key](newObj[key](), true, false, oldVal);
-        });
-      });
-      trigger(specBus, "add", [newArr], [newArr]);
-      $.each(newArr, function(idx, item) {
-        trigger(specBus, "update", [newArr[idx]], [newArr[idx], "update"]);
-      });
-      return attachCollectionFunctions(newArr, collectionFunctions);
+        }
+      }
+      return newArr;
     };
     repoRoot.add[objectBus] = specBus;
     assignOnOffHandlers(repoRoot.add, "add");
@@ -1123,12 +1128,7 @@
     // ----------------------------------------------- all -----------------------------------------------
 
     repoRoot.all = function() {
-      var retVal = [];
-      $.each(storage, function(idx, obj) {
-        retVal.push(obj);
-      });
-      attachCollectionFunctions(retVal, collectionFunctions);
-      return retVal;
+      return new Collection(storage);
     };
 
     // ----------------------------------------------- updateAll -----------------------------------------------
@@ -1164,6 +1164,9 @@
         spec[key](val);
       }
     });
+
+    Collection.prototype = [];
+    attachCollectionFunctions(Collection.prototype, collectionFunctions);
 
     // ----------------------------------------------- bind other functions -----------------------------------------------
 
@@ -1349,7 +1352,7 @@
             var fieldName = name.substring(0, 1).toLowerCase() + name.substring(1);
             retVal = filter(retVal, fieldName, outerArgs[idx]);
           });
-          return attachCollectionFunctions(retVal, collectionFunctions);
+          return new Collection(retVal);
         }
       } else if (fname.indexOf("set") == 0 && fname.length > 3 && isUpperCaseChar(fname, 3)) {
         collectionFunctions.push(fname);
@@ -1405,7 +1408,7 @@
           });
           return ret;
         }
-      } else if (isEmptyFunction(funcSpec)) {
+      } else if (isEmptyFunction(funcSpec) && ! isEventHandlerName(fname)) {
         var trans = funcSpec === jiant.transientFn;
         collectionFunctions.push(fname);
         Model.prototype[fname] = function(val, forceEvent, dontFireUpdate, oldValOverride) {
@@ -1427,15 +1430,24 @@
         Model.prototype[fname].transient_fn = trans;
         spec[fname] = proxy(fname);
         spec[fname].on = function(cb) {return spec.on(fname, cb)};
-        spec[fname].off = function(handler) {return spec.off(handler)};
-        spec[fname].asap = function(handler) {return singleton.asap(fname, handler)};
+        spec[fname].off = function(cb) {return spec.off(cb)};
+        spec[fname].asap = function(cb) {return singleton.asap(fname, cb)};
         spec[fname].onAndNow = function(cb) {return singleton.onAndNow(fname, cb)};
+        spec[fname + "_on"] = function(cb) {return spec.on(fname, cb)};
+        spec[fname + "_off"] = function(cb) {return spec.off(cb)};
+        spec[fname + "_asap"] = function(cb) {return singleton.asap(fname, cb)};
+        spec[fname + "_onAndNow"] = function(cb) {return singleton.onAndNow(fname, cb)};
+        Model.prototype[fname + "_on"] = function(cb) {return this.on(fname, cb)};
+        Model.prototype[fname + "_off"] = function(cb) {return this.off(fname, cb)};
+        Model.prototype[fname + "_asap"] = function(cb) {return this.asap(fname, cb)};
+        Model.prototype[fname + "_onAndNow"] = function(cb) {return this.onAndNow(fname, cb)};
         spec[fname].jiant_accessor = 1;
         spec[fname].transient_fn = trans;
         //if (! objMode) {
         //  assignOnOffHandlers()
         //}
         //assignOnOffHandlers(); // spec[fname], specBus, fname
+      } else if (isEventHandlerName(fname)) {
       } else if (fname != modelStorage && fname != objectBus) {
         collectionFunctions.push(fname);
         spec[fname] = proxy(fname);
@@ -1447,12 +1459,19 @@
     }
   }
 
+  function isEventHandlerName(fname) {
+    function endsWith(fname, suffix) {
+      return fname.length > suffix.length && fname.indexOf(suffix) === fname.length - suffix.length;
+    }
+    return endsWith(fname, "_on") || endsWith(fname, "_off") || endsWith(fname, "_asap") || endsWith(fname, "_onAndNow");
+  }
+
   function attachCollectionFunctions(arr, collectionFunctions) {
     $.each(collectionFunctions, function(idx, fn) {
       arr[fn] = function() {
         var ret = [],
           args = arguments;
-        $.each(arr, function(idx, obj) {
+        $.each(this, function(idx, obj) {
           ret.push(obj[fn].apply(obj, args));
         });
         return ret;
@@ -2789,7 +2808,7 @@
   }
 
   function version() {
-    return 241;
+    return 242;
   }
 
   function Jiant() {}
