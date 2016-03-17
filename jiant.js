@@ -49,6 +49,7 @@
  2.41: internal models implementation rewritten to prototypes inheritance, refs removed, modelObj.fld.on replaced by modelObj.on("fld", spec.fld.on still usable
  2.41.1: debug print removed
  2.42: collection functions optimization, handlers to fields attached as obj.fldName_on, obj.fldName_asap, obj.fldName_onAndNow, obj.fldName_off
+ 2.42.1: suppliers on spec missing flag fixed
  */
 "use strict";
 (function(factory) {
@@ -1454,6 +1455,7 @@
         Model.prototype[fname] = funcSpec;
         if (isSupplierFunction(funcSpec)) {
           Model.prototype[fname].jiant_supplier = 1;
+          spec[fname].jiant_supplier = 1;
         }
       }
     }
