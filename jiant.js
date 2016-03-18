@@ -52,6 +52,7 @@
  2.42.1: suppliers on spec missing flag fixed
  2.42.2: ajax auto parse fix for new Model and Collection
  2.42.3: reverse propagate fix for new Model
+ 2.43: pick(marker, threshold) - only exceeding threshold values are printed, if threshold is passed, returning true if threshold is exceeded
  */
 "use strict";
 (function(factory) {
@@ -208,12 +209,15 @@
     return (results !== null) ? decodeURIComponent(results[1]) : null;
   }
 
-  function pick(marker) {
-    var now = new Date().getTime();
-    if (pickTime) {
-      info((marker ? marker : "jiant.pick:") + " " + (now - pickTime) + "ms");
+  function pick(marker, threshold) {
+    var now = new Date().getTime(),
+        ms = now - pickTime;
+    threshold = threshold || -1;
+    if (pickTime && ms >= threshold) {
+      info((marker ? marker : "jiant.pick:") + " " + ms + "ms");
     }
     pickTime = now;
+    return ms >= threshold;
   }
 
   function msieDom2Html(elem) {
@@ -2816,7 +2820,7 @@
   }
 
   function version() {
-    return 242;
+    return 243;
   }
 
   function Jiant() {}
