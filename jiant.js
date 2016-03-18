@@ -51,6 +51,7 @@
  2.42: collection functions optimization, handlers to fields attached as obj.fldName_on, obj.fldName_asap, obj.fldName_onAndNow, obj.fldName_off
  2.42.1: suppliers on spec missing flag fixed
  2.42.2: ajax auto parse fix for new Model and Collection
+ 2.42.3: reverse propagate fix for new Model
  */
 "use strict";
 (function(factory) {
@@ -830,18 +831,18 @@
               }
               if (val && $.isFunction(val)) {
                 if (etype === jiant.inputSet) {
-                  val(elem2arr(elem));
+                  val.call(data, elem2arr(elem));
                 } else if (etype === jiant.inputSetAsString) {
-                  val(elem2arr(elem).join(","));
+                  val.call(data, elem2arr(elem).join(","));
                 } else {
                   if (tagName == "input" && tp == "checkbox") {
-                    val(!!elem.prop("checked"));
+                    val.call(data, !!elem.prop("checked"));
                   } else if (tagName == "input" && tp == "radio") {
-                    val(elem2arr(elem).join(","));
+                    val.call(data, elem2arr(elem).join(","));
                   } else if (tagName in {"input": 1,  "select": 1, "textarea": 1}) {
-                    val(elem.val());
+                    val.call(data, elem.val());
                   } else if (tagName == "img") {
-                    val(elem.attr("src"));
+                    val.call(data, elem.attr("src"));
                     // no html reverse binding because no actual event for changing html
                     //} else {
                     //  val(elem.html());
