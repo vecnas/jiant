@@ -50,6 +50,7 @@
  2.41.1: debug print removed
  2.42: collection functions optimization, handlers to fields attached as obj.fldName_on, obj.fldName_asap, obj.fldName_onAndNow, obj.fldName_off
  2.42.1: suppliers on spec missing flag fixed
+ 2.42.2: ajax auto parse fix for new Model and Collection
  */
 "use strict";
 (function(factory) {
@@ -1046,8 +1047,8 @@
         singleton = new Model(),
         objFunctions = ["on", "off", "update", "reset", "remove", "asMap"],
         repoFunctions = ["updateAll", "add", "all", "remove"];
-    if (! spec[repoName]) {
-      jiant.errorp("App !!, model !! uses deprecated model repository format, switch to new, with model.jRepo = {} section", appId, modelName);
+    if (jiant.DEV_MODE && !spec[repoName]) {
+      jiant.infop("App !!, model !! uses deprecated model repository format, switch to new, with model.jRepo = {} section", appId, modelName);
     }
     spec[defaultsName] = spec[defaultsName] || {};
     $.each(repoFunctions, function(i, fn) {
@@ -1167,6 +1168,9 @@
     });
 
     Collection.prototype = [];
+    Collection.prototype.jCollection = true;
+    Collection.prototype.jModelName = modelName;
+    Model.prototype.jModelName = modelName;
     attachCollectionFunctions(Collection.prototype, collectionFunctions);
 
     // ----------------------------------------------- bind other functions -----------------------------------------------
@@ -2019,15 +2023,16 @@
   }
 
   function parseForAjaxCall(root, path, actual, traverse) {
-    if ($.isArray(actual) && actual.length > 0) {
+    if ($.isArray(actual) || (actual && actual.jCollection)) {
       var compound = false;
       $.each(actual, function(i, obj) {
-        compound = compound || $.isPlainObject(obj);
+        compound = compound || $.isPlainObject(obj) || obj.jModelName;
+        return !compound;
       });
       $.each(actual, function(i, obj) {
         parseForAjaxCall(root, path + (compound ? ("[" + i + "]") : ""), obj, true);
       });
-    } else if ($.isPlainObject(actual)) {
+    } else if ($.isPlainObject(actual) || (actual && actual.jModelName)) {
       $.each(actual, function(key, value) {
         if (key === jiant.flags.ajaxSubmitAsMap) {
           return;
