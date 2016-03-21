@@ -54,6 +54,7 @@
  2.42.3: reverse propagate fix for new Model
  2.43: pick(marker, threshold) - only exceeding threshold values are printed, if threshold is passed, returning true if threshold is exceeded
  2.44: few fixes related to prototypes refactoring
+ 2.45: findBy / listBy indexing
  */
 "use strict";
 (function(factory) {
@@ -1036,6 +1037,7 @@
     var storage = [],
         collectionFunctions = [],
         modelStorage = "jModelStorage",
+        reverseIndexes = "jReverseIndexes",
         defaultsName = "jDefaults",
         indexesSpec = [],
         indexes = {},
@@ -1044,6 +1046,7 @@
         Model = function() {
           this[modelStorage] = {};
           this[objectBus] = $({});
+          this[reverseIndexes] = [];
         },
         Collection = function(data) {
           if (data) {
@@ -1068,6 +1071,14 @@
     if (spec.id) {
       repoRoot.findById = repoRoot.findById || function(val) {};
     }
+    $.each(repoRoot, function(fname, funcSpec) {
+      if (isFindByFunction(fname)) {
+        var listBy = "listBy" + fname.substring(6);
+        if (! repoRoot[listBy]) {
+          repoRoot[listBy] = funcSpec;
+        }
+      }
+    });
     if (repoMode) {
       $.each(repoRoot, function(fname, funcSpec) {
         bindFn(repoRoot, fname, funcSpec);
@@ -1127,9 +1138,14 @@
           trigger(specBus, "add", [newArr], [newArr]);
           if (specBus[evt("update")] || specBus[evt()]) {
             $.each(newArr, function(idx, item) {
-              trigger(specBus, "update", [newArr[idx]], [newArr[idx], "update"]);
+              trigger(specBus, "update", [item], [item, "update"]);
             });
           }
+          $.each(newArr, function(idx, item) {
+            item.on(function() {
+              updateIndexes(item);
+            }); // any change, due to findBy synthetic fields
+          });
         }
       }
       return newArr;
@@ -1142,29 +1158,44 @@
     function indexPresent(arr) {
       var present = false;
       $.each(indexesSpec, function(i, index) {
-        present = true;
-        (index.length == arr.length) && $.each(index, function(j, elem) {
-          present = (present && (elem == arr[j]));
-        });
-        return !present;
+        if (index.length == arr.length) {
+          var matching = true;
+          $.each(index, function(j, elem) {
+            matching = matching && elem === arr[j];
+          });
+          if (matching) {
+            present = true;
+            return false;
+          }
+        }
       });
       return present;
     }
 
     function addIndexes(obj) {
-      //$.each(indexesSpec, function(i, index) {
-      //  var node = indexes;
-      //  $.each(index, function(j, name) {
-      //    var key = name + "=" + obj[name]();
-      //    node[key] = node[key] || {};
-      //    node = node[key];
-      //  });
-      //  node.content = node.content || [];
-      //  node.content.push(obj);
-      //});
+      $.each(indexesSpec, function(i, index) {
+        var node = indexes;
+        $.each(index, function(j, name) {
+          var key = name + "=" + obj[name]();
+          node[key] = node[key] || {};
+          node = node[key];
+        });
+        node.content = node.content || [];
+        node.content.push(obj);
+        obj[reverseIndexes].push(node.content);
+      });
     }
 
     function removeIndexes(obj) {
+      $.each(obj[reverseIndexes], function(i, arr) {
+        arr.splice($.inArray(obj, arr), 1);
+      });
+      obj[reverseIndexes] = [];
+    }
+
+    function updateIndexes(obj) {
+      removeIndexes(obj);
+      addIndexes(obj);
     }
 
     // ----------------------------------------------- all -----------------------------------------------
@@ -1214,6 +1245,10 @@
     attachCollectionFunctions(Collection.prototype, collectionFunctions);
 
     // ----------------------------------------------- bind other functions -----------------------------------------------
+
+    function isFindByFunction(fname) {
+      return fname.indexOf("findBy") == 0 && fname.length > 6 && isUpperCaseChar(fname, 6);
+    }
 
     function trigger(bus, fname, args, argsPerObj) {
       bus[evt(fname)] && bus.trigger(evt(fname), args);
@@ -1361,27 +1396,9 @@
           });
           return ret;
         }
-      } else if (fname.indexOf("findBy") == 0 && fname.length > 6 && isUpperCaseChar(fname, 6) && !objMode) {
-        var arr = fname.substring(6).split("And");
-        $.each(arr, function(idx, name) {arr[idx] = name.substring(0, 1).toLowerCase() + name.substring(1)});
-        if (!indexPresent(arr)) {
-          indexesSpec.push(arr);
-        }
+      } else if (isFindByFunction(fname) && !objMode) {
         repoRoot[fname] = function() {
-          var retVal = storage,
-            outerArgs = arguments;
-          function filter(arr, fieldName, val, idx) {
-            return $.grep(arr, function(item) {
-              if (! item[fieldName] || !$.isFunction(item[fieldName])) {
-                errorp("findBy argument is not setter or not a function, model: !!, method: !!, method part: !!", modelName, fname, fieldName);
-              }
-              return outerArgs.length < idx || item[fieldName]() === val;
-            });
-          }
-          $.each(arr, function(idx, fieldName) {
-            retVal = filter(retVal, fieldName, outerArgs[idx], idx);
-          });
-          return retVal[0];
+          return repoRoot["listBy" + fname.substring(6)].apply(repoRoot, arguments)[0];
         }
       } else if (fname.indexOf("listBy") == 0 && fname.length > 6 && isUpperCaseChar(fname, 6) && !objMode) {
         var arr = fname.substring(6).split("And");
@@ -1390,20 +1407,16 @@
           indexesSpec.push(arr);
         }
         repoRoot[fname] = function() {
-          var retVal = storage,
-            outerArgs = arguments;
-          function filter(arr, fieldName, val, idx) {
-            return $.grep(arr, function(item) {
-              if (! item[fieldName] || !$.isFunction(item[fieldName])) {
-                errorp("listBy argument is not setter or not a function, model: !!, method: !!, method part: !!", modelName, fname, fieldName);
-              }
-              return outerArgs.length < idx || item[fieldName]() === val;
-            });
-          }
-          $.each(arr, function(idx, fieldName) {
-            retVal = filter(retVal, fieldName, outerArgs[idx], idx);
+          var node = indexes,
+              args = arguments;
+          $.each(arr, function(i, name) {
+            var key = name + "=" + args[i];
+            node = node[key];
+            if (node === undefined) {
+              return false;
+            }
           });
-          return new Collection(retVal);
+          return new Collection(node === undefined ? [] : node.content);
         }
       } else if (fname.indexOf("set") == 0 && fname.length > 3 && isUpperCaseChar(fname, 3)) {
         collectionFunctions.push(fname);
@@ -2861,7 +2874,7 @@
   }
 
   function version() {
-    return 244;
+    return 245;
   }
 
   function Jiant() {}
