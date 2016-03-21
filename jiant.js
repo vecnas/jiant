@@ -1087,7 +1087,7 @@
     repoRoot.remove = function(obj) {
       var prevLen = storage.length;
       storage = $.grep(storage, function(value) {return value != obj});
-      removeIndexes(newObj);
+      removeIndexes(obj);
       if (storage.length != prevLen) {
         obj[objectBus].trigger(evt("remove"), [obj]);
         obj[objectBus].trigger(evt(), [obj, "remove"]);
@@ -1111,13 +1111,13 @@
                 newObj = new Model();
             storage.push(newObj);
             newArr.push(newObj);
-            addIndexes(newObj);
             $.each(newItem, function(name, val) {
               if (isModelAccessor(newObj[name])) {
                 val = isModelAccessor(val) ? val.apply(item) : val;
                 newObj[modelStorage][name] = val;
               }
             });
+            addIndexes(newObj);
             $.each(newItem, function(name, val) {
               if (isModelAccessor(newObj[name])) {
                 newObj[name](newObj[name](), true, false, undefined);
@@ -1155,13 +1155,13 @@
       //$.each(indexesSpec, function(i, index) {
       //  var node = indexes;
       //  $.each(index, function(j, name) {
-      //    node[name] = node[name] || {};
-      //    node = node[name];
+      //    var key = name + "=" + obj[name]();
+      //    node[key] = node[key] || {};
+      //    node = node[key];
       //  });
       //  node.content = node.content || [];
       //  node.content.push(obj);
       //});
-      //jiant.logInfo(indexes);
     }
 
     function removeIndexes(obj) {
@@ -1364,7 +1364,9 @@
       } else if (fname.indexOf("findBy") == 0 && fname.length > 6 && isUpperCaseChar(fname, 6) && !objMode) {
         var arr = fname.substring(6).split("And");
         $.each(arr, function(idx, name) {arr[idx] = name.substring(0, 1).toLowerCase() + name.substring(1)});
-        !indexPresent(arr) && indexesSpec.push(arr);
+        if (!indexPresent(arr)) {
+          indexesSpec.push(arr);
+        }
         repoRoot[fname] = function() {
           var retVal = storage,
             outerArgs = arguments;
@@ -1384,7 +1386,9 @@
       } else if (fname.indexOf("listBy") == 0 && fname.length > 6 && isUpperCaseChar(fname, 6) && !objMode) {
         var arr = fname.substring(6).split("And");
         $.each(arr, function(idx, name) {arr[idx] = name.substring(0, 1).toLowerCase() + name.substring(1)});
-        !indexPresent(arr) && indexesSpec.push(arr);
+        if (!indexPresent(arr)) {
+          indexesSpec.push(arr);
+        }
         repoRoot[fname] = function() {
           var retVal = storage,
             outerArgs = arguments;
