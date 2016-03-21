@@ -55,6 +55,7 @@
  2.43: pick(marker, threshold) - only exceeding threshold values are printed, if threshold is passed, returning true if threshold is exceeded
  2.44: few fixes related to prototypes refactoring
  2.45: findBy / listBy indexing
+ 2.45.1: template cache added
  */
 "use strict";
 (function(factory) {
@@ -141,6 +142,7 @@
     objectBus = "jModelObjectBus",
     repoName = "jRepo",
     jTypeTemplate = {},
+    _tmplCache = {},
     replacementMap = {
       ";" : ";;",
       "," : ";1",
@@ -255,17 +257,16 @@
         data[key] = data[val];
       });
     }
-    var str = $.trim($(that).html()),
-      _tmplCache = {},
-      err = "";
-    if (!jiant.isMSIE) {
-      str = str.replace(/!!/g, "!! ");
-    } else {
-      str = msieDom2Html($(that));
-    }
+    var err = "";
     try {
-      var func = _tmplCache[str];
+      var func = tmId ? _tmplCache[tmId] : null;
       if (!func) {
+        var str = $.trim($(that).html());
+        if (!jiant.isMSIE) {
+          str = str.replace(/!!/g, "!! ");
+        } else {
+          str = msieDom2Html($(that));
+        }
         var strFunc =
           "var p=[],print=function(){p.push.apply(p,arguments);};" +
           "with(obj){p.push('" +
@@ -278,9 +279,8 @@
             .split("?!").join("p.push('")
           + "');}return p.join('');";
 
-        //alert(strFunc);
         func = new Function("obj", strFunc);
-        _tmplCache[str] = func;
+        _tmplCache[tmId] = func;
       }
       return $.trim(func(data));
     } catch (e) {
