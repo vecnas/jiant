@@ -53,6 +53,7 @@
  2.42.2: ajax auto parse fix for new Model and Collection
  2.42.3: reverse propagate fix for new Model
  2.43: pick(marker, threshold) - only exceeding threshold values are printed, if threshold is passed, returning true if threshold is exceeded
+ 2.44: few fixes related to prototypes refactoring
  */
 "use strict";
 (function(factory) {
@@ -217,7 +218,7 @@
       info((marker ? marker : "jiant.pick:") + " " + ms + "ms");
     }
     pickTime = now;
-    return ms >= threshold;
+    return ms >= threshold ? ms : 0;
   }
 
   function msieDom2Html(elem) {
@@ -1036,6 +1037,8 @@
         collectionFunctions = [],
         modelStorage = "jModelStorage",
         defaultsName = "jDefaults",
+        indexesSpec = [],
+        indexes = {},
         repoMode = spec[repoName] && $.isPlainObject(spec[repoName]),
         repoRoot = getRepo(spec),
         Model = function() {
@@ -1084,6 +1087,7 @@
     repoRoot.remove = function(obj) {
       var prevLen = storage.length;
       storage = $.grep(storage, function(value) {return value != obj});
+      removeIndexes(newObj);
       if (storage.length != prevLen) {
         obj[objectBus].trigger(evt("remove"), [obj]);
         obj[objectBus].trigger(evt(), [obj, "remove"]);
@@ -1107,6 +1111,7 @@
                 newObj = new Model();
             storage.push(newObj);
             newArr.push(newObj);
+            addIndexes(newObj);
             $.each(newItem, function(name, val) {
               if (isModelAccessor(newObj[name])) {
                 val = isModelAccessor(val) ? val.apply(item) : val;
@@ -1131,6 +1136,36 @@
     };
     repoRoot.add[objectBus] = specBus;
     assignOnOffHandlers(repoRoot.add, "add");
+
+    // ----------------------------------------------- indexes -----------------------------------------------
+
+    function indexPresent(arr) {
+      var present = false;
+      $.each(indexesSpec, function(i, index) {
+        present = true;
+        (index.length == arr.length) && $.each(index, function(j, elem) {
+          present = (present && (elem == arr[j]));
+        });
+        return !present;
+      });
+      return present;
+    }
+
+    function addIndexes(obj) {
+      //$.each(indexesSpec, function(i, index) {
+      //  var node = indexes;
+      //  $.each(index, function(j, name) {
+      //    node[name] = node[name] || {};
+      //    node = node[name];
+      //  });
+      //  node.content = node.content || [];
+      //  node.content.push(obj);
+      //});
+      //jiant.logInfo(indexes);
+    }
+
+    function removeIndexes(obj) {
+    }
 
     // ----------------------------------------------- all -----------------------------------------------
 
@@ -1328,39 +1363,41 @@
         }
       } else if (fname.indexOf("findBy") == 0 && fname.length > 6 && isUpperCaseChar(fname, 6) && !objMode) {
         var arr = fname.substring(6).split("And");
+        $.each(arr, function(idx, name) {arr[idx] = name.substring(0, 1).toLowerCase() + name.substring(1)});
+        !indexPresent(arr) && indexesSpec.push(arr);
         repoRoot[fname] = function() {
           var retVal = storage,
             outerArgs = arguments;
-          function filter(arr, fieldName, val) {
+          function filter(arr, fieldName, val, idx) {
             return $.grep(arr, function(item) {
               if (! item[fieldName] || !$.isFunction(item[fieldName])) {
                 errorp("findBy argument is not setter or not a function, model: !!, method: !!, method part: !!", modelName, fname, fieldName);
               }
-              return val == undefined || item[fieldName]() == val;
+              return outerArgs.length < idx || item[fieldName]() === val;
             });
           }
-          $.each(arr, function(idx, name) {
-            var fieldName = name.substring(0, 1).toLowerCase() + name.substring(1);
-            retVal = filter(retVal, fieldName, outerArgs[idx]);
+          $.each(arr, function(idx, fieldName) {
+            retVal = filter(retVal, fieldName, outerArgs[idx], idx);
           });
           return retVal[0];
         }
       } else if (fname.indexOf("listBy") == 0 && fname.length > 6 && isUpperCaseChar(fname, 6) && !objMode) {
         var arr = fname.substring(6).split("And");
+        $.each(arr, function(idx, name) {arr[idx] = name.substring(0, 1).toLowerCase() + name.substring(1)});
+        !indexPresent(arr) && indexesSpec.push(arr);
         repoRoot[fname] = function() {
           var retVal = storage,
             outerArgs = arguments;
-          function filter(arr, fieldName, val) {
+          function filter(arr, fieldName, val, idx) {
             return $.grep(arr, function(item) {
               if (! item[fieldName] || !$.isFunction(item[fieldName])) {
                 errorp("listBy argument is not setter or not a function, model: !!, method: !!, method part: !!", modelName, fname, fieldName);
               }
-              return val == undefined || item[fieldName]() == val;
+              return outerArgs.length < idx || item[fieldName]() === val;
             });
           }
-          $.each(arr, function(idx, name) {
-            var fieldName = name.substring(0, 1).toLowerCase() + name.substring(1);
-            retVal = filter(retVal, fieldName, outerArgs[idx]);
+          $.each(arr, function(idx, fieldName) {
+            retVal = filter(retVal, fieldName, outerArgs[idx], idx);
           });
           return new Collection(retVal);
         }
@@ -1458,7 +1495,7 @@
         //}
         //assignOnOffHandlers(); // spec[fname], specBus, fname
       } else if (isEventHandlerName(fname)) {
-      } else if (fname != modelStorage && fname != objectBus) {
+      } else if (fname != modelStorage && fname != objectBus && $.isFunction(funcSpec)) {
         collectionFunctions.push(fname);
         spec[fname] = proxy(fname);
         Model.prototype[fname] = funcSpec;
@@ -2820,7 +2857,7 @@
   }
 
   function version() {
-    return 243;
+    return 244;
   }
 
   function Jiant() {}
