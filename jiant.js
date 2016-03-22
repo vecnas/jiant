@@ -56,6 +56,7 @@
  2.44: few fixes related to prototypes refactoring
  2.45: findBy / listBy indexing
  2.45.1: template cache added
+ 2.46: error log reporting on wrong field names for findBy, listBy
  */
 "use strict";
 (function(factory) {
@@ -215,7 +216,7 @@
 
   function pick(marker, threshold) {
     var now = new Date().getTime(),
-        ms = now - pickTime;
+      ms = now - pickTime;
     threshold = threshold || -1;
     if (pickTime && ms >= threshold) {
       info((marker ? marker : "jiant.pick:") + " " + ms + "ms");
@@ -802,11 +803,11 @@
       subscribe4updates = (subscribe4updates === undefined) ? true : subscribe4updates;
       $.each(map, function (key, elem) {
         var fnKey = "_j" + key,
-            actualKey = (mapping && mapping[key]) ? mapping[key] : key,
-            val = data[actualKey],
-            oldData,
-            handler,
-            elemType = viewOrTm._jiantSpec[key];
+          actualKey = (mapping && mapping[key]) ? mapping[key] : key,
+          val = data[actualKey],
+          oldData,
+          handler,
+          elemType = viewOrTm._jiantSpec[key];
         if (spec[key].customRenderer || (data && val !== undefined && val !== null && !isServiceName(key))) {
           elem = viewOrTm[key];
           var actualVal = $.isFunction(val) ? val.apply(data) : val;
@@ -1035,29 +1036,29 @@
 
   function bindModel(modelName, spec, appId) {
     var storage = [],
-        collectionFunctions = [],
-        modelStorage = "jModelStorage",
-        reverseIndexes = "jReverseIndexes",
-        defaultsName = "jDefaults",
-        indexesSpec = [],
-        indexes = {},
-        repoMode = spec[repoName] && $.isPlainObject(spec[repoName]),
-        repoRoot = getRepo(spec),
-        Model = function() {
-          this[modelStorage] = {};
-          this[objectBus] = $({});
-          this[reverseIndexes] = [];
-        },
-        Collection = function(data) {
-          if (data) {
-            var that = this;
-            $.each(data, function(idx, obj) {that.push(obj)});
-          }
-        },
-        specBus = $({}),
-        singleton = new Model(),
-        objFunctions = ["on", "off", "update", "reset", "remove", "asMap"],
-        repoFunctions = ["updateAll", "add", "all", "remove"];
+      collectionFunctions = [],
+      modelStorage = "jModelStorage",
+      reverseIndexes = "jReverseIndexes",
+      defaultsName = "jDefaults",
+      indexesSpec = [],
+      indexes = {},
+      repoMode = spec[repoName] && $.isPlainObject(spec[repoName]),
+      repoRoot = getRepo(spec),
+      Model = function() {
+        this[modelStorage] = {};
+        this[objectBus] = $({});
+        this[reverseIndexes] = [];
+      },
+      Collection = function(data) {
+        if (data) {
+          var that = this;
+          $.each(data, function(idx, obj) {that.push(obj)});
+        }
+      },
+      specBus = $({}),
+      singleton = new Model(),
+      objFunctions = ["on", "off", "update", "reset", "remove", "asMap"],
+      repoFunctions = ["updateAll", "add", "all", "remove"];
     if (jiant.DEV_MODE && !spec[repoName]) {
       jiant.infop("App !!, model !! uses deprecated model repository format, switch to new, with model.jRepo = {} section", appId, modelName);
     }
@@ -1119,7 +1120,7 @@
         if (arr.length != 0) {
           $.each(arr, function(idx, item) {
             var newItem = $.extend({}, spec[defaultsName], item),
-                newObj = new Model();
+              newObj = new Model();
             storage.push(newObj);
             newArr.push(newObj);
             $.each(newItem, function(name, val) {
@@ -1276,12 +1277,12 @@
       };
       obj.asap = function(field, cb) {
         var bus = this[objectBus],
-            val = this[field]();
+          val = this[field]();
         if (val !== undefined) {
           cb && cb.apply(this, [this, val]);
         } else {
           var eventName = evt(field),
-              that = this;
+            that = this;
           bus[eventName] = (bus[eventName] || 0) + 1;
           bus.one(eventName, function () {
             bus[eventName]--;
@@ -1300,7 +1301,7 @@
           field = overrideField;
         }
         var bus = this[objectBus],
-            eventName = evt(field);
+          eventName = evt(field);
         var handler = function(evt) {
           var args = $.makeArray(arguments);
           args.splice(0, 1);
@@ -1346,8 +1347,8 @@
         spec[fname] = proxy(fname);
         Model.prototype[fname] = function(objFrom, treatMissingAsNulls) {
           var smthChanged = false,
-              toTrigger = {},
-              that = this;
+            toTrigger = {},
+            that = this;
           treatMissingAsNulls && $.each(this[modelStorage], function(key, val) {
             (key in objFrom) || (objFrom[key] = null);
           });
@@ -1402,13 +1403,18 @@
         }
       } else if (fname.indexOf("listBy") == 0 && fname.length > 6 && isUpperCaseChar(fname, 6) && !objMode) {
         var arr = fname.substring(6).split("And");
-        $.each(arr, function(idx, name) {arr[idx] = name.substring(0, 1).toLowerCase() + name.substring(1)});
+        $.each(arr, function(idx, name) {
+          arr[idx] = name.substring(0, 1).toLowerCase() + name.substring(1);
+          if (! spec[arr[idx]]) {
+            errorp("Non existing field used by model method !!, field name: !!, model name: !!, app id: !!", fname, arr[idx], modelName, appId);
+          }
+        });
         if (!indexPresent(arr)) {
           indexesSpec.push(arr);
         }
         repoRoot[fname] = function() {
           var node = indexes,
-              args = arguments;
+            args = arguments;
           $.each(arr, function(i, name) {
             var key = name + "=" + args[i];
             node = node[key];
@@ -1445,7 +1451,7 @@
         spec[fname] = proxy(fname);
         Model.prototype[fname] = function (mapping, deep) {
           var ret = {},
-              that = this;
+            that = this;
           function val2map(ret, val, actualKey) {
             if (isModel(val)) {
               ret[actualKey] = val.asMap(null, deep);
@@ -1464,7 +1470,7 @@
           }
           $.each(that, function(key) {
             var actualKey = (mapping && mapping[key]) ? mapping[key] : key,
-                fn = that[actualKey];
+              fn = that[actualKey];
             if (isModelAccessor(fn) || isModelSupplier(fn)) {
               var val = fn.apply(that);
               val2map(ret, val, actualKey, mapping);
@@ -2374,7 +2380,7 @@
         } else {
           jiant.logError("Application " + appId + ". Not loaded module " + mname
             + ". Possible error - wrong path or module name in js file doesn't match declared in app.modules section. Load initiated by "
-              + (moduleSpec.j_initiatedBy ? moduleSpec.j_initiatedBy : "appication"));
+            + (moduleSpec.j_initiatedBy ? moduleSpec.j_initiatedBy : "appication"));
         }
       });
       cb();
@@ -2392,11 +2398,11 @@
     }
     function parseDep(relpath, dep, moduleSpec) {
       var url = moduleSpec.path,
-          pos = url.lastIndexOf("/") + 1,
-          relurl = url.substring(0, pos) + relpath;
+        pos = url.lastIndexOf("/") + 1,
+        relurl = url.substring(0, pos) + relpath;
       (relurl.lastIndexOf("/") == relurl.length - 1) || (relurl+="/");
       var depObj = typeof dep === "string" ? {name: dep, path: relurl + dep} : dep,
-          depModule = parseObjModule(depObj.name, depObj, appId, modules2load.length);
+        depModule = parseObjModule(depObj.name, depObj, appId, modules2load.length);
       moduleSpec.j_after[depModule.name] = 1;
       depModule.order = Math.min(depModule.order, moduleSpec.order - 0.5);
       depModule.j_initiatedBy = moduleSpec.name;
@@ -2409,8 +2415,8 @@
       if (!modules[moduleName]) {
         loading[moduleName] = 1;
         var url = isCouldBePrefixed(moduleSpec.path)
-            ? ((appRoot.modulesPrefix || "") + moduleSpec.path + ".js?" + (appRoot.modulesSuffix || ""))
-            : moduleSpec.path;
+          ? ((appRoot.modulesPrefix || "") + moduleSpec.path + ".js?" + (appRoot.modulesSuffix || ""))
+          : moduleSpec.path;
         $.ajax({
           url: url,
           timeout: appRoot.modulesTimeout || 15000,
@@ -2420,7 +2426,7 @@
         }).done(function() {
           if (modules[moduleName]) {
             var deps = modules[moduleName].deps,
-                darr = modules[moduleName].parsedDeps = [];
+              darr = modules[moduleName].parsedDeps = [];
             deps && $.each(deps, function(i, dep) {
               if (typeof dep === "string") {
                 darr.push(parseDep("", dep, moduleSpec))
@@ -2874,7 +2880,7 @@
   }
 
   function version() {
-    return 245;
+    return 246;
   }
 
   function Jiant() {}
