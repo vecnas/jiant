@@ -58,6 +58,7 @@
  2.45.1: template cache added
  2.46: error log reporting on wrong field names for findBy, listBy
  2.46.1: fixed - remove call didn't removed indexes
+ 2.46.2: unsafe extension reported as info
  */
 "use strict";
 (function(factory) {
@@ -672,7 +673,7 @@
   function ensureSafeExtend(spec, jqObject) {
     $.each(spec, function(key, content) {
       if (jqObject[key]) {
-        jiant.logError("unsafe extension: " + key + " already defined in base jQuery, shouldn't be used, now overriding!");
+        jiant.info("unsafe extension: " + key + " already defined in base jQuery, shouldn't be used, now overriding!");
         jqObject[key] = undefined;
       }
     });
