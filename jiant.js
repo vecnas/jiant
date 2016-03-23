@@ -57,6 +57,7 @@
  2.45: findBy / listBy indexing
  2.45.1: template cache added
  2.46: error log reporting on wrong field names for findBy, listBy
+ 2.46.1: fixed - remove call didn't removed indexes
  */
 "use strict";
 (function(factory) {
@@ -1143,8 +1144,12 @@
             });
           }
           $.each(newArr, function(idx, item) {
-            item.on(function() {
-              updateIndexes(item);
+            item.on(function(model, action) {
+              if (action == "remove") {
+                removeIndexes(item);
+              } else {
+                updateIndexes(item);
+              }
             }); // any change, due to findBy synthetic fields
           });
         }
