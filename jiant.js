@@ -59,6 +59,7 @@
  2.46: error log reporting on wrong field names for findBy, listBy
  2.46.1: fixed - remove call didn't removed indexes
  2.46.2: unsafe extension reported as info
+ 2.47: intl logic scanDoc attribute, if set - scans document for data-nlabel attribute and translates them
  */
 "use strict";
 (function(factory) {
@@ -2075,7 +2076,8 @@
 
   function getParamNames(func) {
     var funcStr = func.toString();
-    return funcStr.slice(funcStr.indexOf('(') + 1, funcStr.indexOf(')')).match(/([^\s,]+)/g);
+    funcStr = funcStr.slice(funcStr.indexOf('(') + 1, funcStr.indexOf(')')).match(/([^\s,]+)/g);
+    return funcStr ? funcStr : [];
   }
 
   function getDeclaredName(obj) {
@@ -2281,6 +2283,14 @@
         }
       });
       intlRoot.implement(implSpec);
+      if (intlRoot.scanDoc) {
+        $("*[data-nlabel]").each(function(i, elem) {
+          elem = $(elem);
+          var key = elem.attr("data-nlabel"),
+              translation = intlRoot.t(key);
+          elem.html(translation);
+        });
+      }
     });
   }
 
@@ -2886,7 +2896,7 @@
   }
 
   function version() {
-    return 246;
+    return 247;
   }
 
   function Jiant() {}
