@@ -60,6 +60,7 @@
  2.46.1: fixed - remove call didn't removed indexes
  2.46.2: unsafe extension reported as info
  2.47: intl logic scanDoc attribute, if set - scans document for data-nlabel attribute and translates them
+ 2.47.1: reset fixed, treatMissingAsUndefined for update 2nd param instead of previous treatMissingAsNulls
  */
 "use strict";
 (function(factory) {
@@ -1352,12 +1353,12 @@
       } else if (fname == "update") {
         collectionFunctions.push(fname);
         spec[fname] = proxy(fname);
-        Model.prototype[fname] = function(objFrom, treatMissingAsNulls) {
+        Model.prototype[fname] = function(objFrom, treatMissingAsUndefined) {
           var smthChanged = false,
             toTrigger = {},
             that = this;
-          treatMissingAsNulls && $.each(this[modelStorage], function(key, val) {
-            (key in objFrom) || (objFrom[key] = null);
+          treatMissingAsUndefined && $.each(this[modelStorage], function(key, val) {
+            (key in objFrom) || (objFrom[key] = undefined);
           });
           $.each(objFrom, function(key, val) {
             if (isModelAccessor(that[key])) {
@@ -1449,8 +1450,9 @@
         collectionFunctions.push(fname);
         spec[fname] = proxy(fname);
         Model.prototype[fname] = function (val) {
+          var that = this;
           $.each(this, function(name, fn) {
-            isModelAccessor(fn) && fn(val, true);
+            isModelAccessor(fn) && that[name](val, true);
           });
         }
       } else if (fname == "asMap") {
