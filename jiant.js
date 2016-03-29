@@ -61,6 +61,7 @@
  2.46.2: unsafe extension reported as info
  2.47: intl logic scanDoc attribute, if set - scans document for data-nlabel attribute and translates them
  2.47.1: reset fixed, treatMissingAsUndefined for update 2nd param instead of previous treatMissingAsNulls
+ 2.48: repetitive bind application fixes - modules and models
  */
 "use strict";
 (function(factory) {
@@ -1487,7 +1488,7 @@
           });
           return ret;
         }
-      } else if (isEmptyFunction(funcSpec) && ! isEventHandlerName(fname)) {
+      } else if ((isModelAccessor(funcSpec) || isEmptyFunction(funcSpec)) && ! isEventHandlerName(fname)) {
         var trans = funcSpec === jiant.transientFn;
         collectionFunctions.push(fname);
         Model.prototype[fname] = function(val, forceEvent, dontFireUpdate, oldValOverride) {
@@ -2250,7 +2251,7 @@
   function _bindIntl(root, intl, appId) {
     if (intl) {
       if (root.logic.intl) {
-        jiant.logError("Both logic.intl and app.intl declared, skipping app.intl");
+        info("Both logic.intl and app.intl declared, skipping app.intl");
       } else {
         root.logic.intl = intl;
       }
@@ -2379,6 +2380,7 @@
       if (Object.keys(loading).length > 0) {
         return;
       }
+      appRoot.modulesSpec = appRoot.modules;
       appRoot.modules = {};
       var arr = [];
       $.each(modules2load, function(i, moduleSpec) {
@@ -2603,6 +2605,9 @@
       });
     }
     bindingCurrently[appId] = 1;
+    if (root.modulesSpec) {
+      root.modules = root.modulesSpec;
+    }
     _loadModules(root, root.modules, appId, function() {
       intlPresent && _bindIntl(root, root.intl, appId);
       // views after intl because of nlabel proxies
@@ -2898,7 +2903,7 @@
   }
 
   function version() {
-    return 247;
+    return 248;
   }
 
   function Jiant() {}
