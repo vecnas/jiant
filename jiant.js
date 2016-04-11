@@ -62,6 +62,7 @@
  2.47: intl logic scanDoc attribute, if set - scans document for data-nlabel attribute and translates them
  2.47.1: reset fixed, treatMissingAsUndefined for update 2nd param instead of previous treatMissingAsNulls
  2.48: repetitive bind application fixes - modules and models
+ 2.49: getStackTrace is public
  */
 "use strict";
 (function(factory) {
@@ -2928,6 +2929,7 @@
     bindView: bindView,
     loadLibs: loadLibs,
     goRoot: goRoot,
+    getStackTrace: getStackTrace,
     goState: function (params, preserveOmitted) {},
     onUiBound: onUiBound,
     onApp: onUiBound,
