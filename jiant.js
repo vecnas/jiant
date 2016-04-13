@@ -63,6 +63,7 @@
  2.47.1: reset fixed, treatMissingAsUndefined for update 2nd param instead of previous treatMissingAsNulls
  2.48: repetitive bind application fixes - modules and models
  2.49: getStackTrace is public
+ 2.49.1: jiant.showTrace() toggles logInfo to logError, for debug print simpler navigation
  */
 "use strict";
 (function(factory) {
@@ -132,6 +133,7 @@
     bindingsResult = true,
     errString,
     pickTime,
+    alwaysTrace = false,
     lastStates = {},
     lastEncodedStates = {},
     loadedLogics = {},
@@ -432,6 +434,9 @@
   }
 
   function print(method, args) {
+    if (alwaysTrace) {
+      method = "error";
+    }
     try {
       window.console && window.console[method] && $.each(args, function(idx, arg) {
         window.console[method](arg);
@@ -589,6 +594,10 @@
         }
       });
     }
+  }
+
+  function showTrace() {
+    alwaysTrace = true;
   }
 
   function getStackTrace() {
@@ -2904,7 +2913,7 @@
   }
 
   function version() {
-    return 248;
+    return 249;
   }
 
   function Jiant() {}
@@ -2930,6 +2939,7 @@
     loadLibs: loadLibs,
     goRoot: goRoot,
     getStackTrace: getStackTrace,
+    showTrace: showTrace,
     goState: function (params, preserveOmitted) {},
     onUiBound: onUiBound,
     onApp: onUiBound,
