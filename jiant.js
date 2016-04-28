@@ -64,6 +64,7 @@
  2.48: repetitive bind application fixes - modules and models
  2.49: getStackTrace is public
  2.49.1: jiant.showTrace() toggles logInfo to logError, for debug print simpler navigation
+ 2.49.2: modules loading - application has priority on module location, some possible errors logged into console
  */
 "use strict";
 (function(factory) {
@@ -2112,7 +2113,7 @@
     if ($.isArray(actual) || (actual && actual.jCollection)) {
       var compound = false;
       $.each(actual, function(i, obj) {
-        compound = compound || $.isPlainObject(obj) || obj.jModelName;
+        compound = compound || $.isPlainObject(obj) || (obj && obj.jModelName);
         return !compound;
       });
       $.each(actual, function(i, obj) {
@@ -2409,7 +2410,8 @@
           appRoot.modules[mname] = modules[mname].apply(this, args);
         } else {
           jiant.logError("Application " + appId + ". Not loaded module " + mname
-            + ". Possible error - wrong path or module name in js file doesn't match declared in app.modules section. Load initiated by "
+            + ". Possible error - wrong modules section, wrong path or module name in js file doesn't match declared " +
+              "in app.modules section. Load initiated by "
             + (moduleSpec.j_initiatedBy ? moduleSpec.j_initiatedBy : "appication"));
         }
       });
@@ -2442,7 +2444,11 @@
     }
     function loadModule(moduleSpec) {
       var moduleName = moduleSpec.name;
-      if (!modules[moduleName]) {
+      if (typeof moduleName != "string") {
+        logError("Wrong module declaration, possibly used array instead of object, moduleSpec:", moduleSpec);
+        return;
+      }
+      if (!modules[moduleName] && !loading[moduleName]) {
         loading[moduleName] = 1;
         var url = isCouldBePrefixed(moduleSpec.path)
           ? ((appRoot.modulesPrefix || "") + moduleSpec.path + ".js?" + (appRoot.modulesSuffix || ""))
@@ -2455,6 +2461,10 @@
           dataType: "script"
         }).done(function() {
           if (modules[moduleName]) {
+            if (typeof modules[moduleName].deps == "string") {
+              errorp("Dependencies for module should be array, not string, error in module: !!, module url: !!", moduleName, url);
+              modules[moduleName].deps = [modules[moduleName].deps];
+            }
             var deps = modules[moduleName].deps,
               darr = modules[moduleName].parsedDeps = [];
             deps && $.each(deps, function(i, dep) {
