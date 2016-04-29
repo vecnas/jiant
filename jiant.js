@@ -65,6 +65,7 @@
  2.49: getStackTrace is public
  2.49.1: jiant.showTrace() toggles logInfo to logError, for debug print simpler navigation
  2.49.2: modules loading - application has priority on module location, some possible errors logged into console
+ 2.49.3: custom renderer not called on remove event more
  */
 "use strict";
 (function(factory) {
@@ -838,6 +839,9 @@
               actualKey = null;
             }
             handler = data.on(actualKey, function(obj, newVal) {
+              if (arguments.length == 2 && newVal == "remove") {
+                return;
+              }
               getRenderer(spec[key], elemType)(data, elem, newVal, true, viewOrTm)
             });
             fn[fnKey] = [data, handler];
