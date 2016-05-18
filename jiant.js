@@ -66,6 +66,7 @@
  2.49.1: jiant.showTrace() toggles logInfo to logError, for debug print simpler navigation
  2.49.2: modules loading - application has priority on module location, some possible errors logged into console
  2.49.3: custom renderer not called on remove event more
+ 2.50: model.update() without args just fires update event, model method .subscribers([fieldName]) returns list of registered event handlers
  */
 "use strict";
 (function(factory) {
@@ -1334,19 +1335,29 @@
             evt.stopImmediatePropagation();
           }
         };
+        bus.handlers = bus.handlers || {};
+        bus.handlers[eventName] = bus.handlers[field] || [];
+        bus.handlers[eventName].push(cb);
         bus[eventName] = (bus[eventName] || 0) + 1;
         bus.on(eventName, handler);
         handler.off = function() {
           obj.off(handler);
         };
         handler.eventName = eventName;
+        handler.cb = cb;
         return handler;
       };
       obj.off = function(handler) {
         var bus = this[objectBus];
         bus[handler.eventName]--;
+        bus.handlers[handler.eventName].splice(bus.handlers[handler.eventName].indexOf(handler.cb), 1);
         return bus.off(handler.eventName, handler);
       };
+      obj.subscribers = function(field) {
+        var bus = this[objectBus],
+            eventName = evt(field);
+        return bus.handlers[eventName];
+      }
     }
 
     function bindFn(fnRoot, fname, funcSpec) {
@@ -1373,23 +1384,27 @@
           var smthChanged = false,
             toTrigger = {},
             that = this;
-          treatMissingAsUndefined && $.each(this[modelStorage], function(key, val) {
-            (key in objFrom) || (objFrom[key] = undefined);
-          });
-          $.each(objFrom, function(key, val) {
-            if (isModelAccessor(that[key])) {
-              val = $.isFunction(val) ? val() : val;
-              var oldVal = that[key]();
-              if (oldVal !== val) {
-                toTrigger[key] = oldVal;
-                that[key](val, false);
-                smthChanged = true;
+          if (arguments.length == 0) {
+            smthChanged = true;
+          } else {
+            treatMissingAsUndefined && $.each(this[modelStorage], function(key, val) {
+              (key in objFrom) || (objFrom[key] = undefined);
+            });
+            $.each(objFrom, function(key, val) {
+              if (isModelAccessor(that[key])) {
+                val = $.isFunction(val) ? val() : val;
+                var oldVal = that[key]();
+                if (oldVal !== val) {
+                  toTrigger[key] = oldVal;
+                  that[key](val, false);
+                  smthChanged = true;
+                }
               }
-            }
-          });
-          $.each(toTrigger, function(key, oldVal) {
-            that[key](that[key](), true, false, oldVal);
-          });
+            });
+            $.each(toTrigger, function(key, oldVal) {
+              that[key](that[key](), true, false, oldVal);
+            });
+          }
           if (smthChanged) {
             trigger(this[objectBus], fname, [this], [this, fname]);
             trigger(specBus, fname, [this], [this, fname]);
@@ -2927,7 +2942,7 @@
   }
 
   function version() {
-    return 249;
+    return 250;
   }
 
   function Jiant() {}
