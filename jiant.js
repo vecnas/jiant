@@ -67,6 +67,7 @@
  2.49.2: modules loading - application has priority on module location, some possible errors logged into console
  2.49.3: custom renderer not called on remove event more
  2.50: model.update() without args just fires update event, model method .subscribers([fieldName]) returns list of registered event handlers
+ 2.50.1: defaults, defined as function, properly called
  */
 "use strict";
 (function(factory) {
@@ -1145,6 +1146,9 @@
             storage.push(newObj);
             newArr.push(newObj);
             $.each(newItem, function(name, val) {
+              if (spec[defaultsName][name]) {
+                val = $.isFunction(val) ? val(newItem) : val;
+              }
               if (isModelAccessor(newObj[name])) {
                 val = isModelAccessor(val) ? val.apply(item) : val;
                 newObj[modelStorage][name] = val;
