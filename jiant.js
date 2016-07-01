@@ -69,6 +69,7 @@
  2.50: model.update() without args just fires update event, model method .subscribers([fieldName]) returns list of registered event handlers
  2.50.1: defaults, defined as function, properly called
  2.50.2: reverse binding for html elements enabled, could be used when change manually triggered by code
+ 2.50.3: html(undefined) uses "" for propagate value
  */
 "use strict";
 (function(factory) {
@@ -965,7 +966,7 @@
     } else if (tagName == "img") {
       elem.attr("src", val);
     } else {
-      elem.html(val);
+      elem.html(val === undefined ? "" : val);
     }
   }
 
