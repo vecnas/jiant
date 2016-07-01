@@ -68,6 +68,7 @@
  2.49.3: custom renderer not called on remove event more
  2.50: model.update() without args just fires update event, model method .subscribers([fieldName]) returns list of registered event handlers
  2.50.1: defaults, defined as function, properly called
+ 2.50.2: reverse binding for html elements enabled, could be used when change manually triggered by code
  */
 "use strict";
 (function(factory) {
@@ -872,9 +873,9 @@
                     val.call(data, elem.val());
                   } else if (tagName == "img") {
                     val.call(data, elem.attr("src"));
-                    // no html reverse binding because no actual event for changing html
-                    //} else {
-                    //  val(elem.html());
+                    // no actual event for changing html, manual 'change' trigger supported by this code
+                  } else {
+                    val.call(data, elem.html());
                   }
                 }
               }
