@@ -70,6 +70,7 @@
  2.50.1: defaults, defined as function, properly called
  2.50.2: reverse binding for html elements enabled, could be used when change manually triggered by code
  2.50.3: html(undefined) uses "" for propagate value
+ 2.50.4: firefox URI encode workaround (additional hash decode), %20 will be decoded into space in FF, since this
  */
 "use strict";
 (function(factory) {
@@ -2083,6 +2084,9 @@
   }
 
   function unpack(s) {
+    if (s.indexOf("%") >= 0 && navigator.userAgent.toLowerCase().indexOf('firefox') >= 0) {
+      s = decodeURI(s);
+    }
     s = s ? s.replace(reverseRegex, function(matched) {return reverseMap[matched];}) : "";
     if (s && s[0] == "{") {
       var retVal = {};
