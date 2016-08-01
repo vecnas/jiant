@@ -71,6 +71,7 @@
  2.50.2: reverse binding for html elements enabled, could be used when change manually triggered by code
  2.50.3: html(undefined) uses "" for propagate value
  2.50.4: firefox URI encode workaround (additional hash decode), %20 will be decoded into space in FF, since this
+ 2.51: .unpropagate fixed
  */
 "use strict";
 (function(factory) {
@@ -896,8 +897,8 @@
       $.each(map, function (key, elem) {
         var fnKey = "_j" + key;
         if (fn[fnKey]) {
-          var off = fn[fnKey][0];
-          off && off(fn[fnKey][1]);
+          var oldData = fn[fnKey][0];
+          oldData && oldData.off(fn[fnKey][1]);
           fn[fnKey][2] && elem.off && elem.off("change", fn[fnKey][2]);
         }
       });
@@ -2952,7 +2953,7 @@
   }
 
   function version() {
-    return 250;
+    return 251;
   }
 
   function Jiant() {}
