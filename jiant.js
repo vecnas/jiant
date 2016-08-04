@@ -72,6 +72,7 @@
  2.50.3: html(undefined) uses "" for propagate value
  2.50.4: firefox URI encode workaround (additional hash decode), %20 will be decoded into space in FF, since this
  2.51: .unpropagate fixed
+ 2.52: value="undefined" mapped to undefined for inputSet/inputSetAsString and radio, both forward and reverse bindings, lib load time reported
  */
 "use strict";
 (function(factory) {
@@ -857,23 +858,29 @@
               var tagName = elem[0].tagName.toLowerCase(),
                 tp = elem.attr("type"),
                 etype = viewOrTm._jiantSpec[key];
+              function convert(val) {
+                return val === "undefined" ? undefined : val;
+              }
               function elem2arr(elem) {
                 var arr = [];
-                $.each(elem, function (idx, item) {!!$(item).prop("checked") && arr.push($(item).val());});
+                $.each(elem, function (idx, item) {!!$(item).prop("checked") && arr.push(convert($(item).val()));});
                 return arr;
+              }
+              function joinOrUndef(arr) {
+                return arr.length == 0 || (arr.length == 1 && arr[0] === undefined) ? undefined : arr.join();
               }
               if (val && $.isFunction(val)) {
                 if (etype === jiant.inputSet) {
                   val.call(data, elem2arr(elem));
                 } else if (etype === jiant.inputSetAsString) {
-                  val.call(data, elem2arr(elem).join(","));
+                  val.call(data, joinOrUndef(elem2arr(elem)));
                 } else {
                   if (tagName == "input" && tp == "checkbox") {
                     val.call(data, !!elem.prop("checked"));
                   } else if (tagName == "input" && tp == "radio") {
-                    val.call(data, elem2arr(elem).join(","));
+                    val.call(data, joinOrUndef(elem2arr(elem)));
                   } else if (tagName in {"input": 1,  "select": 1, "textarea": 1}) {
-                    val.call(data, elem.val());
+                    val.call(data, elem.val()); // don't convert due to user may input "undefined" as string
                   } else if (tagName == "img") {
                     val.call(data, elem.attr("src"));
                     // no actual event for changing html, manual 'change' trigger supported by this code
@@ -935,7 +942,7 @@
     }
     $.each(elem, function(idx, item) {
       item = $(item);
-      var check = item.val() === val;
+      var check = item.val() == val + "";
       if (!check && $.isArray(val)) {
         $.each(val, function(i, subval) {
           if (subval + "" == item.val() + "") {
@@ -960,7 +967,7 @@
         elem.prop("checked", !!val);
       } else if (tp == "radio") {
         $.each(elem, function(idx, subelem) {
-          $(subelem).prop("checked", subelem.value == val);
+          $(subelem).prop("checked", subelem.value == (val + ""));
         });
       } else {
         (val == undefined || val == null) ? elem.val(val) : elem.val(val + "");
@@ -1729,9 +1736,11 @@
   }
 
   function declare(name, objOrUrlorFn) {
-    var lib = typeof objOrUrlorFn === "string";
+    var lib = typeof objOrUrlorFn === "string",
+        startedAt = new Date().getTime();
     function handle() {
-      lib && jiant.info("Loaded external library " + objOrUrlorFn);
+      var ms = new Date().getTime() - startedAt;
+      lib && jiant.infop("Loaded external library !! in !! ms", objOrUrlorFn, ms);
       externalDeclarations[name] = lib ? {} : objOrUrlorFn;
       $.each(awaitingDepends, function(appId, depList) {
         copyLogic(appId, name);
@@ -2953,7 +2962,7 @@
   }
 
   function version() {
-    return 251;
+    return 252;
   }
 
   function Jiant() {}
