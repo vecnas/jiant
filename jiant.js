@@ -73,6 +73,7 @@
  2.50.4: firefox URI encode workaround (additional hash decode), %20 will be decoded into space in FF, since this
  2.51: .unpropagate fixed
  2.52: value="undefined" mapped to undefined for inputSet/inputSetAsString and radio, both forward and reverse bindings, lib load time reported
+ 2.53: view/template component type could be specified as array: [jiant.label, jiant.optional], jiant.optional added for optionally presented elements
  */
 "use strict";
 (function(factory) {
@@ -620,7 +621,8 @@
   function _bindContent(appRoot, viewRoot, viewId, viewElem, prefix) {
     var typeSpec = {};
     viewRoot._jiantSpec = typeSpec;
-    $.each(viewRoot, function (componentId, componentContent) {
+    $.each(viewRoot, function (componentId, componentContentOrArr) {
+      var componentContent = getComponentType(componentContentOrArr);
       typeSpec[componentId] = componentContent;
       if (componentId in {appPrefix: 1, impl: 1, _jiantSpec: 1}) {
         //skip
@@ -636,12 +638,40 @@
         setupCssFlagsMarkers(viewRoot, componentId);
       } else {
         var uiElem = uiFactory.viewComponent(viewElem, viewId, prefix, componentId, componentContent);
-        ensureExists(prefix, appRoot.dirtyList, uiElem, prefix + viewId, prefix + componentId);
+        ensureExists(prefix, appRoot.dirtyList, uiElem, prefix + viewId, prefix + componentId, isFlagPresent(componentContentOrArr, jiant.optional));
         viewRoot[componentId] = uiElem;
         setupExtras(appRoot, uiElem, componentContent, viewId, componentId, viewRoot);
         //        logInfo("    bound UI for: " + componentId);
       }
     });
+  }
+
+  function getComponentType(tpOrArr) {
+    if (! $.isArray(tpOrArr)) {
+      return tpOrArr;
+    }
+    var tp;
+    $.each(tpOrArr, function(i, item) {
+      if (item !== jiant.optional) {
+        tp = item;
+        return false;
+      }
+    });
+    return tp;
+  }
+
+  function isFlagPresent(tpOrArr, flag) {
+    if (! $.isArray(tpOrArr)) {
+      return false;
+    }
+    var b = false;
+    $.each(tpOrArr, function(i, item) {
+      if (item === flag) {
+        b = true;
+        return false;
+      }
+    });
+    return b;
   }
 
   function setupLookup(viewRoot, componentId, viewElem, prefix) {
@@ -743,23 +773,26 @@
     });
   }
 
-  function ensureExists(appPrefix, dirtyList, obj, idName, className) {
+  function ensureExists(appPrefix, dirtyList, obj, idName, className, optional) {
     if (idName && dirtyList && ($.inArray(idName, dirtyList) >= 0
       || (appPrefix && $.inArray(idName.substring(appPrefix.length), dirtyList) >= 0))) {
       return true;
     }
     if (!obj || !obj.length) {
-      window.console && window.console.error
-      && (className ? jiant.logError("non existing object referred by class under object id '" + idName
-        + "', check stack trace for details, expected obj class: " + className) :
-        jiant.logError("non existing object referred by id, check stack trace for details, expected obj id: " + idName));
-      if (className) {
-        errString += "   ,    #" + idName + " ." + className;
+      if (optional) {
+        jiant.DEV_MODE && infop("optional element .!! not present under #!!, skipping, all is ok", className, idName);
+        return true;
       } else {
-        errString += ", #" + idName;
+        className ? errorp("non existing object referred by class under object id #!!, check stack trace for details, expected obj class: .!!", idName, className)
+            : errorp("non existing object referred by id, check stack trace for details, expected obj id: #!!", idName);
+        if (className) {
+          errString += ",    #" + idName + " ." + className;
+        } else {
+          errString += ", #" + idName;
+        }
+        bindingsResult = false;
+        return false;
       }
-      bindingsResult = false;
-      return false;
     }
     return true;
   }
@@ -1010,7 +1043,8 @@
         tm = appUiFactory.template(prefix, tmId, tmContent);
       root[tmId]._jiantSpec = {};
       root[tmId]._jiantType = jTypeTemplate;
-      $.each(tmContent, function (componentId, elemType) {
+      $.each(tmContent, function (componentId, elemTypeOrArr) {
+        var elemType = getComponentType(elemTypeOrArr);
         if (!(componentId in {appPrefix: 1, impl: 1, _jiantSpec: 1, _jiantType: 1})) {
           root[tmId]._jiantSpec[componentId] = elemType;
           if (elemType === jiant.lookup) {
@@ -1026,7 +1060,7 @@
             setupCssFlagsMarkers(tmContent, componentId);
           } else {
             var comp = appUiFactory.viewComponent(tm, tmId, prefix, componentId, elemType);
-            ensureExists(prefix, appRoot.dirtyList, comp, prefix + tmId, prefix + componentId);
+            ensureExists(prefix, appRoot.dirtyList, comp, prefix + tmId, prefix + componentId, isFlagPresent(elemTypeOrArr, jiant.optional));
             tmContent[componentId] = {};
           }
         }
@@ -1035,7 +1069,8 @@
       root[tmId].parseTemplate = function(data, subscribeForUpdates, reverseBind, mapping) {
         var retVal = $("<!-- -->" + parseTemplate(tm, data, tmId, mapping)); // add comment to force jQuery to read it as HTML fragment
         retVal._jiantSpec = root[tmId]._jiantSpec;
-        $.each(tmContent, function (elem, elemType) {
+        $.each(tmContent, function (elem, elemTypeOrArr) {
+          var elemType = getComponentType(elemTypeOrArr);
           if (elemType === jiant.lookup) {
             jiant.logInfo("    loookup element, no checks/bindings: " + elem);
             setupLookup(retVal, elem, retVal, prefix);
@@ -2961,8 +2996,12 @@
     }
   }
 
+  function optional(tp) {
+    return [optional, tp];
+  }
+
   function version() {
-    return 252;
+    return 253;
   }
 
   function Jiant() {}
@@ -3036,6 +3075,8 @@
 
     addListener: addListener,
     removeListener: removeListener,
+
+    optional: optional,
 
     collection: "jiant.collection",
     container: "jiant.container",
