@@ -1,79 +1,5 @@
 /*
- 2.15: absolute urls for modules support, repo/defaults names per model, not app (redone 2.14), via jiantDefaults or jiantRepo flag inside of section
- 2.15.1: minor fix for already loaded all modules
- 2.16: jiant.flags, jiant.refs for public reflection
- 2.16.1: states defaults/undefineds mix fix
- 2.16.2: warning about old model repo format
- 2.16.3: refs used as functions: model[jiant.refs.modelRepoRefName]() to avoid problems with $.extend
- 2.16.4: template data copy protection vs infinite recursion
- 2.17: jquery names intersection bug fix in models
- 2.18: supplier methods of model (starting with "return") results passed to ajax call, jiant.isModelSupplier and jiant.isModelAccessor for testing model fields
- 2.18.1: proper context for supplier call to support this.
- 2.18.2: no-repo error shown only for spec and as info
- 2.19: asMap(mapping, deep) - to iterate model recursively, jiant.isModel - to check is object model, jiant.packForState, jiant.unpackForState are public
- 2.20: defaults/repo renamed to jDefaults/jRepo for more uniqueness
- 2.21: asMap deep supports maps with models as values
- 2.21.1: internal minor reorganizations
- 2.21.2: better values mapping for inputSetAsString
- 2.21.3: defaults functions now use passed object as this
- 2.22: multiple UI elements could be bound to single jiant.pager declaration
- 2.23: added model field .onAndNow method, similar to asap, but subscribes for all field updates
- 2.24: restructure, amd compatible, anonymous model declared in amd environment
- 2.25: further amd integration, amdConfig could be passed as last parameter for bindUi call, modules used as array for require call
- 2.26: fixed non-singleton scenario, jiant.getApps() returns currently loaded applications
- 2.27: jiant.module means define, name ignored, modules usage in any way require amd, object modules declaration supported, loadApp() added
- 2.27.1: restructure code
- 2.28: modules could be set as arr of objects for folders structure: [{"shared": ["m0", "m1"]} is same as ["shared/m0", "shared/m1"]
- 2.28.1: jiant.registerCustomType("tp", function(elem, view, app) - custom type handler extra parameters
- 2.29: error in console if onUiBound(undefined) called, modules executed if function returned from define: function($, app, jiant)
- 2.30: removed loadApp, requirejs usage; modules returned to pre-2.24, other functionality remains, module dependencies not supported yet
- 2.31: module dependencies supported, jiant.module(name, deps, function($, app, moduleParams) {}), executed in given order, app.modulesTimeout sets timeout for script load
- 2.32: jiant.preUiBound(app, cb) added for pre-configuration of application
- 2.33: app(app), onApp(app, deps, cb), preApp(app, cb) shorter synonyms for UiBind, app accepts only parameter - app, other moved to application definition
- 2.33.1: jiant.preApp("*", cb) executed for all applications to be loaded
- 2.33.2: fixed notification about non-resolved depends, it appears in console after 5 seconds in dev mode
- 2.33.3: module load intitiated by fix
- 2.33.4: sub-dependency module double-path fix
- 2.34: transitive module deps load
- 2.35: jiant.check(bool, errMessage) - alerts error in debug mode, prints to error log always, devMode of bindUi ignored, should be set via jiant.DEV_MODE, default devMode false
- 2.36: jiant.intro.isTemplate(obj) - to check is given object jiant template
- 2.36.1: null implementation possible for logic function
- 2.36.2: model object update event not fired fixed
- 2.36.3: event bus proper .off
- 2.37: view/tm.off unbinds from model notifications if propagated - both direct and reverse
- 2.37.1: set from function check fix
- 2.37.2: module present in modules and dependencies - proper execution order fixed
- 2.38: state.replace new generated method, to replace state without keeping nav history
- 2.39: element types defined as strings, to enable $.extend(app, baseApp)
- 2.40: handler returned by model.field.on now contains .off method, hanlder.off() could be used
- 2.41: internal models implementation rewritten to prototypes inheritance, refs removed, modelObj.fld.on replaced by modelObj.on("fld", spec.fld.on still usable
- 2.41.1: debug print removed
- 2.42: collection functions optimization, handlers to fields attached as obj.fldName_on, obj.fldName_asap, obj.fldName_onAndNow, obj.fldName_off
- 2.42.1: suppliers on spec missing flag fixed
- 2.42.2: ajax auto parse fix for new Model and Collection
- 2.42.3: reverse propagate fix for new Model
- 2.43: pick(marker, threshold) - only exceeding threshold values are printed, if threshold is passed, returning true if threshold is exceeded
- 2.44: few fixes related to prototypes refactoring
- 2.45: findBy / listBy indexing
- 2.45.1: template cache added
- 2.46: error log reporting on wrong field names for findBy, listBy
- 2.46.1: fixed - remove call didn't removed indexes
- 2.46.2: unsafe extension reported as info
- 2.47: intl logic scanDoc attribute, if set - scans document for data-nlabel attribute and translates them
- 2.47.1: reset fixed, treatMissingAsUndefined for update 2nd param instead of previous treatMissingAsNulls
- 2.48: repetitive bind application fixes - modules and models
- 2.49: getStackTrace is public
- 2.49.1: jiant.showTrace() toggles logInfo to logError, for debug print simpler navigation
- 2.49.2: modules loading - application has priority on module location, some possible errors logged into console
- 2.49.3: custom renderer not called on remove event more
- 2.50: model.update() without args just fires update event, model method .subscribers([fieldName]) returns list of registered event handlers
- 2.50.1: defaults, defined as function, properly called
- 2.50.2: reverse binding for html elements enabled, could be used when change manually triggered by code
- 2.50.3: html(undefined) uses "" for propagate value
- 2.50.4: firefox URI encode workaround (additional hash decode), %20 will be decoded into space in FF, since this
- 2.51: .unpropagate fixed
- 2.52: value="undefined" mapped to undefined for inputSet/inputSetAsString and radio, both forward and reverse bindings, lib load time reported
- 2.53: view/template component type could be specified as array: [jiant.label, jiant.optional], jiant.optional added for optionally presented elements
+ 2.53.1: states .replace fixed to use defaults if specified
  */
 "use strict";
 (function(factory) {
@@ -1897,8 +1823,9 @@
       states[""] = {};
     }
     $.each(states, function(name, stateSpec) {
-      stateSpec.go = go(name, stateSpec.root, stateSpec, stateExternalBase, appId, true);
-      stateSpec.replace = go(name, stateSpec.root, stateSpec, stateExternalBase, appId, false);
+      var params = stateSpec.go ? getParamNames(stateSpec.go) : [];
+      stateSpec.go = go(name, stateSpec.root, stateSpec, stateExternalBase, appId, true, params);
+      stateSpec.replace = go(name, stateSpec.root, stateSpec, stateExternalBase, appId, false, params);
       stateSpec.start = function(cb) {
         var trace;
         $.each(listeners, function(i, l) {l.stateStartRegisterHandler && l.stateStartRegisterHandler(appRoot, name, stateSpec)});
@@ -1969,9 +1896,8 @@
     }
   }
 
-  function go(stateId, root, stateSpec, stateExternalBase, appId, assignMode) {
-    var defaults = stateSpec.jDefaults,
-      params = stateSpec.go ? getParamNames(stateSpec.go) : [];
+  function go(stateId, root, stateSpec, stateExternalBase, appId, assignMode, params) {
+    var defaults = stateSpec.jDefaults;
     return function() {
       var parsed = parseState(appId),
         prevState = parsed.now;
