@@ -1,5 +1,6 @@
 /*
  2.53.1: states .replace fixed to use defaults if specified
+ 2.54: model per field subscriptions added to collection functions, formatMoney(amount, grpDelim, decDelim, decimals) - more parameters
  */
 "use strict";
 (function(factory) {
@@ -113,19 +114,30 @@
     return ((num === 0 && val !== 0 && val !== "0") || isNaN(num)) ? null : new Date(num);
   }
 
-  function formatMoney(amount, grpDelim) {
+  function formatMoney(amount, grpDelim, decDelim, decimals) {
+    var total, num, ret;
     grpDelim = grpDelim !== undefined ? grpDelim : ",";
-    var num = parseInt(amount);
-    if (isNaN(num)) {
+    decDelim = decDelim !== undefined ? decDelim : '.';
+    amount = amount.toString().replace(/\s+/g, '');
+    num = (typeof decimals === 'undefined' || decimals === 0) ? Math.round(parseFloat(amount)) : num = amount.split('.');
+    if (isNaN(num) && !num[0]) {
       return "";
-    } else if (num == 0) {
-      return "0";
     }
-    var ret = "" + Math.abs(num);
+    if (num[1]) {
+      num[1] = Math.round((num[1])).toString().substring(0, decimals);
+      ret = "" + Math.abs(num[0]);
+    } else {
+      ret = "" + Math.abs(num);
+    }
     for (var idx = ret.length; idx > 0; idx -= 3) {
-      ret = ret.substring(0, idx) + (idx < ret.length ? grpDelim : "") + ret.substring(idx);
+      ret = ret.substring(0, idx) + (idx < ret.length ? "." : "") + ret.substring(idx);
     }
-    return (num < 0 ? "-" : "") + ret;
+    ret = ret.split('.');
+    total = ret.join(grpDelim);
+    if (!isNaN(num[1])) {
+      total += (decDelim + num[1]);
+    }
+    return total;
   }
 
   function formatDate(millis) {
@@ -1497,6 +1509,10 @@
       } else if ((isModelAccessor(funcSpec) || isEmptyFunction(funcSpec)) && ! isEventHandlerName(fname)) {
         var trans = funcSpec === jiant.transientFn;
         collectionFunctions.push(fname);
+        collectionFunctions.push(fname + "_on");
+        collectionFunctions.push(fname + "_off");
+        collectionFunctions.push(fname + "_asap");
+        collectionFunctions.push(fname + "_onAndNow");
         Model.prototype[fname] = function(val, forceEvent, dontFireUpdate, oldValOverride) {
           if (arguments.length != 0) {
             if (forceEvent || (this[modelStorage][fname] !== val && forceEvent !== false)) {
@@ -2927,7 +2943,7 @@
   }
 
   function version() {
-    return 253;
+    return 254;
   }
 
   function Jiant() {}
