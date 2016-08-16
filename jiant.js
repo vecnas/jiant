@@ -1,6 +1,7 @@
 /*
  2.53.1: states .replace fixed to use defaults if specified
  2.54: model per field subscriptions added to collection functions, formatMoney(amount, grpDelim, decDelim, decimals) - more parameters
+ 2.55: bindView already bound view fixed, proper call is jiant.bindView(app, "testView", app.views.testView, $(app.views.testView[0]));
  */
 "use strict";
 (function(factory) {
@@ -959,6 +960,14 @@
   }
 
   function bindView(appRoot, viewId, viewContent, view) {
+    if (viewContent._jiantSpec) {
+      var spec = viewContent._jiantSpec;
+      viewContent = {};
+      appRoot.views[viewId] = viewContent;
+      $.each(spec, function(key, val) {
+        viewContent[key] = val;
+      })
+    }
     var prefix = ("appPrefix" in viewContent) ? viewContent.appPrefix : appRoot.appPrefix ? appRoot.appPrefix : "",
       viewOk = ensureExists(prefix, appRoot.dirtyList, view, prefix + viewId);
     viewOk && _bindContent(appRoot, viewContent, viewId, view, prefix);
@@ -2943,7 +2952,7 @@
   }
 
   function version() {
-    return 254;
+    return 255;
   }
 
   function Jiant() {}
