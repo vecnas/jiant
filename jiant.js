@@ -1,7 +1,7 @@
 /*
  2.53.1: states .replace fixed to use defaults if specified
  2.54: model per field subscriptions added to collection functions, formatMoney(amount, grpDelim, decDelim, decimals) - more parameters
- 2.55: bindView already bound view fixed, proper call is jiant.bindView(app, "testView", app.views.testView, $(app.views.testView[0]));
+ 2.55: jiant.forget completely restores base app structure, cleaning anything added later
  */
 "use strict";
 (function(factory) {
@@ -80,6 +80,7 @@
     modules = {},
     eventBus = $({}),
     boundApps = {},
+    backupApps = {},
     bindingCurrently = {},
     pre = {},
     onInitAppActions = [],
@@ -960,14 +961,6 @@
   }
 
   function bindView(appRoot, viewId, viewContent, view) {
-    if (viewContent._jiantSpec) {
-      var spec = viewContent._jiantSpec;
-      viewContent = {};
-      appRoot.views[viewId] = viewContent;
-      $.each(spec, function(key, val) {
-        viewContent[key] = val;
-      })
-    }
     var prefix = ("appPrefix" in viewContent) ? viewContent.appPrefix : appRoot.appPrefix ? appRoot.appPrefix : "",
       viewOk = ensureExists(prefix, appRoot.dirtyList, view, prefix + viewId);
     viewOk && _bindContent(appRoot, viewContent, viewId, view, prefix);
@@ -2628,6 +2621,8 @@
       jiant.logError("Application '" + appId + "' already loaded, skipping multiple bind call");
       return;
     }
+    backupApps[appId] = {};
+    plainCopy(root, backupApps[appId]);
     maybeShort(root, "logic", "l");
     var intlPresent = maybeShort(root, "intl", "i");
     maybeShort(root, "views", "v");
@@ -2867,22 +2862,22 @@
 
   function forget(appOrId) {
     var appId = extractApplicationId(appOrId);
-    if (boundApps[appId]) {
-      boundApps[appId].views && $.each(boundApps[appId].views, function(v, vSpec) {
-        boundApps[appId].views[v] = vSpec._jiantSpec;
-      });
-      boundApps[appId].templates && $.each(boundApps[appId].templates, function(t, tSpec) {
-        boundApps[appId].templates[t] = tSpec._jiantSpec;
-      });
-      boundApps[appId].ajax && $.each(boundApps[appId].ajax, function(f, fSpec) {
-        boundApps[appId].ajax[f] = fSpec._jiantSpec;
-      });
-    }
+    boundApps[appId] && plainCopy(backupApps[appId], boundApps[appId]);
     boundApps[appId] && delete boundApps[appId];
     awaitingDepends[appId] && delete awaitingDepends[appId];
     loadedLogics[appId] && delete loadedLogics[appId];
     lastEncodedStates[appId] && delete lastEncodedStates[appId];
     lastStates[appId] && delete lastStates[appId];
+  }
+
+  function plainCopy(fromApp, toApp) {
+    if (! fromApp) {
+      return;
+    }
+    $.each(toApp, function(key, val) {
+      delete toApp[key];
+    });
+    $.extend(true, toApp, fromApp);
   }
 
   function getAwaitingDepends() {
