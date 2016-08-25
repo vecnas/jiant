@@ -4,6 +4,7 @@
  2.55: jiant.forget completely restores base app structure, cleaning anything added later
  2.56: shortenings added to app always, forget resets all modeles to undefined, events separated to bus per app
  2.56.1: dependency for embedded into main script modules properly handled
+ 2.56.2: jiant.visualize updated
  */
 "use strict";
 (function(factory) {
@@ -2915,15 +2916,19 @@
   }
 
   function visualize(appId) {
-    loadLibs(["https://cdn.rawgit.com/vecnas/jiant/master/graph.js"], function() {
-      appId || $.each(boundApps, function(key, val) {
-        appId = key;
-        return false;
-      });
-      onUiBound(appId, ["jiantVisualizer"], function($, app) {
-        app.logic.jiantVisualizer.visualize($, app);
-      });
-    }, true);
+    loadLibs(["https://rawgit.com/vecnas/jiant/master/arbor.js"], function() {
+      loadLibs(["https://rawgit.com/vecnas/jiant/master/arbor-tween.js"], function() {
+        loadLibs(["https://rawgit.com/vecnas/jiant/master/graph.js"], function() {
+          appId || $.each(boundApps, function(key, val) {
+            appId = key;
+            return false;
+          });
+          onUiBound(appId, ["jiantVisualizer"], function($, app) {
+            app.logic.jiantVisualizer.visualize($, app);
+          });
+        }, true)
+      })
+    })
   }
 
   function asObjArray(arr, name, idxName) {
