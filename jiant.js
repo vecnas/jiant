@@ -5,6 +5,7 @@
  2.56: shortenings added to app always, forget resets all modeles to undefined, events separated to bus per app
  2.56.1: dependency for embedded into main script modules properly handled
  2.56.2: jiant.visualize updated
+ 2.56.3: removed model cleanup on forget
  */
 "use strict";
 (function(factory) {
@@ -2877,10 +2878,6 @@
   function forget(appOrId) {
     var appId = extractApplicationId(appOrId),
         app = boundApps[appId];
-    app && $.each(app.models, function(i, m) {
-      m.reset(undefined);
-      getRepo(m).all().reset(undefined);
-    });
     app && plainCopy(backupApps[appId], app);
     app && delete boundApps[appId];
     awaitingDepends[appId] && delete awaitingDepends[appId];
