@@ -3,6 +3,7 @@
  2.54: model per field subscriptions added to collection functions, formatMoney(amount, grpDelim, decDelim, decimals) - more parameters
  2.55: jiant.forget completely restores base app structure, cleaning anything added later
  2.56: shortenings added to app always, forget resets all modeles to undefined, events separated to bus per app
+ 2.56.1: dependency for embedded into main script modules properly handled
  */
 "use strict";
 (function(factory) {
@@ -2462,54 +2463,61 @@
       loadModule(depModule);
       return depModule.name;
     }
+    function handleModuleDeps(moduleName, moduleSpec) {
+      if (typeof modules[moduleName].deps == "string") {
+        errorp("Dependencies for module should be array, not string, error in module: !!, module url: !!", moduleName, url);
+        modules[moduleName].deps = [modules[moduleName].deps];
+      }
+      var deps = modules[moduleName].deps,
+        darr = modules[moduleName].parsedDeps = [];
+      deps && $.each(deps, function(i, dep) {
+        if (typeof dep === "string") {
+          darr.push(parseDep("", dep, moduleSpec))
+        } else {
+          $.each(dep, function(path, arr) {
+            if (! $.isArray(arr)) {
+              arr = [arr];
+            }
+            $.each(arr, function(i, val) {
+              darr.push(parseDep(path, val, moduleSpec));
+            });
+          });
+        }
+      });
+    }
     function loadModule(moduleSpec) {
       var moduleName = moduleSpec.name;
       if (typeof moduleName != "string") {
         logError("Wrong module declaration, possibly used array instead of object, moduleSpec:", moduleSpec);
         return;
       }
-      if (!modules[moduleName] && !loading[moduleName]) {
-        loading[moduleName] = 1;
-        var url = isCouldBePrefixed(moduleSpec.path)
-          ? ((appRoot.modulesPrefix || "") + moduleSpec.path + ".js?" + (appRoot.modulesSuffix || ""))
-          : moduleSpec.path;
-        $.ajax({
-          url: url,
-          timeout: appRoot.modulesTimeout || 15000,
-          cache: true,
-          crossDomain: true,
-          dataType: "script"
-        }).done(function() {
-          if (modules[moduleName]) {
-            if (typeof modules[moduleName].deps == "string") {
-              errorp("Dependencies for module should be array, not string, error in module: !!, module url: !!", moduleName, url);
-              modules[moduleName].deps = [modules[moduleName].deps];
+      if (!loading[moduleName]) {
+        if (!modules[moduleName]) {
+          loading[moduleName] = 1;
+          var url = isCouldBePrefixed(moduleSpec.path)
+            ? ((appRoot.modulesPrefix || "") + moduleSpec.path + ".js?" + (appRoot.modulesSuffix || ""))
+            : moduleSpec.path;
+          $.ajax({
+            url: url,
+            timeout: appRoot.modulesTimeout || 15000,
+            cache: true,
+            crossDomain: true,
+            dataType: "script"
+          }).done(function() {
+            if (modules[moduleName]) {
+              handleModuleDeps(moduleName, moduleSpec);
             }
-            var deps = modules[moduleName].deps,
-              darr = modules[moduleName].parsedDeps = [];
-            deps && $.each(deps, function(i, dep) {
-              if (typeof dep === "string") {
-                darr.push(parseDep("", dep, moduleSpec))
-              } else {
-                $.each(dep, function(path, arr) {
-                  if (! $.isArray(arr)) {
-                    arr = [arr];
-                  }
-                  $.each(arr, function(i, val) {
-                    darr.push(parseDep(path, val, moduleSpec));
-                  });
-                });
-              }
-            });
-          }
-        }).fail(function() {
-          errorp("Application !!. Not loaded module !!", appId, moduleName);
-        }).always(function() {
-          if (loading[moduleName]) {
-            delete loading[moduleName];
-            cbIf0(moduleName);
-          }
-        });
+          }).fail(function() {
+            errorp("Application !!. Not loaded module !!", appId, moduleName);
+          }).always(function() {
+            if (loading[moduleName]) {
+              delete loading[moduleName];
+              cbIf0(moduleName);
+            }
+          });
+        } else {
+          handleModuleDeps(moduleName, moduleSpec);
+        }
       }
     }
     $.each(modules2load, function(i, moduleSpec) {
@@ -2574,6 +2582,7 @@
   }
 
   function module(name, deps, cb) {
+    jiant.logInfo("registering module " + name);
     if (arguments.length < 3) {
       cb = deps;
       deps = [];
