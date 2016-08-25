@@ -131,7 +131,7 @@ jiant.declare("jiantVisualizer", {
     "states" : "#23F",
     "events" : "#382",
     "ajax" : "#D66",
-    "modules": "#777",
+//    "modules": "#777",
     "models" : "#F39",
     "views" : "B59",
     "templates" : "#297",
