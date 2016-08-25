@@ -2,6 +2,7 @@
  2.53.1: states .replace fixed to use defaults if specified
  2.54: model per field subscriptions added to collection functions, formatMoney(amount, grpDelim, decDelim, decimals) - more parameters
  2.55: jiant.forget completely restores base app structure, cleaning anything added later
+ 2.56: shortenings added to app always, forget resets all modeles to undefined, events separated to bus per app
  */
 "use strict";
 (function(factory) {
@@ -79,6 +80,7 @@
     externalDeclarations = {},
     modules = {},
     eventBus = $({}),
+    perAppBus = {},
     boundApps = {},
     backupApps = {},
     bindingCurrently = {},
@@ -1802,7 +1804,7 @@
     $.each(events, function(name, spec) {
       events[name].listenersCount = 0;
       events[name].fire = function() {
-        eventBus.trigger(appId + name + ".event", arguments);
+        perAppBus[appId].trigger(name + ".event", arguments);
       };
       events[name].on = function (cb) {
         events[name].listenersCount++;
@@ -1811,12 +1813,12 @@
           args.splice(0, 1);
           cb && cb.apply(cb, args);
         };
-        eventBus.on(appId + name + ".event", handler);
+        perAppBus[appId].on(name + ".event", handler);
         return handler;
       };
       events[name].off = function (handler) {
         events[name].listenersCount--;
-        return eventBus.off(appId + name + ".event", handler);
+        return perAppBus[appId].off(name + ".event", handler);
       };
 
       $.each(listeners, function(i, l) {l.boundEvent && l.boundEvent(appRoot, events, name, events[name])});
@@ -2599,6 +2601,7 @@
 
   function maybeShort(root, full, shorten) {
     if (root[full]) {
+      root[shorten] || (root[shorten] = root[full]);
       return true;
     }
     if (root[shorten]) {
@@ -2660,6 +2663,7 @@
       _bindModels(root, root.models, appId);
       _bindLogic(root, root.logic, appId);
       jiant.DEV_MODE && !bindingsResult && alert("Some elements not bound to HTML properly, check console" + errString);
+      perAppBus[appId] = $({});
       boundApps[appId] = root;
       loadedLogics[appId] || (loadedLogics[appId] = {});
       $.each(externalDeclarations, function(name, impl) {
@@ -2861,13 +2865,19 @@
   }
 
   function forget(appOrId) {
-    var appId = extractApplicationId(appOrId);
-    boundApps[appId] && plainCopy(backupApps[appId], boundApps[appId]);
-    boundApps[appId] && delete boundApps[appId];
+    var appId = extractApplicationId(appOrId),
+        app = boundApps[appId];
+    app && $.each(app.models, function(i, m) {
+      m.reset(undefined);
+      getRepo(m).all().reset(undefined);
+    });
+    app && plainCopy(backupApps[appId], app);
+    app && delete boundApps[appId];
     awaitingDepends[appId] && delete awaitingDepends[appId];
     loadedLogics[appId] && delete loadedLogics[appId];
     lastEncodedStates[appId] && delete lastEncodedStates[appId];
     lastStates[appId] && delete lastStates[appId];
+    perAppBus[appId] && delete perAppBus[appId];
   }
 
   function plainCopy(fromApp, toApp) {
@@ -2947,7 +2957,7 @@
   }
 
   function version() {
-    return 255;
+    return 256;
   }
 
   function Jiant() {}
