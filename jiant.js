@@ -2880,12 +2880,12 @@
   function forget(appOrId, deep) {
     var appId = extractApplicationId(appOrId),
         app = boundApps[appId];
-    if (deep) {
+    if (app && deep) {
+      $.each(app.models, function(i, m) {
+          m.reset(undefined);
+          getRepo(m).all().remove();
+        });
       $.each(app.views, function (i, v) {
-        app && $.each(app.models, function(i, m) {
-            m.reset(undefined);
-            getRepo(m).all().remove();
-          });
         $.each(v._jiantSpec, function (name, spec) {
             if (jiant.cssFlag === spec) {
               v.removeClass(name);
