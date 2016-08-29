@@ -7,6 +7,7 @@
  2.56.2: jiant.visualize updated
  2.56.3: removed model cleanup on forget
  2.57: .forget(app, deep) - one more "deep" parameter, to reset models to undefined and to remove css marker/flag classes
+ 2.57.1: loadLibs forgets pseudo app
  */
 "use strict";
 (function(factory) {
@@ -1716,8 +1717,11 @@
       declare(pseudoName, url);
     });
     var pseudoAppName = "app" + new Date().getTime() + Math.random();
-    onUiBound(pseudoAppName, pseudoDeps, cb);
-    bindUi({id: pseudoAppName}, devMode);
+    onUiBound(pseudoAppName, pseudoDeps, function($, app) {
+      forget(pseudoAppName);
+      cb($);
+    });
+    app({id: pseudoAppName});
   }
 
   function declare(name, objOrUrlorFn) {
