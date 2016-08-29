@@ -6,6 +6,7 @@
  2.56.1: dependency for embedded into main script modules properly handled
  2.56.2: jiant.visualize updated
  2.56.3: removed model cleanup on forget
+ 2.57: .forget(app, deep) - one more "deep" parameter, to reset models to undefined and to remove css marker/flag classes
  */
 "use strict";
 (function(factory) {
@@ -2690,7 +2691,8 @@
         if (awaitingDepends[appId]) {
           $.each(awaitingDepends[appId], function(key, arr) {
             if (arr && arr.length) {
-              logError("Some depends for application " + appId + " are not resolved", awaitingDepends[appId]);
+              errorp("Some logic depends for application " + appId + " are not implemented by your code, logic name: ", key);
+              logError(awaitingDepends[appId]);
               return false;
             }
           })
@@ -2875,9 +2877,26 @@
     }
   }
 
-  function forget(appOrId) {
+  function forget(appOrId, deep) {
     var appId = extractApplicationId(appOrId),
         app = boundApps[appId];
+    if (deep) {
+      $.each(app.views, function (i, v) {
+        app && $.each(app.models, function(i, m) {
+            m.reset(undefined);
+            getRepo(m).all().remove();
+          });
+        $.each(v._jiantSpec, function (name, spec) {
+            if (jiant.cssFlag === spec) {
+              v.removeClass(name);
+            } else if (jiant.cssMarker === spec) {
+              v.removeClass($.grep(v.attr('class').split(' '), function (c) {
+                return c.substr(0, name.length + 1) === (name + "_");
+              }).join(' '))
+            }
+          });
+      });
+    }
     app && plainCopy(backupApps[appId], app);
     app && delete boundApps[appId];
     awaitingDepends[appId] && delete awaitingDepends[appId];
@@ -2968,7 +2987,7 @@
   }
 
   function version() {
-    return 256;
+    return 257;
   }
 
   function Jiant() {}
