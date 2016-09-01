@@ -14,6 +14,7 @@
  2.60.1: .js also added to remote url path
  2.60.2: default lib load timeout increased from 500 to 5000 ms
  2.60.3: extra logging removed
+ 2.61: proper order of js/css/html loading in frames of same module
  */
 "use strict";
 (function(factory) {
@@ -2551,30 +2552,31 @@
   }
 
   function executeExternal(appRoot, cb, arr, idx, module) {
-    module.cssLoaded && $.each(module.cssLoaded, function(url, css) {
+    module.css && $.each(module.css, function(i, url) {
       if (addedLibs[url]) {
         return;
       }
       addedLibs[url] = 1;
-      css = css + "\r\n/*# sourceURL=" + url + " */\r\n";
+      var css = module.cssLoaded[url] + "\r\n/*# sourceURL=" + url + " */\r\n";
       $("<style>").html(css).appendTo("head");
     });
-    module.htmlLoaded && $.each(module.htmlLoaded, function(url, html) {
+    module.html && $.each(module.html, function(i, url) {
       if (addedLibs[url]) {
         return;
       }
       addedLibs[url] = 1;
-      html = "<!-- sourceUrl = " + url + " -->" + html + "<!-- end of source from " + url + " -->";
+      var html = module.htmlLoaded[url] + "<!-- sourceUrl = " + url + " -->" + html + "<!-- end of source from " + url + " -->";
       var injectionPoint = !module.injectId ? $("body") :
           module.injectId.startsWith("#") ? $(module.injectId) : $("#" + module.injectId);
       $(html).appendTo(injectionPoint);
     });
-    module.jsLoaded && $.each(module.jsLoaded, function(url, js) {
+    // jiant.logInfo("!!!", module, addedLibs);
+    module.js && $.each(module.js, function(i, url) {
       if (addedLibs[url]) {
         return;
       }
       addedLibs[url] = 1;
-      js = js + "\r\n//# sourceURL=" + url + " \r\n";
+      var js = module.jsLoaded[url] + "\r\n//# sourceURL=" + url + " \r\n";
       $("<script>").html(js).appendTo("body");
     });
     executeModule(appRoot, cb, arr, idx + 1);
@@ -3250,7 +3252,7 @@
   }
 
   function version() {
-    return 260;
+    return 261;
   }
 
   function Jiant() {}
