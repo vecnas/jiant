@@ -15,6 +15,7 @@
  2.60.2: default lib load timeout increased from 500 to 5000 ms
  2.60.3: extra logging removed
  2.61: proper order of js/css/html loading in frames of same module
+ 2.61.1: proper loaded js eval
  */
 "use strict";
 (function(factory) {
@@ -2570,14 +2571,13 @@
           module.injectId.startsWith("#") ? $(module.injectId) : $("#" + module.injectId);
       $(html).appendTo(injectionPoint);
     });
-    // jiant.logInfo("!!!", module, addedLibs);
     module.js && $.each(module.js, function(i, url) {
       if (addedLibs[url]) {
         return;
       }
       addedLibs[url] = 1;
       var js = module.jsLoaded[url] + "\r\n//# sourceURL=" + url + " \r\n";
-      $("<script>").html(js).appendTo("body");
+      $.globalEval(js);
     });
     executeModule(appRoot, cb, arr, idx + 1);
   }
