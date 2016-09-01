@@ -10,6 +10,7 @@
  2.57.1: loadLibs forgets pseudo app
  2.58: jiant.loadCss(arrOrUrl, cb) loads css into document
  2.59: jiant.loadModule(app, moduleSpec) loads module into specified application
+ 2.60: module(name, {js: ..., css: ..., html: ..., injectId: ...}) supported for external components loading
  */
 "use strict";
 (function(factory) {
@@ -83,6 +84,10 @@
     lastStates = {},
     lastEncodedStates = {},
     loadedLogics = {},
+    addedLibs = {},
+    loadedLibs = {},
+    loadingLibs = {},
+    moduleLoads = [],
     awaitingDepends = {},
     externalDeclarations = {},
     modules = {},
@@ -1720,8 +1725,8 @@
     });
     var pseudoAppName = "app" + new Date().getTime() + Math.random();
     onUiBound(pseudoAppName, pseudoDeps, function($, app) {
-      forget(pseudoAppName);
       cb($);
+      forget(pseudoAppName);
     });
     app({id: pseudoAppName});
   }
@@ -1740,23 +1745,24 @@
         checkForExternalAwaiters(appId, name);
       });
     }
-    lib && jiant.info("Start loading external library " + objOrUrlorFn);
+    lib && info("Start loading external library " + objOrUrlorFn);
     lib ? $.ajax({
       url: objOrUrlorFn,
       cache: true,
       crossDomain: true,
-      dataType: "script",
-      success: handle
-    }) : handle();
+      timeout: 500,
+      dataType: "script"
+    }).always(handle) : handle();
   }
 
   function copyLogic(appId, name) {
-    var obj = externalDeclarations[name];
-    if (obj && awaitingDepends[appId] && awaitingDepends[appId][name] && boundApps[appId]) {
-      boundApps[appId].logic || (boundApps[appId].logic = {});
-      boundApps[appId].logic[name] || (boundApps[appId].logic[name] = {});
-      $.each($.isFunction(obj) ? obj($, boundApps[appId]) : obj, function(fname, fspec) {
-        boundApps[appId].logic[name][fname] = fspec;
+    var obj = externalDeclarations[name],
+        app = boundApps[appId];
+    if (obj && awaitingDepends[appId] && awaitingDepends[appId][name] && app) {
+      app.logic || (app.logic = {});
+      app.logic[name] || (app.logic[name] = {});
+      $.each($.isFunction(obj) ? obj($, app) : obj, function(fname, fspec) {
+        app.logic[name][fname] = fspec;
       });
     }
   }
@@ -1764,7 +1770,7 @@
   function checkForExternalAwaiters(appId, name) {
     if (externalDeclarations[name] && awaitingDepends[appId][name] && boundApps[appId]) {
       awakeAwaitingDepends(appId, name);
-      loadedLogics[appId][name] = 1;
+      loadedLogics[appId] && (loadedLogics[appId][name] = 1);
       logUnboundCount(appId, name);
     }
   }
@@ -1799,8 +1805,8 @@
       arr = [arr];
     }
     $.each(arr, function (idx, url) {
-      jiant.info("Start loading CSS: " + url);
-      loadedCss.push(handle(url));
+      info("Start loading CSS: " + url);
+      loadedCss.push(handleCss(url));
     });
 
     if (all_loaded.state() != 'resolved') {
@@ -1809,7 +1815,6 @@
         all_loaded.resolve();
       });
     }
-    jiant.info("All CSS files loaded");
 
     if (cb) {
       // Perform JS
@@ -1818,7 +1823,7 @@
       return loadedCss;
     }
 
-    function handle(url) {
+    function handleCss(url) {
       var promise = $.Deferred();
       // IE 8 & 9 it is best to use 'onload'. style[0].sheet.cssRules has problems.
       if (navigator.appVersion.indexOf("MSIE") != -1) {
@@ -2507,7 +2512,7 @@
     return jiant.getApps()[extractApplicationId(app)];
   }
 
-  // loadModule before .app puts module into list of app modules
+  // loadModule before .app puts module into list of app modules, cb ignored
   // loadModule during .app executes module immediately
   // loadModule after .app executes module immediately
   function loadModule(app, module, cb) {
@@ -2542,9 +2547,84 @@
     }
   }
 
-  function cbIf0(appRoot, appId, modules2load, initial, cb, loading) {
-    if (Object.keys(loading).length > 0) {
+  function executeExternal(appRoot, cb, arr, idx, module) {
+    module.cssLoaded && $.each(module.cssLoaded, function(url, css) {
+      if (addedLibs[url]) {
+        return;
+      }
+      addedLibs[url] = 1;
+      css = css + "\r\n/*# sourceURL=" + url + " */\r\n";
+      $("<style>").html(css).appendTo("head");
+    });
+    module.htmlLoaded && $.each(module.htmlLoaded, function(url, html) {
+      if (addedLibs[url]) {
+        return;
+      }
+      addedLibs[url] = 1;
+      html = "<!-- sourceUrl = " + url + " -->" + html + "<!-- end of source from " + url + " -->";
+      var injectionPoint = !module.injectId ? $("body") :
+          module.injectId.startsWith("#") ? $(module.injectId) : $("#" + module.injectId);
+      $(html).appendTo(injectionPoint);
+    });
+    module.jsLoaded && $.each(module.jsLoaded, function(url, js) {
+      if (addedLibs[url]) {
+        return;
+      }
+      addedLibs[url] = 1;
+      js = js + "\r\n//# sourceURL=" + url + " \r\n";
+      $("<script>").html(js).appendTo("body");
+    });
+    executeModule(appRoot, cb, arr, idx + 1);
+  }
+
+  function executeModule(appRoot, cb, arr, idx) {
+    if (idx >= arr.length) {
+      cb();
       return;
+    }
+    var moduleSpec = arr[idx],
+        mname = moduleSpec.name,
+        module = modules[mname];
+    if ($.isFunction(module)) {
+      var args = [$, appRoot, jiant, moduleSpec];
+      module.parsedDeps && $.each(module.parsedDeps, function(i, name) {
+        args.push(appRoot.modules[name]);
+      });
+      appRoot.modules[mname] = module.apply(this, args);
+      executeModule(appRoot, cb, arr, idx + 1);
+    } else if ($.isPlainObject(module)) {
+      logInfo("Ex M, skip");
+      executeExternal(appRoot, cb, arr, idx, module);
+    } else {
+      errorp("Application !!. Not loaded module !!. " +
+          "Possible error - wrong modules section, wrong path or module name in js file doesn't match declared " +
+          "in app.modules section. Load initiated by !!",
+          appRoot.id, mname, (moduleSpec.j_initiatedBy ? moduleSpec.j_initiatedBy : "appication"));
+      executeModule(appRoot, cb, arr, idx + 1);
+    }
+  }
+
+  function cbIf0() {
+    for (var i = 0; i < moduleLoads.length; i++) {
+      var load = moduleLoads[i];
+      if (cbLoadIf0(load.appRoot, load.modules2load, load.initial, load.cb, load.loading)) {
+        moduleLoads.splice(i, 1);
+        i--;
+      }
+    }
+  }
+
+  function cbLoadIf0(appRoot, modules2load, initial, cb, loading) {
+    if (Object.keys(loading).length > 0) {
+      return false;
+    }
+    for (var i in modules2load) {
+      var mName = modules2load[i].name,
+          m = modules[mName];
+      if (!m || m.cssCount || m.jsCount || m.htmlCount) {
+        logInfo(m);
+        return false;
+      }
     }
     if (initial) {
       appRoot.modulesSpec = appRoot.modules;
@@ -2557,37 +2637,24 @@
     arr.sort(function(a, b) {
       return nvl(a.order, 0) - nvl(b.order, 0);
     });
-    $.each(arr, function(i, moduleSpec) {
-      var mname = moduleSpec.name;
-      if ($.isFunction(modules[mname])) {
-        var args = [$, appRoot, jiant, moduleSpec];
-        modules[mname].parsedDeps && $.each(modules[mname].parsedDeps, function(i, name) {
-          args.push(appRoot.modules[name]);
-        });
-        appRoot.modules[mname] = modules[mname].apply(this, args);
-      } else {
-        jiant.logError("Application " + appId + ". Not loaded module " + mname
-          + ". Possible error - wrong modules section, wrong path or module name in js file doesn't match declared " +
-            "in app.modules section. Load initiated by "
-          + (moduleSpec.j_initiatedBy ? moduleSpec.j_initiatedBy : "appication"));
+    executeModule(appRoot, cb, arr, 0);
+    return true;
+  }
+
+  function addIfNeed(modules2load, depModule) {
+    var found = false;
+    $.each(modules2load, function(i, moduleSpec) {
+      if (moduleSpec.name == depModule.name) {
+        found = true;
+        moduleSpec.order = Math.min(moduleSpec.order, depModule.order);
+        return false;
       }
     });
-    cb();
+    !found && modules2load.push(depModule);
   }
 
   function _loadModule(appRoot, appId, modules2load, initial, cb, moduleSpec, loading) {
-    function addIfNeed(depModule) {
-      var found = false;
-      $.each(modules2load, function(i, moduleSpec) {
-        if (moduleSpec.name == depModule.name) {
-          found = true;
-          moduleSpec.order = Math.min(moduleSpec.order, depModule.order);
-          return false;
-        }
-      });
-      !found && modules2load.push(depModule);
-    }
-    function parseDep(relpath, dep, moduleSpec) {
+    function loadDep(relpath, dep, moduleSpec) {
       var url = moduleSpec.path,
         pos = url.lastIndexOf("/") + 1,
         relurl = url.substring(0, pos) + relpath;
@@ -2597,7 +2664,7 @@
       moduleSpec.j_after[depModule.name] = 1;
       depModule.order = Math.min(depModule.order, moduleSpec.order - 0.5);
       depModule.j_initiatedBy = moduleSpec.name;
-      addIfNeed(depModule);
+      addIfNeed(modules2load, depModule);
       _loadModule(appRoot, appId, modules2load, initial, cb, depModule, loading);
       return depModule.name;
     }
@@ -2610,14 +2677,14 @@
         darr = modules[moduleName].parsedDeps = [];
       deps && $.each(deps, function(i, dep) {
         if (typeof dep === "string") {
-          darr.push(parseDep("", dep, moduleSpec))
+          darr.push(loadDep("", dep, moduleSpec))
         } else {
           $.each(dep, function(path, arr) {
             if (! $.isArray(arr)) {
               arr = [arr];
             }
             $.each(arr, function(i, val) {
-              darr.push(parseDep(path, val, moduleSpec));
+              darr.push(loadDep(path, val, moduleSpec));
             });
           });
         }
@@ -2649,7 +2716,7 @@
         }).always(function() {
           if (loading[moduleName]) {
             delete loading[moduleName];
-            cbIf0(appRoot, appId, modules2load, initial, cb, loading);
+            cbIf0();
           }
         });
       } else {
@@ -2660,10 +2727,13 @@
 
   function loadModules(appRoot, appId, modules2load, initial, cb) {
     var loading = {};
+    moduleLoads.push({
+      appRoot: appRoot, modules2load: modules2load, initial: initial, cb: cb, loading: loading
+    });
     $.each(modules2load, function(i, moduleSpec) {
       _loadModule(appRoot, appId, modules2load, initial, cb, moduleSpec, loading);
     });
-    cbIf0(appRoot, appId, modules2load, initial, cb, loading);
+    cbIf0();
   }
 
   function parseArrayModules(root, appId) {
@@ -2721,8 +2791,57 @@
     return module;
   }
 
+  function loadPath(module, obj, path) {
+    if (obj[path]) {
+      if (! $.isArray(obj[path])) {
+        obj[path] = [obj[path]];
+      }
+      module[path + "Count"] = obj[path].length;
+      module[path + "Loaded"] = {};
+      $.each(obj[path], function(i, url) {
+        if (loadedLibs[url]) {
+          module[path + "Loaded"][url] = loadedLibs[url];
+          module[path + "Count"]--;
+          if (!module.cssCount && !module.jsCount && !module.htmlCount) {
+            cbIf0();
+          }
+        } else if (loadingLibs[url]) {
+          loadingLibs[url].push(function() {
+            module[path + "Loaded"][url] = loadedLibs[url];
+            module[path + "Count"]--;
+            if (!module.cssCount && !module.jsCount && !module.htmlCount) {
+              cbIf0();
+            }
+          })
+        } else {
+          loadingLibs[url] = [];
+          $.ajax({
+            url: url,
+            timeout: jiant.LIB_LOAD_TIMEOUT,
+            cache: true,
+            crossDomain: true,
+            dataType: "text"
+          }).done(function(data) {
+            module[path + "Loaded"][url] = data;
+            loadedLibs[url] = data;
+            var waiters = loadingLibs[url];
+            delete loadingLibs[url];
+            $.each(waiters, function(i, w) {
+              w();
+            });
+          }).always(function() {
+            // infop("loaded url !!", url);
+            module[path + "Count"]--;
+            if (!module.cssCount && !module.jsCount && !module.htmlCount) {
+              cbIf0();
+            }
+          });
+        }
+      });
+    }
+  }
+
   function module(name, deps, cb) {
-    jiant.logInfo("registering module " + name);
     if (arguments.length < 3) {
       cb = deps;
       deps = [];
@@ -2732,8 +2851,15 @@
       modules[nameOld] = modules[name];
       errorp("Module !! already defined, overriding, old module stored as !!", name, nameOld);
     }
+    info("registered module " + name);
     modules[name] = cb;
     modules[name].deps = deps;
+    if ($.isPlainObject(cb)) {
+      info("loading ex module " + name);
+      loadPath(modules[name], cb, "css");
+      loadPath(modules[name], cb, "js");
+      loadPath(modules[name], cb, "html");
+    }
   }
 
 // ------------ base staff ----------------
@@ -3124,7 +3250,7 @@
   }
 
   function version() {
-    return 259;
+    return 260;
   }
 
   function Jiant() {}
@@ -3134,6 +3260,7 @@
     AJAX_SUFFIX: "",
     DEV_MODE: false,
     PAGER_RADIUS: 6,
+    LIB_LOAD_TIMEOUT: 500,
     isMSIE: eval("/*@cc_on!@*/!1"),
     STATE_EXTERNAL_BASE: undefined,
     getAwaitingDepends: getAwaitingDepends, // for application debug purposes
