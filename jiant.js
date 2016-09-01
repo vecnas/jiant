@@ -11,6 +11,7 @@
  2.58: jiant.loadCss(arrOrUrl, cb) loads css into document
  2.59: jiant.loadModule(app, moduleSpec) loads module into specified application
  2.60: module(name, {js: ..., css: ..., html: ..., injectId: ...}) supported for external components loading
+ 2.60.1: .js also added to remote url path
  */
 "use strict";
 (function(factory) {
@@ -2699,8 +2700,9 @@
       if (!modules[moduleName]) {
         loading[moduleName] = 1;
         var url = isCouldBePrefixed(moduleSpec.path)
-          ? ((appRoot.modulesPrefix || "") + moduleSpec.path + ".js?" + (appRoot.modulesSuffix || ""))
+          ? ((appRoot.modulesPrefix || "") + moduleSpec.path)
           : moduleSpec.path;
+        url = url + ".js?" + (appRoot.modulesSuffix || "")
         $.ajax({
           url: url,
           timeout: appRoot.modulesTimeout || 15000,
