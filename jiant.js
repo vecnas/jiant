@@ -13,6 +13,7 @@
  2.60: module(name, {js: ..., css: ..., html: ..., injectId: ...}) supported for external components loading
  2.60.1: .js also added to remote url path
  2.60.2: default lib load timeout increased from 500 to 5000 ms
+ 2.60.3: extra logging removed
  */
 "use strict";
 (function(factory) {
@@ -2595,7 +2596,6 @@
       appRoot.modules[mname] = module.apply(this, args);
       executeModule(appRoot, cb, arr, idx + 1);
     } else if ($.isPlainObject(module)) {
-      logInfo("Ex M, skip");
       executeExternal(appRoot, cb, arr, idx, module);
     } else {
       errorp("Application !!. Not loaded module !!. " +
@@ -2624,7 +2624,6 @@
       var mName = modules2load[i].name,
           m = modules[mName];
       if (!m || m.cssCount || m.jsCount || m.htmlCount) {
-        logInfo(m);
         return false;
       }
     }
@@ -2833,7 +2832,6 @@
               w();
             });
           }).always(function() {
-            // infop("loaded url !!", url);
             module[path + "Count"]--;
             if (!module.cssCount && !module.jsCount && !module.htmlCount) {
               cbIf0();
@@ -2858,7 +2856,6 @@
     modules[name] = cb;
     modules[name].deps = deps;
     if ($.isPlainObject(cb)) {
-      info("loading ex module " + name);
       loadPath(modules[name], cb, "css");
       loadPath(modules[name], cb, "js");
       loadPath(modules[name], cb, "html");
