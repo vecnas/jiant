@@ -12,6 +12,7 @@
  2.59: jiant.loadModule(app, moduleSpec) loads module into specified application
  2.60: module(name, {js: ..., css: ..., html: ..., injectId: ...}) supported for external components loading
  2.60.1: .js also added to remote url path
+ 2.60.2: default lib load timeout increased from 500 to 5000 ms
  */
 "use strict";
 (function(factory) {
@@ -3262,7 +3263,7 @@
     AJAX_SUFFIX: "",
     DEV_MODE: false,
     PAGER_RADIUS: 6,
-    LIB_LOAD_TIMEOUT: 500,
+    LIB_LOAD_TIMEOUT: 5000,
     isMSIE: eval("/*@cc_on!@*/!1"),
     STATE_EXTERNAL_BASE: undefined,
     getAwaitingDepends: getAwaitingDepends, // for application debug purposes
