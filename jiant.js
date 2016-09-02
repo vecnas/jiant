@@ -2555,7 +2555,6 @@
   }
 
   function executeExternal(appRoot, cb, arr, idx, module) {
-    jiant.logInfo(module);
     module.css && $.each(module.css, function(i, url) {
       if (addedLibs[url]) {
         return;
@@ -2635,7 +2634,6 @@
       var mName = modules2load[i].name,
           m = modules[mName];
       if (!m || m.cssCount || m.jsCount || m.htmlCount) {
-        logInfo("continue", m);
         return false;
       }
     }
