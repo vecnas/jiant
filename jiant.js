@@ -18,6 +18,7 @@
  2.61.1: proper loaded js eval
  2.62: libs are loaded on module load, checks for missing libs on module execution
  2.62.1: module load info print in dev mode - by whom initiated
+ 2.62.2: jiant.loadModule accepts both string and array as module spec for load (2nd parameter)
  */
 "use strict";
 (function(factory) {
@@ -2523,19 +2524,22 @@
   // loadModule before .app puts module into list of app modules, cb ignored
   // loadModule during .app executes module immediately
   // loadModule after .app executes module immediately
-  function loadModule(app, module, cb) {
+  function loadModule(app, modules, cb) {
     var appId = extractApplicationId(app);
+    if (! $.isArray(modules)) {
+      modules = [modules];
+    }
     if (boundApps[appId]) { // after
-      _loadModules(boundApps[appId], [module], appId, false, cb);
+      _loadModules(boundApps[appId], modules, appId, false, cb);
     } else if (bindingCurrently[appId]) { // during
-      _loadModules(bindingCurrently[appId], [module], appId, false, cb);
+      _loadModules(bindingCurrently[appId], modules, appId, false, cb);
     } else { // before
       preApp(appId, function($, app) {
-        app.modules.push(module);
+        $.each(modules, function(i, m) {
+          app.modules.push(m);
+        });
       });
     }
-    // var boundApp = a(app);
-    // _loadModule(module);
   }
 
   function _loadModules(appRoot, root, appId, initial, cb) {
