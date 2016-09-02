@@ -19,6 +19,7 @@
  2.62: libs are loaded on module load, checks for missing libs on module execution
  2.62.1: module load info print in dev mode - by whom initiated
  2.62.2: jiant.loadModule accepts both string and array as module spec for load (2nd parameter)
+ 2.62.3: recursion fixed when called loadModule during app init
  */
 "use strict";
 (function(factory) {
@@ -2571,15 +2572,20 @@
       }
     });
     module.html && $.each(module.html, function(i, url) {
-      if (addedLibs[url]) {
-        return;
-      }
+      // if (addedLibs[url]) {
+      //   return;
+      // }
       addedLibs[url] = 1;
       if (module.htmlLoaded[url]) {
         var html = "<!-- sourceUrl = " + url + " -->" + module.htmlLoaded[url] + "<!-- end of source from " + url + " -->";
-        var injectionPoint = !module.injectId ? $("body") :
-            module.injectId.startsWith("#") ? $(module.injectId) : $("#" + module.injectId);
-        $(html).appendTo(injectionPoint);
+        var injectionPoint = module.injectId 
+            ? (module.injectId.startsWith("#") ? $(module.injectId) : $("#" + module.injectId))
+            : module.injectTo ? module.injectTo : $("body");
+        if (module.replace) {
+          injectionPoint.html(html);
+        } else {
+          injectionPoint.append($(html));
+        }
       }
     });
     module.js && $.each(module.js, function(i, url) {
@@ -2624,14 +2630,14 @@
   function cbIf0() {
     for (var i = 0; i < moduleLoads.length; i++) {
       var load = moduleLoads[i];
-      if (cbLoadIf0(load.appRoot, load.modules2load, load.initial, load.cb, load.loading)) {
-        moduleLoads.splice(i, 1);
-        i--;
+      if (cbLoadIf0(load.appRoot, load.modules2load, load.initial, load.cb, load.loading, i)) {
+        cbIf0();
+        break;
       }
     }
   }
 
-  function cbLoadIf0(appRoot, modules2load, initial, cb, loading) {
+  function cbLoadIf0(appRoot, modules2load, initial, cb, loading, idx) {
     if (Object.keys(loading).length > 0) {
       return false;
     }
@@ -2642,6 +2648,7 @@
         return false;
       }
     }
+    moduleLoads.splice(idx, 1);
     if (initial) {
       appRoot.modulesSpec = appRoot.modules;
       appRoot.modules = {};
@@ -2655,7 +2662,7 @@
     });
     executeModule(appRoot, cb, arr, 0);
     return true;
-  }
+}
 
   function addIfNeed(modules2load, depModule) {
     var found = false;
