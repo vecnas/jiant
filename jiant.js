@@ -17,6 +17,7 @@
  2.61: proper order of js/css/html loading in frames of same module
  2.61.1: proper loaded js eval
  2.62: libs are loaded on module load, checks for missing libs on module execution
+ 2.62.1: module load info print in dev mode - by whom initiated
  */
 "use strict";
 (function(factory) {
@@ -2710,6 +2711,7 @@
       }
     }
     var moduleName = moduleSpec.name;
+    infop("Loading module !!, initiated by !!", moduleSpec.name, moduleSpec.j_initiatedBy ? moduleSpec.j_initiatedBy : "application");
     if (typeof moduleName != "string") {
       logError("Wrong module declaration, possibly used array instead of object, moduleSpec:", moduleSpec);
       return;
@@ -2719,6 +2721,7 @@
         loading[moduleName] = 1;
         var url = isCouldBePrefixed(moduleSpec.path) ? ((appRoot.modulesPrefix || "") + moduleSpec.path) : moduleSpec.path;
         url = url + ".js?" + (appRoot.modulesSuffix || "");
+        infop("           url: " + url);
         $.ajax({
           url: url,
           timeout: appRoot.modulesTimeout || 15000,
