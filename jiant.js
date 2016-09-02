@@ -16,6 +16,7 @@
  2.60.3: extra logging removed
  2.61: proper order of js/css/html loading in frames of same module
  2.61.1: proper loaded js eval
+ 2.62: libs are loaded on module load, checks for missing libs on module execution
  */
 "use strict";
 (function(factory) {
@@ -1705,7 +1706,7 @@
           logUnboundCount(appId, name);
         };
         if (name == "intl") {
-          loadIntl(spec);
+          loadIntl(spec, appRoot);
         }
       }
       $.each(listeners, function(i, l) {l.boundLogic && l.boundLogic(appRoot, logics, name, spec)});
@@ -2413,7 +2414,8 @@
     }
   }
 
-  function loadIntl(intlRoot) {
+  function loadIntl(intlRoot, appRoot) {
+    infop("Loading intl for app !!", appRoot.id);
     if (! intlRoot.url) {
       //error("Intl data url not provided, internationalization will not be loaded");
       return;
@@ -2553,31 +2555,38 @@
   }
 
   function executeExternal(appRoot, cb, arr, idx, module) {
+    jiant.logInfo(module);
     module.css && $.each(module.css, function(i, url) {
       if (addedLibs[url]) {
         return;
       }
       addedLibs[url] = 1;
-      var css = module.cssLoaded[url] + "\r\n/*# sourceURL=" + url + " */\r\n";
-      $("<style>").html(css).appendTo("head");
+      if (module.cssLoaded[url]) {
+        var css = module.cssLoaded[url] + "\r\n/*# sourceURL=" + url + " */\r\n";
+        $("<style>").html(css).appendTo("head");
+      }
     });
     module.html && $.each(module.html, function(i, url) {
       if (addedLibs[url]) {
         return;
       }
       addedLibs[url] = 1;
-      var html = module.htmlLoaded[url] + "<!-- sourceUrl = " + url + " -->" + html + "<!-- end of source from " + url + " -->";
-      var injectionPoint = !module.injectId ? $("body") :
-          module.injectId.startsWith("#") ? $(module.injectId) : $("#" + module.injectId);
-      $(html).appendTo(injectionPoint);
+      if (module.htmlLoaded[url]) {
+        var html = "<!-- sourceUrl = " + url + " -->" + module.htmlLoaded[url] + "<!-- end of source from " + url + " -->";
+        var injectionPoint = !module.injectId ? $("body") :
+            module.injectId.startsWith("#") ? $(module.injectId) : $("#" + module.injectId);
+        $(html).appendTo(injectionPoint);
+      }
     });
     module.js && $.each(module.js, function(i, url) {
       if (addedLibs[url]) {
         return;
       }
       addedLibs[url] = 1;
-      var js = module.jsLoaded[url] + "\r\n//# sourceURL=" + url + " \r\n";
-      $.globalEval(js);
+      if (module.jsLoaded[url]) {
+        var js = module.jsLoaded[url] + "\r\n//# sourceURL=" + url + " \r\n";
+        $.globalEval(js);
+      }
     });
     executeModule(appRoot, cb, arr, idx + 1);
   }
@@ -2626,6 +2635,7 @@
       var mName = modules2load[i].name,
           m = modules[mName];
       if (!m || m.cssCount || m.jsCount || m.htmlCount) {
+        logInfo("continue", m);
         return false;
       }
     }
@@ -2693,6 +2703,14 @@
         }
       });
     }
+    function preprocessLoadedModule(moduleSpec, moduleObj) {
+      handleModuleDeps(moduleSpec.name, moduleSpec);
+      if ($.isPlainObject(moduleObj)) {
+        loadPath(moduleObj, "css");
+        loadPath(moduleObj, "js");
+        loadPath(moduleObj, "html");
+      }
+    }
     var moduleName = moduleSpec.name;
     if (typeof moduleName != "string") {
       logError("Wrong module declaration, possibly used array instead of object, moduleSpec:", moduleSpec);
@@ -2701,10 +2719,8 @@
     if (!loading[moduleName]) {
       if (!modules[moduleName]) {
         loading[moduleName] = 1;
-        var url = isCouldBePrefixed(moduleSpec.path)
-          ? ((appRoot.modulesPrefix || "") + moduleSpec.path)
-          : moduleSpec.path;
-        url = url + ".js?" + (appRoot.modulesSuffix || "")
+        var url = isCouldBePrefixed(moduleSpec.path) ? ((appRoot.modulesPrefix || "") + moduleSpec.path) : moduleSpec.path;
+        url = url + ".js?" + (appRoot.modulesSuffix || "");
         $.ajax({
           url: url,
           timeout: appRoot.modulesTimeout || 15000,
@@ -2713,7 +2729,7 @@
           dataType: "script"
         }).done(function() {
           if (modules[moduleName]) {
-            handleModuleDeps(moduleName, moduleSpec);
+            preprocessLoadedModule(moduleSpec, modules[moduleName]);
           }
         }).fail(function() {
           errorp("Application !!. Not loaded module !!", appId, moduleName);
@@ -2724,7 +2740,7 @@
           }
         });
       } else {
-        handleModuleDeps(moduleName, moduleSpec);
+        preprocessLoadedModule(moduleSpec, modules[moduleName]);
       }
     }
   }
@@ -2795,14 +2811,14 @@
     return module;
   }
 
-  function loadPath(module, obj, path) {
-    if (obj[path]) {
-      if (! $.isArray(obj[path])) {
-        obj[path] = [obj[path]];
+  function loadPath(module, path) {
+    if (module[path]) {
+      if (! $.isArray(module[path])) {
+        module[path] = [module[path]];
       }
-      module[path + "Count"] = obj[path].length;
+      module[path + "Count"] = module[path + "Count"] ? (module[path + "Count"] + module[path].length) : module[path].length;
       module[path + "Loaded"] = {};
-      $.each(obj[path], function(i, url) {
+      $.each(module[path], function(i, url) {
         if (loadedLibs[url]) {
           module[path + "Loaded"][url] = loadedLibs[url];
           module[path + "Count"]--;
@@ -2857,11 +2873,6 @@
     info("registered module " + name);
     modules[name] = cb;
     modules[name].deps = deps;
-    if ($.isPlainObject(cb)) {
-      loadPath(modules[name], cb, "css");
-      loadPath(modules[name], cb, "js");
-      loadPath(modules[name], cb, "html");
-    }
   }
 
 // ------------ base staff ----------------
@@ -3252,7 +3263,7 @@
   }
 
   function version() {
-    return 261;
+    return 262;
   }
 
   function Jiant() {}
