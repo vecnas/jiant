@@ -20,6 +20,7 @@
  2.62.1: module load info print in dev mode - by whom initiated
  2.62.2: jiant.loadModule accepts both string and array as module spec for load (2nd parameter)
  2.62.3: recursion fixed when called loadModule during app init
+ 2.63: loadModule(app, modules, cb, injectTo, replace) - 2 more parameters, moved from jiant.module() declaration
  */
 "use strict";
 (function(factory) {
@@ -2525,15 +2526,15 @@
   // loadModule before .app puts module into list of app modules, cb ignored
   // loadModule during .app executes module immediately
   // loadModule after .app executes module immediately
-  function loadModule(app, modules, cb) {
+  function loadModule(app, modules, cb, injectTo, replace) {
     var appId = extractApplicationId(app);
     if (! $.isArray(modules)) {
       modules = [modules];
     }
     if (boundApps[appId]) { // after
-      _loadModules(boundApps[appId], modules, appId, false, cb);
+      _loadModules(boundApps[appId], modules, appId, false, cb, injectTo, replace);
     } else if (bindingCurrently[appId]) { // during
-      _loadModules(bindingCurrently[appId], modules, appId, false, cb);
+      _loadModules(bindingCurrently[appId], modules, appId, false, cb, injectTo, replace);
     } else { // before
       preApp(appId, function($, app) {
         $.each(modules, function(i, m) {
@@ -2543,8 +2544,9 @@
     }
   }
 
-  function _loadModules(appRoot, root, appId, initial, cb) {
-    var modules2load = [];
+  function _loadModules(appRoot, root, appId, initial, cb, injectTo, replace) {
+    var modules2load = [],
+        replaceProvided = arguments.length >= 7;
     cb = cb || function() {};
     if ($.isPlainObject(root)) {
       modules2load = parseObjectModules(root, appId);
@@ -2554,6 +2556,16 @@
       logError("Unrecognized modules type", root);
     }
     if (modules2load.length) {
+      if (injectTo) {
+        $.each(modules2load, function(i, m) {
+          m.injectTo = injectTo;
+        });
+      }
+      if (replaceProvided) {
+        $.each(modules2load, function(i, m) {
+          m.replace = replace;
+        });
+      }
       loadModules(appRoot, appId, modules2load, initial, cb);
     } else {
       cb();
@@ -2578,13 +2590,11 @@
       addedLibs[url] = 1;
       if (module.htmlLoaded[url]) {
         var html = "<!-- sourceUrl = " + url + " -->" + module.htmlLoaded[url] + "<!-- end of source from " + url + " -->";
-        var injectionPoint = module.injectId 
-            ? (module.injectId.startsWith("#") ? $(module.injectId) : $("#" + module.injectId))
-            : module.injectTo ? module.injectTo : $("body");
-        if (module.replace) {
-          injectionPoint.html(html);
+        var inj = arr[idx].injectTo ? $(arr[idx].injectTo) : $("body");
+        if (arr[idx].replace) {
+          inj.html(html);
         } else {
-          injectionPoint.append($(html));
+          inj.append($(html));
         }
       }
     });
@@ -3275,7 +3285,7 @@
   }
 
   function version() {
-    return 262;
+    return 263;
   }
 
   function Jiant() {}
