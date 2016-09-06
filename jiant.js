@@ -22,6 +22,7 @@
  2.62.3: recursion fixed when called loadModule during app init
  2.63: loadModule(app, modules, cb, injectTo, replace) - 2 more parameters, moved from jiant.module() declaration
  2.63.1: states - prev state vals applied before defaults
+ 2.63.2: goRoot(appOrId) accepts app or application id (was only id before)
  */
 "use strict";
 (function(factory) {
@@ -1724,7 +1725,7 @@
     $.each(listeners, function(i, l) {l.logicImplemented && l.logicImplemented(appId, name, len)});
   }
 
-  function loadLibs(arr, cb, devMode) {
+  function loadLibs(arr, cb) {
     var pseudoDeps = [];
     if (!$.isArray(arr)) {
       arr = [arr];
@@ -2108,7 +2109,7 @@
     && statesRoot[state0].statesGroup === statesRoot[state1].statesGroup);
   }
 
-  function goRoot(appId) {
+  function goRoot(appOrId) {
     function _go(appId) {
       var parsed = parseState(appId);
       parsed.now = [];
@@ -2118,10 +2119,14 @@
       });
       setState(parsed, undefined, appId, true); // external base not used
     }
-    appId && _go(appId);
-    !appId && $.each(getStates(), function(appId, state) {
+    if (appOrId) {
+      var appId = extractApplicationId(appOrId);
       _go(appId);
-    });
+    } else {
+      $.each(getStates(), function(appId, state) {
+        _go(appId);
+      });
+    }
   }
 
   function setState(parsed, stateExternalBase, appId, assignMode) {
