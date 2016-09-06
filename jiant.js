@@ -21,6 +21,7 @@
  2.62.2: jiant.loadModule accepts both string and array as module spec for load (2nd parameter)
  2.62.3: recursion fixed when called loadModule during app init
  2.63: loadModule(app, modules, cb, injectTo, replace) - 2 more parameters, moved from jiant.module() declaration
+ 2.63.1: states - prev state vals applied before defaults
  */
 "use strict";
 (function(factory) {
@@ -2052,38 +2053,39 @@
         prevState = parsed.now;
       parsed.now = [stateId];
       $.each(arguments, function(idx, arg) {
-        if (arg != undefined) {
+        if (arg !== undefined) {
           parsed.now.push(pack(arg));
+        } else if ((prevState[0] == stateId || isSameStatesGroup(appId, prevState[0], stateId)) && prevState[idx + 1] != undefined) {
+          parsed.now.push(pack(prevState[idx + 1]));
         } else if (idx < params.length && defaults && (params[idx] in defaults)) {
           parsed.now.push(defaults[params[idx]]);
-        } else if ((prevState[0] == stateId || isSameStatesGroup(appId, prevState[0], stateId)) && prevState[idx + 1] != undefined) {
-//              info("reusing prev state param: " + prevState[idx + 1]);
-          parsed.now.push(pack(prevState[idx + 1]));
         } else {
           parsed.now.push(pack(arg));
         }
       });
-      if (defaults) {
-        for (var i = arguments.length; i < params.length; i++) {
-          if ((params[i] in defaults)) {
-            parsed.now.push(defaults[params[i]]);
-          } else {
-            parsed.now.push(undefined);
-          }
-        }
-      }
       if (prevState && (prevState[0] == stateId || isSameStatesGroup(appId, prevState[0], stateId))) {
         var argLen = arguments.length + 1;
         while (argLen < prevState.length) {
-//              info("pushing prev state param: " + prevState[argLen]);
+          // infop("!! vs !!, !! of !!", parsed.now[argLen], prevState[argLen], argLen, parsed.now.length);
           if (argLen < parsed.now.length) {
-            if (parsed.now[argLen] == undefined) {
+            if (parsed.now[argLen] === undefined) {
               parsed.now[argLen] = pack(prevState[argLen]);
             }
           } else {
             parsed.now.push(pack(prevState[argLen]));
           }
           argLen++;
+        }
+      }
+      if (defaults) {
+        for (var i = arguments.length; i < params.length; i++) {
+          if ((params[i] in defaults && parsed.now[i] === undefined)) {
+            if (i < parsed.now.length) {
+              parsed.now[i] = defaults[params[i]];
+            } else {
+              parsed.now.push(defaults[params[i]]);
+            }
+          }
         }
       }
       if (root) {
