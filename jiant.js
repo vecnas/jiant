@@ -23,6 +23,7 @@
  2.63: loadModule(app, modules, cb, injectTo, replace) - 2 more parameters, moved from jiant.module() declaration
  2.63.1: states - prev state vals applied before defaults
  2.63.2: goRoot(appOrId) accepts app or application id (was only id before)
+ 2.64: parsed template element gets extra CSS class jianttm_<templateId>, to simplify finding template parse results 
  */
 "use strict";
 (function(factory) {
@@ -1038,7 +1039,7 @@
         $.each(tmContent, function (elem, elemTypeOrArr) {
           var elemType = getComponentType(elemTypeOrArr);
           if (elemType === jiant.lookup) {
-            jiant.logInfo("    loookup element, no checks/bindings: " + elem);
+            info("    loookup element, no checks/bindings: " + elem);
             setupLookup(retVal, elem, retVal, prefix);
           } else if (elemType === jiant.meta) {
           } else if (elemType.jiant_data) {
@@ -1053,6 +1054,7 @@
         assignPropagationFunction(tmId, tmContent, retVal);
         data && retVal.propagate(data, !!subscribeForUpdates, !!reverseBind, mapping);
         $.each(listeners, function(i, l) {l.parsedTemplate && l.parsedTemplate(appRoot, root, tmId, root[tmId], data, retVal)});
+        retVal.addClass("jianttm_" + tmId);
         return retVal;
       };
       root[tmId].parseTemplate2Text = function(data) {
@@ -3292,7 +3294,7 @@
   }
 
   function version() {
-    return 263;
+    return 264;
   }
 
   function Jiant() {}
