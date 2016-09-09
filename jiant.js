@@ -23,7 +23,8 @@
  2.63: loadModule(app, modules, cb, injectTo, replace) - 2 more parameters, moved from jiant.module() declaration
  2.63.1: states - prev state vals applied before defaults
  2.63.2: goRoot(appOrId) accepts app or application id (was only id before)
- 2.64: parsed template element gets extra CSS class jianttm_<templateId>, to simplify finding template parse results 
+ 2.64: parsed template element gets extra CSS class jianttm_<templateId>, to simplify finding template parse results
+ 2.64.1: some cleanup
  */
 "use strict";
 (function(factory) {
@@ -732,7 +733,7 @@
           message += "\r\n------------\r\n";
           message += pseudoserializeJSON($._data(uiElem[0], "events"));
         }
-        jiant.logInfo(message);
+        info(message);
         alert(message);
         event.preventDefault();
         event.stopImmediatePropagation();
@@ -3055,10 +3056,6 @@
     $.each(listeners, function(i, l) {l.bindCompleted && l.bindCompleted(root)});
   }
 
-  function bind(obj1, obj2) {
-    $.extend(obj1, obj2);
-  }
-
   function extractApplicationId(appId) {
     return $.isPlainObject(appId) ? appId.id : appId
   }
@@ -3309,7 +3306,6 @@
     STATE_EXTERNAL_BASE: undefined,
     getAwaitingDepends: getAwaitingDepends, // for application debug purposes
 
-    bind: bind,
     bindUi: bindUi,
     app: app,
     forget: forget,
@@ -3324,7 +3320,6 @@
     goRoot: goRoot,
     getStackTrace: getStackTrace,
     showTrace: showTrace,
-    goState: function (params, preserveOmitted) {},
     onUiBound: onUiBound,
     onApp: onUiBound,
     preUiBound: preApp,
@@ -3401,8 +3396,6 @@
     fn: function (param) {},
     data: function (val) {},
     lookup: function (selector) {},
-    on: function (cb) {},
-    stub: function () {jiant.logError("stub called")},
     transientFn: function(val) {},
 
     flags: {
