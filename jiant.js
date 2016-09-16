@@ -25,6 +25,7 @@
  2.63.2: goRoot(appOrId) accepts app or application id (was only id before)
  2.64: parsed template element gets extra CSS class jianttm_<templateId>, to simplify finding template parse results
  2.64.1: some cleanup
+ 2.65: removed models.onAndNow(replaced by .asapAndOn), added .nowAndOn, .asapAndOn, .once, also added .once for events
  */
 "use strict";
 (function(factory) {
@@ -1094,7 +1095,7 @@
       },
       specBus = $({}),
       singleton = new Model(),
-      objFunctions = ["on", "off", "update", "reset", "remove", "asMap"],
+      objFunctions = ["on", "once", "off", "update", "reset", "remove", "asMap"],
       repoFunctions = ["updateAll", "add", "all", "remove"];
     if (jiant.DEV_MODE && !spec[repoName]) {
       jiant.infop("App !!, model !! uses deprecated model repository format, switch to new, with model.jRepo = {} section", appId, modelName);
@@ -1126,7 +1127,8 @@
       bindFn(spec, fname, funcSpec);
     });
     spec.asap = proxy("asap");
-    spec.onAndNow = proxy("onAndNow");
+    spec.nowAndOn = proxy("nowAndOn");
+    spec.asapAndOn = proxy("asapAndOn");
     spec[objectBus] = specBus;
 
     //  ----------------------------------------------- remove -----------------------------------------------
@@ -1312,7 +1314,11 @@
     }
 
     function assignExtraHandlers(obj) {
-      obj.onAndNow = function(field, cb) {
+      obj.nowAndOn = function(field, cb) {
+        cb.apply(this, [this, this[field]]);
+        this.on(field, cb);
+      };
+      obj.asapAndOn = function(field, cb) {
         var that = this;
         that.asap(field, function() {
           cb.apply(that, arguments);
@@ -1366,6 +1372,13 @@
         handler.cb = cb;
         return handler;
       };
+      obj.once = function(field, cb) {
+        var that = this,
+            handler = obj.on(field, function() {
+              obj.off(handler);
+              cb && cb.apply(that, arguments);
+            });
+      };
       obj.off = function(handler) {
         var bus = this[objectBus];
         bus[handler.eventName]--;
@@ -1386,9 +1399,13 @@
       } else if (fname == "all" && !objMode) {
       } else if (fname == "off") {
         collectionFunctions.push(fname);
-      } else if (fname == "onAndNow") {
+      } else if (fname == "nowAndOn") {
+        collectionFunctions.push(fname);
+      } else if (fname == "asapAndOn") {
         collectionFunctions.push(fname);
       } else if (fname == "asap") {
+        collectionFunctions.push(fname);
+      } else if (fname == "once") {
         collectionFunctions.push(fname);
       } else if (fname == "on") {
         collectionFunctions.push(fname);
@@ -1541,9 +1558,11 @@
         var trans = funcSpec === jiant.transientFn;
         collectionFunctions.push(fname);
         collectionFunctions.push(fname + "_on");
+        collectionFunctions.push(fname + "_once");
         collectionFunctions.push(fname + "_off");
         collectionFunctions.push(fname + "_asap");
-        collectionFunctions.push(fname + "_onAndNow");
+        collectionFunctions.push(fname + "_nowAndOn");
+        collectionFunctions.push(fname + "_asapAndOn");
         Model.prototype[fname] = function(val, forceEvent, dontFireUpdate, oldValOverride) {
           if (arguments.length != 0) {
             if (forceEvent || (this[modelStorage][fname] !== val && forceEvent !== false)) {
@@ -1563,17 +1582,23 @@
         Model.prototype[fname].transient_fn = trans;
         spec[fname] = proxy(fname);
         spec[fname].on = function(cb) {return spec.on(fname, cb)};
+        spec[fname].once = function(cb) {return spec.once(fname, cb)};
         spec[fname].off = function(cb) {return spec.off(cb)};
         spec[fname].asap = function(cb) {return singleton.asap(fname, cb)};
-        spec[fname].onAndNow = function(cb) {return singleton.onAndNow(fname, cb)};
+        spec[fname].nowAndOn = function(cb) {return singleton.nowAndOn(fname, cb)};
+        spec[fname].asapAndOn = function(cb) {return singleton.asapAndOn(fname, cb)};
         spec[fname + "_on"] = function(cb) {return spec.on(fname, cb)};
+        spec[fname + "_once"] = function(cb) {return spec.once(fname, cb)};
         spec[fname + "_off"] = function(cb) {return spec.off(cb)};
         spec[fname + "_asap"] = function(cb) {return singleton.asap(fname, cb)};
-        spec[fname + "_onAndNow"] = function(cb) {return singleton.onAndNow(fname, cb)};
+        spec[fname + "_nowAndOn"] = function(cb) {return singleton.nowAndOn(fname, cb)};
+        spec[fname + "_asapAndOn"] = function(cb) {return singleton.asapAndOn(fname, cb)};
         Model.prototype[fname + "_on"] = function(cb) {return this.on(fname, cb)};
+        Model.prototype[fname + "_once"] = function(cb) {return this.once(fname, cb)};
         Model.prototype[fname + "_off"] = function(cb) {return this.off(fname, cb)};
         Model.prototype[fname + "_asap"] = function(cb) {return this.asap(fname, cb)};
-        Model.prototype[fname + "_onAndNow"] = function(cb) {return this.onAndNow(fname, cb)};
+        Model.prototype[fname + "_nowAndOn"] = function(cb) {return this.nowAndOn(fname, cb)};
+        Model.prototype[fname + "_asapAndOn"] = function(cb) {return this.asapAndOn(fname, cb)};
         spec[fname].jiant_accessor = 1;
         spec[fname].transient_fn = trans;
         //if (! objMode) {
@@ -1597,7 +1622,8 @@
     function endsWith(fname, suffix) {
       return fname.length > suffix.length && fname.indexOf(suffix) === fname.length - suffix.length;
     }
-    return endsWith(fname, "_on") || endsWith(fname, "_off") || endsWith(fname, "_asap") || endsWith(fname, "_onAndNow");
+    return endsWith(fname, "_on") || endsWith(fname, "_once") || endsWith(fname, "_off")
+        || endsWith(fname, "_asap") || endsWith(fname, "_nowAndOn") || endsWith(fname, "_asapAndOn");
   }
 
   function attachCollectionFunctions(arr, collectionFunctions) {
@@ -1950,7 +1976,17 @@
         perAppBus[appId].on(name + ".event", handler);
         return handler;
       };
+      events[name].once = function (cb) {
+        var handler = events[name].on(function() {
+          events[name].off(handler);
+          cb.apply(cb, arguments);
+        });
+      };
       events[name].off = function (handler) {
+        if (jiant.DEV_MODE && (arguments.length == 0 || !handler)) {
+          jiant.logInfo("Event.off called without handler, unsubscribing all event handlers, check code if it is unintentionally",
+              jiant.getStackTrace());
+        }
         events[name].listenersCount--;
         return perAppBus[appId].off(name + ".event", handler);
       };
@@ -3291,7 +3327,7 @@
   }
 
   function version() {
-    return 264;
+    return 265;
   }
 
   function Jiant() {}
