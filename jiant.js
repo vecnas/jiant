@@ -27,6 +27,7 @@
  2.64.1: some cleanup
  2.65: removed models.onAndNow(replaced by .asapAndOn), added .nowAndOn, .asapAndOn, .once, also added .once for events
  2.65.1: nowAndOn fix
+ 2.66: bindView already bound view fixed, proper call is jiant.bindView(app, "testView", app.views.testView, $(app.views.testView[0]));
  */
 "use strict";
 (function(factory) {
@@ -593,7 +594,7 @@
     viewRoot._jiantSpec = typeSpec;
     $.each(viewRoot, function (componentId, componentContentOrArr) {
       var componentContent = getComponentType(componentContentOrArr);
-      typeSpec[componentId] = componentContent;
+      typeSpec[componentId] = componentContentOrArr;
       if (componentId in {appPrefix: 1, impl: 1, _jiantSpec: 1}) {
         //skip
       } else if (viewRoot[componentId] === jiant.lookup) {
@@ -754,7 +755,7 @@
         return true;
       } else {
         className ? errorp("non existing object referred by class under object id #!!, check stack trace for details, expected obj class: .!!", idName, className)
-            : errorp("non existing object referred by id, check stack trace for details, expected obj id: #!!", idName);
+          : errorp("non existing object referred by id, check stack trace for details, expected obj id: #!!", idName);
         if (className) {
           errString += ",    #" + idName + " ." + className;
         } else {
@@ -991,6 +992,15 @@
   }
 
   function bindView(appRoot, viewId, viewContent, view) {
+    if (viewContent._jiantSpec) {
+      var spec = viewContent._jiantSpec;
+      viewContent = {};
+      appRoot.views[viewId] = viewContent;
+      $.each(spec, function(key, val) {
+        viewContent[key] = val;
+      })
+    }
+    logInfo(viewContent);
     var prefix = ("appPrefix" in viewContent) ? viewContent.appPrefix : appRoot.appPrefix ? appRoot.appPrefix : "",
       viewOk = ensureExists(prefix, appRoot.dirtyList, view, prefix + viewId);
     viewOk && _bindContent(appRoot, viewContent, viewId, view, prefix);
@@ -1375,10 +1385,10 @@
       };
       obj.once = function(field, cb) {
         var that = this,
-            handler = obj.on(field, function() {
-              obj.off(handler);
-              cb && cb.apply(that, arguments);
-            });
+          handler = obj.on(field, function() {
+            obj.off(handler);
+            cb && cb.apply(that, arguments);
+          });
       };
       obj.off = function(handler) {
         var bus = this[objectBus];
@@ -1388,7 +1398,7 @@
       };
       obj.subscribers = function(field) {
         var bus = this[objectBus],
-            eventName = evt(field);
+          eventName = evt(field);
         return bus.handlers[eventName];
       }
     }
@@ -1624,7 +1634,7 @@
       return fname.length > suffix.length && fname.indexOf(suffix) === fname.length - suffix.length;
     }
     return endsWith(fname, "_on") || endsWith(fname, "_once") || endsWith(fname, "_off")
-        || endsWith(fname, "_asap") || endsWith(fname, "_nowAndOn") || endsWith(fname, "_asapAndOn");
+      || endsWith(fname, "_asap") || endsWith(fname, "_nowAndOn") || endsWith(fname, "_asapAndOn");
   }
 
   function attachCollectionFunctions(arr, collectionFunctions) {
@@ -1775,7 +1785,7 @@
 
   function declare(name, objOrUrlorFn) {
     var lib = typeof objOrUrlorFn === "string",
-        startedAt = new Date().getTime();
+      startedAt = new Date().getTime();
     function handle() {
       var ms = new Date().getTime() - startedAt;
       lib && jiant.infop("Loaded external library !! in !! ms", objOrUrlorFn, ms);
@@ -1799,7 +1809,7 @@
 
   function copyLogic(appId, name) {
     var obj = externalDeclarations[name],
-        app = boundApps[appId];
+      app = boundApps[appId];
     if (obj && awaitingDepends[appId] && awaitingDepends[appId][name] && app) {
       app.logic || (app.logic = {});
       app.logic[name] || (app.logic[name] = {});
@@ -1833,15 +1843,15 @@
 
   function loadCss(arr, cb) {
     var all_loaded = $.Deferred(),
-        loadedCss = [],
-        link,
-        style,
-        interval,
-        timeout = 60000, // 1 minute seems like a good timeout
-        counter = 0, // Used to compare try time against timeout
-        step = 30, // Amount of wait time on each load check
-        docStyles = document.styleSheets, // local reference
-        ssCount = docStyles.length; // Initial stylesheet count
+      loadedCss = [],
+      link,
+      style,
+      interval,
+      timeout = 60000, // 1 minute seems like a good timeout
+      counter = 0, // Used to compare try time against timeout
+      step = 30, // Amount of wait time on each load check
+      docStyles = document.styleSheets, // local reference
+      ssCount = docStyles.length; // Initial stylesheet count
 
     if (!$.isArray(arr)) {
       arr = [arr];
@@ -1897,8 +1907,8 @@
               throw (url + ' not loaded yet');
             } else {
               var loaded = false,
-                  href,
-                  n;
+                href,
+                n;
               // If there are multiple files being loaded at once, we need to make sure that
               // the new file is this file
               for (n = docStyles.length - 1; n >= 0; n--) {
@@ -1986,7 +1996,7 @@
       events[name].off = function (handler) {
         if (jiant.DEV_MODE && (arguments.length == 0 || !handler)) {
           jiant.logInfo("Event.off called without handler, unsubscribing all event handlers, check code if it is unintentionally",
-              jiant.getStackTrace());
+            jiant.getStackTrace());
         }
         events[name].listenersCount--;
         return perAppBus[appId].off(name + ".event", handler);
@@ -2498,7 +2508,7 @@
         $("*[data-nlabel]").each(function(i, elem) {
           elem = $(elem);
           var key = elem.attr("data-nlabel"),
-              translation = intlRoot.t(key);
+            translation = intlRoot.t(key);
           elem.html(translation);
         });
       }
@@ -2593,7 +2603,7 @@
 
   function _loadModules(appRoot, root, appId, initial, cb, injectTo, replace) {
     var modules2load = [],
-        replaceProvided = arguments.length >= 7;
+      replaceProvided = arguments.length >= 7;
     cb = cb || function() {};
     if ($.isPlainObject(root)) {
       modules2load = parseObjectModules(root, appId);
@@ -2664,8 +2674,8 @@
       return;
     }
     var moduleSpec = arr[idx],
-        mname = moduleSpec.name,
-        module = modules[mname];
+      mname = moduleSpec.name,
+      module = modules[mname];
     if ($.isFunction(module)) {
       var args = [$, appRoot, jiant, moduleSpec];
       module.parsedDeps && $.each(module.parsedDeps, function(i, name) {
@@ -2677,9 +2687,9 @@
       executeExternal(appRoot, cb, arr, idx, module);
     } else {
       errorp("Application !!. Not loaded module !!. " +
-          "Possible error - wrong modules section, wrong path or module name in js file doesn't match declared " +
-          "in app.modules section. Load initiated by !!",
-          appRoot.id, mname, (moduleSpec.j_initiatedBy ? moduleSpec.j_initiatedBy : "appication"));
+        "Possible error - wrong modules section, wrong path or module name in js file doesn't match declared " +
+        "in app.modules section. Load initiated by !!",
+        appRoot.id, mname, (moduleSpec.j_initiatedBy ? moduleSpec.j_initiatedBy : "appication"));
       executeModule(appRoot, cb, arr, idx + 1);
     }
   }
@@ -2700,7 +2710,7 @@
     }
     for (var i in modules2load) {
       var mName = modules2load[i].name,
-          m = modules[mName];
+        m = modules[mName];
       if (!m || m.cssCount || m.jsCount || m.htmlCount) {
         return false;
       }
@@ -2719,7 +2729,7 @@
     });
     executeModule(appRoot, cb, arr, 0);
     return true;
-}
+  }
 
   function addIfNeed(modules2load, depModule) {
     var found = false;
@@ -3220,22 +3230,22 @@
 
   function forget(appOrId, deep) {
     var appId = extractApplicationId(appOrId),
-        app = boundApps[appId];
+      app = boundApps[appId];
     if (app && deep) {
       $.each(app.models, function(i, m) {
-          m.reset(undefined);
-          getRepo(m).all().remove();
-        });
+        m.reset(undefined);
+        getRepo(m).all().remove();
+      });
       $.each(app.views, function (i, v) {
         $.each(v._jiantSpec, function (name, spec) {
-            if (jiant.cssFlag === spec) {
-              v.removeClass(name);
-            } else if (jiant.cssMarker === spec) {
-              v.removeClass($.grep(v.attr('class').split(' '), function (c) {
-                return c.substr(0, name.length + 1) === (name + "_");
-              }).join(' '))
-            }
-          });
+          if (jiant.cssFlag === spec) {
+            v.removeClass(name);
+          } else if (jiant.cssMarker === spec) {
+            v.removeClass($.grep(v.attr('class').split(' '), function (c) {
+              return c.substr(0, name.length + 1) === (name + "_");
+            }).join(' '))
+          }
+        });
       });
     }
     app && plainCopy(backupApps[appId], app);
@@ -3328,7 +3338,7 @@
   }
 
   function version() {
-    return 265;
+    return 266;
   }
 
   function Jiant() {}
