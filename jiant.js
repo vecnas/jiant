@@ -26,6 +26,7 @@
  2.64: parsed template element gets extra CSS class jianttm_<templateId>, to simplify finding template parse results
  2.64.1: some cleanup
  2.65: removed models.onAndNow(replaced by .asapAndOn), added .nowAndOn, .asapAndOn, .once, also added .once for events
+ 2.65.1: nowAndOn fix
  */
 "use strict";
 (function(factory) {
@@ -1315,7 +1316,7 @@
 
     function assignExtraHandlers(obj) {
       obj.nowAndOn = function(field, cb) {
-        cb.apply(this, [this, this[field]]);
+        cb.apply(this, [this, this[field]()]);
         this.on(field, cb);
       };
       obj.asapAndOn = function(field, cb) {
