@@ -29,6 +29,7 @@
  2.65.1: nowAndOn fix
  2.66: bindView already bound view fixed, proper call is jiant.bindView(app, "testView", app.views.testView, $(app.views.testView[0]));
  2.66.1: updateAll(undefined) doesn't break anymore
+ 2.66.2: bindView parameter viewContent now updated with new state, not keeps old
  */
 "use strict";
 (function(factory) {
@@ -995,7 +996,9 @@
   function bindView(appRoot, viewId, viewContent, view) {
     if (viewContent._jiantSpec) {
       var spec = viewContent._jiantSpec;
-      viewContent = {};
+      for (var key in viewContent) {
+        delete viewContent[key];
+      }
       appRoot.views[viewId] = viewContent;
       $.each(spec, function(key, val) {
         viewContent[key] = val;
