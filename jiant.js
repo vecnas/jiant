@@ -28,6 +28,7 @@
  2.65: removed models.onAndNow(replaced by .asapAndOn), added .nowAndOn, .asapAndOn, .once, also added .once for events
  2.65.1: nowAndOn fix
  2.66: bindView already bound view fixed, proper call is jiant.bindView(app, "testView", app.views.testView, $(app.views.testView[0]));
+ 2.66.1: updateAll(undefined) doesn't break anymore
  */
 "use strict";
 (function(factory) {
@@ -1264,7 +1265,7 @@
 
     // ----------------------------------------------- updateAll -----------------------------------------------
     repoRoot.updateAll = function(arr, removeMissing, matcherCb) {
-      arr = $.isArray(arr) ? arr : [arr];
+      arr = $.isArray(arr) ? arr : (arr ? [arr] : []);
       matcherCb = matcherCb ? matcherCb : function(modelObj, outerObj) {return modelObj.id ? modelObj.id() == outerObj.id : false;};
       var toRemove = [];
       var toAdd = [];
