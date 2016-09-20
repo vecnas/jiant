@@ -1001,7 +1001,6 @@
         viewContent[key] = val;
       })
     }
-    logInfo(viewContent);
     var prefix = ("appPrefix" in viewContent) ? viewContent.appPrefix : appRoot.appPrefix ? appRoot.appPrefix : "",
       viewOk = ensureExists(prefix, appRoot.dirtyList, view, prefix + viewId);
     viewOk && _bindContent(appRoot, viewContent, viewId, view, prefix);
