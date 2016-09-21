@@ -30,6 +30,7 @@
  2.66: bindView already bound view fixed, proper call is jiant.bindView(app, "testView", app.views.testView, $(app.views.testView[0]));
  2.66.1: updateAll(undefined) doesn't break anymore
  2.66.2: bindView parameter viewContent now updated with new state, not keeps old
+ 2.66.3: empty key not reported as missing translation anymore
  */
 "use strict";
 (function(factory) {
@@ -1779,7 +1780,7 @@
       declare(pseudoName, url);
     });
     var pseudoAppName = "app" + new Date().getTime() + Math.random();
-    onUiBound(pseudoAppName, pseudoDeps, function($, app) {
+    onApp(pseudoAppName, pseudoDeps, function($, app) {
       cb($);
       forget(pseudoAppName);
     });
@@ -2457,7 +2458,8 @@
           prev.call(elem, translate(appRoot, val));
         } else {
           prev.call(elem, val);
-          onUiBound(appRoot, ["intl"], function() {prev.call(elem, translate(appRoot, val))});
+          var stack = getStackTrace();
+          onApp(appRoot, ["intl"], function() {prev.call(elem, translate(appRoot, val))});
         }
       }
     }
@@ -2527,7 +2529,7 @@
   }
 
   function ensureIntlKey(data, key) {
-    data[key] || jiant.error("Not found translation for key: ", key);
+    key && (data[key] || jiant.error("Not found translation for key: ", key));
   }
 
   function implementIntlFunctionWithI18N(fname, fspec, data, javaSubst) {
@@ -2566,7 +2568,7 @@
   function implementIntlFunction(fname, fspec, data) {
     var impl = function(key) {return prepareTranslation(key, data[key])};
     if (fname == "t") {
-      return impl
+      return impl;
     } else if (fspec.empty) {
       return function() {
         return impl(fname);
@@ -3110,13 +3112,13 @@
     return $.isPlainObject(appId) ? appId.id : appId
   }
 
-  // onUiBound(cb);
-  // onUiBound(depList, cb); - INVALID, treated as onUiBound(appIdArr, cb);
-  // onUiBound(appIdArr, cb);
-  // onUiBound(appIdArr, depList, cb);
-  // onUiBound(appId, cb);
-  // onUiBound(appId, depList, cb)
-  function onUiBound(appIdArr, dependenciesList, cb) {
+  // onApp(cb);
+  // onApp(depList, cb); - INVALID, treated as onApp(appIdArr, cb);
+  // onApp(appIdArr, cb);
+  // onApp(appIdArr, depList, cb);
+  // onApp(appId, cb);
+  // onApp(appId, depList, cb)
+  function onApp(appIdArr, dependenciesList, cb) {
     if (! cb && ! dependenciesList) {
       jiant.error("!!! Registering anonymous logic without application id. Not recommended since 0.20");
       cb = appIdArr;
@@ -3131,7 +3133,7 @@
     if (appIdArr.length > 1 && $.isArray(dependenciesList) && dependenciesList.length > 0) {
       $.each(dependenciesList, function(idx, arr) {
         if (!$.isArray(arr)) {
-          jiant.error("Used multiple applications onUiBound and supplied wrong dependency list, use multi-array, " +
+          jiant.error("Used multiple applications onApp and supplied wrong dependency list, use multi-array, " +
             "like [[app1DepList], [app2DepList]]");
         }
       })
@@ -3143,7 +3145,7 @@
     $.each(listeners, function(i, l) {l.onUiBoundCalled && l.onUiBoundCalled(appIdArr, dependenciesList, cb)});
     $.each(appIdArr, function(idx, appId) {
       if (appId === undefined || appId === null) {
-        logError("Called onUiBound with undefined application, apps array is ", appIdArr);
+        logError("Called onApp with undefined application, apps array is ", appIdArr);
       } else if ($.isPlainObject(appId)) {
         appId = appId.id;
         appIdArr[idx] = appId;
@@ -3222,7 +3224,7 @@
       deferred.resolve();
     };
     if (boundApps[appId]) {
-      jiant.logError("Defining and calling onUiBound() before onAppInit().");
+      jiant.logError("Defining and calling onApp() before onAppInit().");
     } else {
       var eventId = appId + "onAppInit" + appId;
       eventBus.on(eventId, function () {
@@ -3293,7 +3295,7 @@
             appId = key;
             return false;
           });
-          onUiBound(appId, ["jiantVisualizer"], function($, app) {
+          onApp(appId, ["jiantVisualizer"], function($, app) {
             app.logic.jiantVisualizer.visualize($, app);
           });
         }, true)
@@ -3370,8 +3372,8 @@
     goRoot: goRoot,
     getStackTrace: getStackTrace,
     showTrace: showTrace,
-    onUiBound: onUiBound,
-    onApp: onUiBound,
+    onUiBound: onApp,
+    onApp: onApp,
     preUiBound: preApp,
     preApp: preApp,
     onAppInit: onAppInit,
