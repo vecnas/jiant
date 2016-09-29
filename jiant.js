@@ -31,6 +31,7 @@
  2.66.1: updateAll(undefined) doesn't break anymore
  2.66.2: bindView parameter viewContent now updated with new state, not keeps old
  2.66.3: empty key not reported as missing translation anymore
+ 2.67: app.handleErrorFn could be declared to handle ajax errors specifically per application
  */
 "use strict";
 (function(factory) {
@@ -379,7 +380,13 @@
         url: url,
         data: elem.serialize(),
         success: cb,
-        error: function (jqXHR, textStatus, errorText) {jiant.handleErrorFn(jqXHR.responseText)}
+        error: function (jqXHR, textStatus, errorText) {
+          if (appRoot.handleErrorFn) {
+            appRoot.handleErrorFn(jqXHR.responseText);
+          } else {
+            jiant.handleErrorFn(jqXHR.responseText);
+          }
+        }
       };
       if (appRoot.crossDomain) {
         data.contentType = "application/json";
@@ -2399,6 +2406,8 @@
         }
         if (errHandler) {
           errHandler(jqXHR.responseText);
+        } else if (appRoot.handleErrorFn) {
+          appRoot.handleErrorFn(jqXHR.responseText);
         } else {
           jiant.handleErrorFn(jqXHR.responseText);
         }
@@ -3343,7 +3352,7 @@
   }
 
   function version() {
-    return 266;
+    return 267;
   }
 
   function Jiant() {}
