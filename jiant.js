@@ -32,6 +32,7 @@
  2.66.2: bindView parameter viewContent now updated with new state, not keeps old
  2.66.3: empty key not reported as missing translation anymore
  2.67: app.handleErrorFn could be declared to handle ajax errors specifically per application
+ 2.67.1: model.subscribers() fixed
  */
 "use strict";
 (function(factory) {
@@ -1410,7 +1411,7 @@
       obj.subscribers = function(field) {
         var bus = this[objectBus],
           eventName = evt(field);
-        return bus.handlers[eventName];
+        return bus.handlers ? bus.handlers[eventName] : undefined;
       }
     }
 
