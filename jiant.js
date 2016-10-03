@@ -33,6 +33,7 @@
  2.66.3: empty key not reported as missing translation anymore
  2.67: app.handleErrorFn could be declared to handle ajax errors specifically per application
  2.67.1: model.subscribers() fixed
+ 2.67.2: nowAndOn returns .on handler, could be used to unsubscribe later
  */
 "use strict";
 (function(factory) {
@@ -1339,7 +1340,7 @@
     function assignExtraHandlers(obj) {
       obj.nowAndOn = function(field, cb) {
         cb.apply(this, [this, this[field]()]);
-        this.on(field, cb);
+        return this.on(field, cb);
       };
       obj.asapAndOn = function(field, cb) {
         var that = this;
