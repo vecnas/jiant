@@ -35,7 +35,8 @@
  2.67.1: model.subscribers() fixed
  2.67.2: nowAndOn returns .on handler, could be used to unsubscribe later
  2.68: models .off fixed, now also supports list.off(list.on), also list.on().off() chains
- 2.69: model.jRepo.filter(cb)::Collection, model.jRepo.toCollection(arr)::Collection functions added 
+ 2.69: model.jRepo.filter(cb)::Collection, model.jRepo.toCollection(arr)::Collection functions added
+ 2.69.1: removed "injectTo" from load modules functionality 
  */
 "use strict";
 (function(factory) {
@@ -2618,15 +2619,15 @@
   // loadModule before .app puts module into list of app modules, cb ignored
   // loadModule during .app executes module immediately
   // loadModule after .app executes module immediately
-  function loadModule(app, modules, cb, injectTo, replace) {
+  function loadModule(app, modules, cb, replace) {
     var appId = extractApplicationId(app);
     if (! $.isArray(modules)) {
       modules = [modules];
     }
     if (boundApps[appId]) { // after
-      _loadModules(boundApps[appId], modules, appId, false, cb, injectTo, replace);
+      _loadModules(boundApps[appId], modules, appId, false, cb, replace);
     } else if (bindingCurrently[appId]) { // during
-      _loadModules(bindingCurrently[appId], modules, appId, false, cb, injectTo, replace);
+      _loadModules(bindingCurrently[appId], modules, appId, false, cb, replace);
     } else { // before
       preApp(appId, function($, app) {
         $.each(modules, function(i, m) {
@@ -2636,7 +2637,7 @@
     }
   }
 
-  function _loadModules(appRoot, root, appId, initial, cb, injectTo, replace) {
+  function _loadModules(appRoot, root, appId, initial, cb, replace) {
     var modules2load = [],
       replaceProvided = arguments.length >= 7;
     cb = cb || function() {};
@@ -2648,11 +2649,6 @@
       logError("Unrecognized modules type", root);
     }
     if (modules2load.length) {
-      if (injectTo) {
-        $.each(modules2load, function(i, m) {
-          m.injectTo = injectTo;
-        });
-      }
       if (replaceProvided) {
         $.each(modules2load, function(i, m) {
           m.replace = replace;
@@ -2682,7 +2678,7 @@
       addedLibs[url] = 1;
       if (module.htmlLoaded[url]) {
         var html = "<!-- sourceUrl = " + url + " -->" + module.htmlLoaded[url] + "<!-- end of source from " + url + " -->";
-        var inj = arr[idx].injectTo ? $(arr[idx].injectTo) : $("body");
+        var inj = $("body");
         if (arr[idx].replace) {
           inj.html(html);
         } else {
