@@ -34,6 +34,7 @@
  2.67: app.handleErrorFn could be declared to handle ajax errors specifically per application
  2.67.1: model.subscribers() fixed
  2.67.2: nowAndOn returns .on handler, could be used to unsubscribe later
+ 2.68: models .off fixed, now also supports list.off(list.on), also list.on().off() chains
  */
 "use strict";
 (function(factory) {
@@ -1374,8 +1375,9 @@
           cb = field;
           field = overrideField;
         }
-        var bus = this[objectBus],
-          eventName = evt(field);
+        var that = this,
+            bus = this[objectBus],
+            eventName = evt(field);
         var handler = function(evt) {
           var args = $.makeArray(arguments);
           args.splice(0, 1);
@@ -1390,7 +1392,7 @@
         bus[eventName] = (bus[eventName] || 0) + 1;
         bus.on(eventName, handler);
         handler.off = function() {
-          obj.off(handler);
+          that.off(handler);
         };
         handler.eventName = eventName;
         handler.cb = cb;
@@ -1403,11 +1405,14 @@
             cb && cb.apply(that, arguments);
           });
       };
-      obj.off = function(handler) {
+      obj.off = function(handlerOrArr) {
         var bus = this[objectBus];
-        bus[handler.eventName]--;
-        bus.handlers[handler.eventName].splice(bus.handlers[handler.eventName].indexOf(handler.cb), 1);
-        return bus.off(handler.eventName, handler);
+        handlerOrArr = $.isArray(handlerOrArr) ? handlerOrArr : [handlerOrArr];
+        $.each(handlerOrArr, function(i, handler) {
+          bus[handler.eventName]--;
+          bus.handlers[handler.eventName].splice(bus.handlers[handler.eventName].indexOf(handler.cb), 1);
+          return bus.off(handler.eventName, handler);
+        });
       };
       obj.subscribers = function(field) {
         var bus = this[objectBus],
@@ -1421,15 +1426,7 @@
       if (fname == defaultsName && $.isPlainObject(funcSpec)) {
       } else if (fname == repoName && $.isPlainObject(funcSpec)) {
       } else if (fname == "all" && !objMode) {
-      } else if (fname == "off") {
-        collectionFunctions.push(fname);
-      } else if (fname == "nowAndOn") {
-        collectionFunctions.push(fname);
-      } else if (fname == "asapAndOn") {
-        collectionFunctions.push(fname);
-      } else if (fname == "asap") {
-        collectionFunctions.push(fname);
-      } else if (fname == "once") {
+      } else if (fname in {"off": 1, "nowAndOn": 1, "asapAndOn": 1, "asap": 1, "once": 1}) {
         collectionFunctions.push(fname);
       } else if (fname == "on") {
         collectionFunctions.push(fname);
@@ -1619,7 +1616,7 @@
         spec[fname + "_asapAndOn"] = function(cb) {return singleton.asapAndOn(fname, cb)};
         Model.prototype[fname + "_on"] = function(cb) {return this.on(fname, cb)};
         Model.prototype[fname + "_once"] = function(cb) {return this.once(fname, cb)};
-        Model.prototype[fname + "_off"] = function(cb) {return this.off(fname, cb)};
+        Model.prototype[fname + "_off"] = function(cb) {return this.off(cb)};
         Model.prototype[fname + "_asap"] = function(cb) {return this.asap(fname, cb)};
         Model.prototype[fname + "_nowAndOn"] = function(cb) {return this.nowAndOn(fname, cb)};
         Model.prototype[fname + "_asapAndOn"] = function(cb) {return this.asapAndOn(fname, cb)};
@@ -1658,6 +1655,13 @@
         $.each(this, function(idx, obj) {
           ret.push(obj[fn].apply(obj, args));
         });
+        if (isEventHandlerName(fn)) {
+          ret.off = function() {
+            $.each(ret, function(i, item) {
+              item.off();
+            });
+          }
+        }
         return ret;
       }
     });
@@ -3354,7 +3358,7 @@
   }
 
   function version() {
-    return 267;
+    return 268;
   }
 
   function Jiant() {}
