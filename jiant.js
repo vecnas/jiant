@@ -35,6 +35,7 @@
  2.67.1: model.subscribers() fixed
  2.67.2: nowAndOn returns .on handler, could be used to unsubscribe later
  2.68: models .off fixed, now also supports list.off(list.on), also list.on().off() chains
+ 2.69: model.jRepo.filter(cb)::Collection, model.jRepo.toCollection(arr)::Collection functions added 
  */
 "use strict";
 (function(factory) {
@@ -1121,7 +1122,7 @@
       specBus = $({}),
       singleton = new Model(),
       objFunctions = ["on", "once", "off", "update", "reset", "remove", "asMap"],
-      repoFunctions = ["updateAll", "add", "all", "remove"];
+      repoFunctions = ["updateAll", "add", "all", "remove", "filter", "toCollection"];
     if (jiant.DEV_MODE && !spec[repoName]) {
       jiant.infop("App !!, model !! uses deprecated model repository format, switch to new, with model.jRepo = {} section", appId, modelName);
     }
@@ -1276,6 +1277,12 @@
       return new Collection(storage);
     };
 
+    // ----------------------------------------------- toCollection ----------------------------------------
+
+    repoRoot.toCollection = function(arr) {
+      return new Collection(arr);
+    };
+
     // ----------------------------------------------- updateAll -----------------------------------------------
     repoRoot.updateAll = function(arr, removeMissing, matcherCb) {
       arr = $.isArray(arr) ? arr : (arr ? [arr] : []);
@@ -1425,7 +1432,9 @@
       var objMode = repoMode && fnRoot !== spec[repoName];
       if (fname == defaultsName && $.isPlainObject(funcSpec)) {
       } else if (fname == repoName && $.isPlainObject(funcSpec)) {
-      } else if (fname == "all" && !objMode) {
+      } else if (fname == "addAll") {
+        alert("JIANT: Model function 'addAll' removed since 1.37, use previous versions or replace it by 'add'");
+      } else if (!objMode && fname in {"updateAll": 1, "add": 1, "toCollection": 1, "all": 1}) {
       } else if (fname in {"off": 1, "nowAndOn": 1, "asapAndOn": 1, "asap": 1, "once": 1}) {
         collectionFunctions.push(fname);
       } else if (fname == "on") {
@@ -1467,10 +1476,6 @@
             trigger(specBus, fname, [this], [this, fname]);
           }
         };
-      } else if (fname == "updateAll" && !objMode) {
-      } else if (fname == "addAll") {
-        alert("JIANT: Model function 'addAll' removed since 1.37, use previous versions or replace it by 'add'");
-      } else if (fname == "add" && !objMode) {
       } else if (fname == "remove") {
       } else if (fname.indexOf("sum") == 0 && fname.length > 3 && isUpperCaseChar(fname, 3) && !objMode) {
         var arr = fname.substring(3).split("And");
@@ -1493,6 +1498,16 @@
           });
           return ret;
         }
+      } else if (fname == "filter" && !objMode) {
+        repoRoot[fname] = function(cb) {
+          var ret = [];
+          $.each(repoRoot.all(), function(i, obj) {
+            if (cb(obj)) {
+              ret.push(obj);
+            }
+          });
+          return new Collection(ret);
+        };
       } else if (isFindByFunction(fname) && !objMode) {
         repoRoot[fname] = function() {
           return repoRoot["listBy" + fname.substring(6)].apply(repoRoot, arguments)[0];
@@ -3358,7 +3373,7 @@
   }
 
   function version() {
-    return 268;
+    return 269;
   }
 
   function Jiant() {}
