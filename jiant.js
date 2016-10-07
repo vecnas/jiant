@@ -36,7 +36,8 @@
  2.67.2: nowAndOn returns .on handler, could be used to unsubscribe later
  2.68: models .off fixed, now also supports list.off(list.on), also list.on().off() chains
  2.69: model.jRepo.filter(cb)::Collection, model.jRepo.toCollection(arr)::Collection functions added
- 2.69.1: removed "injectTo" from load modules functionality 
+ 2.69.1: removed "injectTo" from load modules functionality
+ 2.69.2: cacheKey passed for jiant.parseTemplate2Text(data, cacheKey), template.parseTemplate2Text(data, mapping)
  */
 "use strict";
 (function(factory) {
@@ -1029,8 +1030,8 @@
 
 // ------------ templates ----------------
 
-  function parseTemplate2Text(tm, data) {
-    return parseTemplate(tm, data);
+  function parseTemplate2Text(tm, data, cacheKey) {
+    return parseTemplate(tm, data, cacheKey);
   }
 
   function _bindTemplates(appRoot, root, appUiFactory) {
@@ -1086,8 +1087,8 @@
         retVal.addClass("jianttm_" + tmId);
         return retVal;
       };
-      root[tmId].parseTemplate2Text = function(data) {
-        return parseTemplate(tm, data);
+      root[tmId].parseTemplate2Text = function(data, mapping) {
+        return parseTemplate(tm, data, tmId, mapping);
       };
       $.each(listeners, function(i, l) {l.boundTemplate && l.boundTemplate(appRoot, root, tmId, prefix, root[tmId])});
     });
