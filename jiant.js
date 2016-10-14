@@ -38,6 +38,7 @@
  2.69: model.jRepo.filter(cb)::Collection, model.jRepo.toCollection(arr)::Collection functions added
  2.69.1: removed "injectTo" from load modules functionality
  2.69.2: cacheKey passed for jiant.parseTemplate2Text(data, cacheKey), template.parseTemplate2Text(data, mapping)
+ 2.70: statenameCtl: jiant.et.ctl2state new element type sends to state statename (name suffix "Ctl" is optional), jiant.et.ctlBack sends to history back
  */
 "use strict";
 (function(factory) {
@@ -798,12 +799,25 @@
     elem.click(function() {viewOrTm.hide()})
   }
 
+  function setupCtlBack(viewOrTm, elem) {
+    elem.click(function() {window.history.back()})
+  }
+
+  function setupCtl2state(viewOrTm, elem, app, name) {
+    var stateName = name.endsWith("Ctl") ? name.substring(0, name.length - 3) : name;
+    elem.click(function() {app.states[stateName].go()})
+  }
+
   function setupExtras(appRoot, uiElem, elemType, key, elemKey, viewOrTm) {
     if (elemType === jiant.tabs && uiElem.tabs) {
       uiElem.tabs();
       uiElem.refreshTabs = function() {uiElem.tabs("refresh");};
     } else if (elemType === jiant.ctlHide) {
       setupCtlHide(viewOrTm, uiElem);
+    } else if (elemType === jiant.et.ctl2state) {
+      setupCtl2state(viewOrTm, uiElem, appRoot, elemKey);
+    } else if (elemType === jiant.et.ctlBack) {
+      setupCtlBack(viewOrTm, uiElem);
     } else if (elemType === jiant.inputInt) {
       setupInputInt(uiElem);
     } else if (elemType === jiant.inputFloat) {
@@ -3370,7 +3384,7 @@
   }
 
   function version() {
-    return 269;
+    return 270;
   }
 
   function Jiant() {}
@@ -3477,6 +3491,10 @@
     lookup: function (selector) {},
     transientFn: function(val) {},
 
+    et: { // element types
+      ctl2state: "jiant.ctl2state",
+      ctlBack: "jiant.ctlBack"
+    },
     flags: {
       ajaxSubmitAsMap: "_jiantFlagSubmitAsMap"
     },
