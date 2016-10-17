@@ -40,6 +40,7 @@
  2.69.2: cacheKey passed for jiant.parseTemplate2Text(data, cacheKey), template.parseTemplate2Text(data, mapping)
  2.70: statenameCtl: jiant.et.ctl2state new element type sends to state statename (name suffix "Ctl" is optional), jiant.et.ctlBack sends to history back
  2.71: ctrl_alt_click in dev mode copies to clipboard and prints to console CSS path to element, for easier styling, jiant.copy2clipboard(txt) available
+ 2.72: i18n (i18next) v 3 compatible, intl new options: (interpolation) prefix/suffix
  */
 "use strict";
 (function(factory) {
@@ -2547,6 +2548,14 @@
     }
   }
 
+  function isI18n() {
+    return (typeof i18n !== "undefined");
+  }
+
+  function i18ntl() {
+    return (typeof i18n !== "undefined") ? i18n : i18next;
+  }
+
   function loadIntl(intlRoot, appRoot) {
     infop("Loading intl for app !!", appRoot.id);
     if (! intlRoot.url) {
@@ -2557,18 +2566,37 @@
     intlRoot.t.spec = true;
     intlRoot.t.empty = true;
     $.getJSON(intlRoot.url, function(data) {
-      var implSpec = {};
+      var implSpec = {}, option = {};
       if (intlRoot.i18n) {
-        var option = {
-          customLoad: function(lng, ns, options, loadComplete) {
+        if (isI18n()) {
+          option.customLoad = function(lng, ns, options, loadComplete) {
             loadComplete(null, data);
+          };
+          if (intlRoot.javaSubst) {
+            option.interpolationPrefix = '{';
+            option.interpolationSuffix = '}';
           }
-        };
-        if (intlRoot.javaSubst) {
-          option.interpolationPrefix = '{';
-          option.interpolationSuffix = '}';
+          i18n.init(option);
+        } else {
+          if (intlRoot.javaSubst) {
+            option.interpolation = {
+              prefix: '{',
+              suffix: '}'
+            };
+          } else {
+            option.interpolation = {
+              prefix: intlRoot.prefix || '__',
+              suffix: intlRoot.suffix || '__'
+            };
+          }
+          i18next.use({
+            type: 'backend',
+            init: function(services, options) {},
+            read: function(language, namespace, callback) {
+              callback(null, data);
+            }
+          }).init(option);
         }
-        i18n.init(option);
       }
       $.each(intlRoot, function(fname, fspec) {
         if (fspec.spec) {
@@ -2611,7 +2639,7 @@
           }
         }
         ensureIntlKey(data, key);
-        return i18n.t(key, args);
+        return i18ntl().t(key, args);
       }
     } else if (fspec.empty) {
       return function() {
@@ -2625,7 +2653,7 @@
           }
         }
         ensureIntlKey(data, fname);
-        return i18n.t(fname, args);
+        return i18ntl().t(fname, args);
       }
     } else {
       return fspec;
@@ -3405,7 +3433,7 @@
   }
 
   function version() {
-    return 271;
+    return 272;
   }
 
   function Jiant() {}
