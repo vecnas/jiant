@@ -39,6 +39,7 @@
  2.69.1: removed "injectTo" from load modules functionality
  2.69.2: cacheKey passed for jiant.parseTemplate2Text(data, cacheKey), template.parseTemplate2Text(data, mapping)
  2.70: statenameCtl: jiant.et.ctl2state new element type sends to state statename (name suffix "Ctl" is optional), jiant.et.ctlBack sends to history back
+ 2.71: ctrl_alt_click in dev mode copies to clipboard and prints to console CSS path to element, for easier styling, jiant.copy2clipboard(txt) available
  */
 "use strict";
 (function(factory) {
@@ -628,7 +629,7 @@
         var uiElem = uiFactory.viewComponent(viewElem, viewId, prefix, componentId, componentContent);
         ensureExists(prefix, appRoot.dirtyList, uiElem, prefix + viewId, prefix + componentId, isFlagPresent(componentContentOrArr, jiant.optional));
         viewRoot[componentId] = uiElem;
-        setupExtras(appRoot, uiElem, componentContent, viewId, componentId, viewRoot);
+        setupExtras(appRoot, uiElem, componentContent, viewId, componentId, viewRoot, prefix);
         //        logInfo("    bound UI for: " + componentId);
       }
     });
@@ -745,7 +746,7 @@
     }
   }
 
-  function maybeAddDevHook(uiElem, key, elem) {
+  function maybeAddDevHook(uiElem, key, elem, prefix) {
     jiant.DEV_MODE && uiElem.click(function(event) {
       if (event.shiftKey && event.altKey) {
         var message = key + (elem ? ("." + elem) : "");
@@ -757,8 +758,28 @@
         alert(message);
         event.preventDefault();
         event.stopImmediatePropagation();
+      } else if (event.ctrlKey && event.altKey) {
+        copy2cb("#" + prefix + key + " " + (elem ? ("." + prefix + elem) : ""));
+        event.preventDefault();
+        event.stopImmediatePropagation();
       }
     });
+  }
+  
+  function copy2cb(txt) {
+    info(txt);
+    if (document.execCommand) {
+      var input = document.createElement("input");
+      input.type = "text";
+      input.style.opacity = 0;
+      input.style.position = "absolute";
+      input.style.zIndex = -1;
+      input.value = txt;
+      document.body.appendChild(input);
+      input.select();
+      document.execCommand("copy");
+      document.body.removeChild(input);
+    }
   }
 
   function ensureExists(appPrefix, dirtyList, obj, idName, className, optional) {
@@ -808,7 +829,7 @@
     elem.click(function() {app.states[stateName].go()})
   }
 
-  function setupExtras(appRoot, uiElem, elemType, key, elemKey, viewOrTm) {
+  function setupExtras(appRoot, uiElem, elemType, key, elemKey, viewOrTm, prefix) {
     if (elemType === jiant.tabs && uiElem.tabs) {
       uiElem.tabs();
       uiElem.refreshTabs = function() {uiElem.tabs("refresh");};
@@ -841,10 +862,10 @@
       customElementTypes[elemType](uiElem, viewOrTm, appRoot);
     } else if ($.isArray(elemType)) {
       $.each(elemType, function(i, tp) {
-        setupExtras(appRoot, uiElem, tp, key, elemKey, viewOrTm);
+        setupExtras(appRoot, uiElem, tp, key, elemKey, viewOrTm, prefix);
       });
     }
-    maybeAddDevHook(uiElem, key, elemKey);
+    maybeAddDevHook(uiElem, key, elemKey, prefix);
   }
 
   function isServiceName(key) {
@@ -1038,7 +1059,7 @@
     ensureSafeExtend(viewContent, view);
     assignPropagationFunction(viewId, viewContent, viewContent);
     $.extend(viewContent, view);
-    maybeAddDevHook(view, viewId, undefined);
+    maybeAddDevHook(view, viewId, undefined, prefix);
     $.each(listeners, function(i, l) {l.boundView && l.boundView(appRoot, appRoot.views, viewId, prefix, viewContent)});
   }
 
@@ -1090,8 +1111,8 @@
             setupDataFunction(retVal, elem);
           } else if (! (elem in {"parseTemplate": 1, "parseTemplate2Text": 1, "appPrefix": 1, "impl": 1, "_jiantSpec": 1})) {
             retVal[elem] = $.merge(retVal.filter("." + prefix + elem), retVal.find("." + prefix + elem));
-            setupExtras(appRoot, retVal[elem], root[tmId]._jiantSpec[elem], tmId, elem, retVal);
-            maybeAddDevHook(retVal[elem], tmId, elem);
+            setupExtras(appRoot, retVal[elem], root[tmId]._jiantSpec[elem], tmId, elem, retVal, prefix);
+            maybeAddDevHook(retVal[elem], tmId, elem, prefix);
           }
         });
         retVal.splice(0, 1); // remove first comment
@@ -3384,7 +3405,7 @@
   }
 
   function version() {
-    return 270;
+    return 271;
   }
 
   function Jiant() {}
@@ -3439,6 +3460,7 @@
     check: check,
     parseTemplate: function(text, data) {return $(parseTemplate(text, data));},
     parseTemplate2Text: parseTemplate2Text,
+    copy2clipboard: copy2cb,
     version: version,
 
     formatDate: formatDate,
