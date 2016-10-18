@@ -2607,6 +2607,8 @@
             }
           }).init(option, completeIntl);
         }
+      } else {
+        completeIntl();
       }
       function completeIntl() {
         $.each(intlRoot, function(fname, fspec) {
