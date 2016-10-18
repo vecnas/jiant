@@ -42,6 +42,7 @@
  2.71: ctrl_alt_click in dev mode copies to clipboard and prints to console CSS path to element, for easier styling, jiant.copy2clipboard(txt) available
  2.72: i18n (i18next) v 3 compatible, intl new options: (interpolation) prefix/suffix
  2.72.1: intl section i18nOptions could be specified for starting options for i18next: intl: { i18nOptions: {...., intl.debugIntl(prefix) prints debug into console
+ 2.72.2: jiant.et.ctl2root sends to states nearest root via jiant.goRoot(app)
  */
 "use strict";
 (function(factory) {
@@ -826,6 +827,10 @@
     elem.click(function() {window.history.back()})
   }
 
+  function setupCtl2root(app, elem) {
+    elem.click(function() {jiant.goRoot(app)})
+  }
+
   function setupCtl2state(viewOrTm, elem, app, name) {
     var stateName = name.endsWith("Ctl") ? name.substring(0, name.length - 3) : name;
     elem.click(function() {app.states[stateName].go()})
@@ -841,6 +846,8 @@
       setupCtl2state(viewOrTm, uiElem, appRoot, elemKey);
     } else if (elemType === jiant.et.ctlBack) {
       setupCtlBack(viewOrTm, uiElem);
+    } else if (elemType === jiant.et.ctl2root) {
+      setupCtl2root(appRoot, uiElem);
     } else if (elemType === jiant.inputInt) {
       setupInputInt(uiElem);
     } else if (elemType === jiant.inputFloat) {
@@ -3549,6 +3556,7 @@
 
     et: { // element types
       ctl2state: "jiant.ctl2state",
+      ctl2root: "jiant.ctl2root",
       ctlBack: "jiant.ctlBack"
     },
     flags: {
