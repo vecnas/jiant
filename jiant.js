@@ -41,6 +41,7 @@
  2.70: statenameCtl: jiant.et.ctl2state new element type sends to state statename (name suffix "Ctl" is optional), jiant.et.ctlBack sends to history back
  2.71: ctrl_alt_click in dev mode copies to clipboard and prints to console CSS path to element, for easier styling, jiant.copy2clipboard(txt) available
  2.72: i18n (i18next) v 3 compatible, intl new options: (interpolation) prefix/suffix
+ 2.72.1: intl section i18nOptions could be specified for starting options for i18next: intl: { i18nOptions: {...., intl.debugIntl(prefix) prints debug into console
  */
 "use strict";
 (function(factory) {
@@ -2566,7 +2567,7 @@
     intlRoot.t.spec = true;
     intlRoot.t.empty = true;
     $.getJSON(intlRoot.url, function(data) {
-      var implSpec = {}, option = {};
+      var implSpec = {}, option = intlRoot["i18nOptions"] || {debug: jiant.DEV_MODE};
       if (intlRoot.i18n) {
         if (isI18n()) {
           option.customLoad = function(lng, ns, options, loadComplete) {
@@ -2584,7 +2585,7 @@
               suffix: '}'
             };
           } else {
-            option.interpolation = {
+            option.interpolation = option.interpolation || {
               prefix: intlRoot.prefix || '__',
               suffix: intlRoot.suffix || '__'
             };
@@ -2604,6 +2605,11 @@
         }
       });
       intlRoot.implement(implSpec);
+      intlRoot.debugIntl = function(prefix) {
+        $.each(data, function(key, val) {
+          key.startsWith(prefix) && infop("!! = !!", key, val);
+        });
+      };
       if (intlRoot.scanDoc) {
         $("*[data-nlabel]").each(function(i, elem) {
           elem = $(elem);
