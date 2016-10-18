@@ -43,6 +43,7 @@
  2.72: i18n (i18next) v 3 compatible, intl new options: (interpolation) prefix/suffix
  2.72.1: intl section i18nOptions could be specified for starting options for i18next: intl: { i18nOptions: {...., intl.debugIntl(prefix) prints debug into console
  2.72.2: jiant.et.ctl2root sends to states nearest root via jiant.goRoot(app)
+ 2.72.3: i18next proper translation time
  */
 "use strict";
 (function(factory) {
@@ -2585,6 +2586,7 @@
             option.interpolationSuffix = '}';
           }
           i18n.init(option);
+          completeIntl();
         } else {
           if (intlRoot.javaSubst) {
             option.interpolation = {
@@ -2603,27 +2605,29 @@
             read: function(language, namespace, callback) {
               callback(null, data);
             }
-          }).init(option);
+          }).init(option, completeIntl);
         }
       }
-      $.each(intlRoot, function(fname, fspec) {
-        if (fspec.spec) {
-          implSpec[fname] = intlRoot.i18n ? implementIntlFunctionWithI18N(fname, fspec, data, intlRoot.javaSubst) : implementIntlFunction(fname, fspec, data);
+      function completeIntl() {
+        $.each(intlRoot, function(fname, fspec) {
+          if (fspec.spec) {
+            implSpec[fname] = intlRoot.i18n ? implementIntlFunctionWithI18N(fname, fspec, data, intlRoot.javaSubst) : implementIntlFunction(fname, fspec, data);
+          }
+        });
+        intlRoot.implement(implSpec);
+        intlRoot.debugIntl = function(prefix) {
+          $.each(data, function(key, val) {
+            key.startsWith(prefix) && infop("!! = !!", key, val);
+          });
+        };
+        if (intlRoot.scanDoc) {
+          $("*[data-nlabel]").each(function(i, elem) {
+            elem = $(elem);
+            var key = elem.attr("data-nlabel"),
+              translation = intlRoot.t(key);
+            elem.html(translation);
+          });
         }
-      });
-      intlRoot.implement(implSpec);
-      intlRoot.debugIntl = function(prefix) {
-        $.each(data, function(key, val) {
-          key.startsWith(prefix) && infop("!! = !!", key, val);
-        });
-      };
-      if (intlRoot.scanDoc) {
-        $("*[data-nlabel]").each(function(i, elem) {
-          elem = $(elem);
-          var key = elem.attr("data-nlabel"),
-            translation = intlRoot.t(key);
-          elem.html(translation);
-        });
       }
     });
   }
