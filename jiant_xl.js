@@ -63,6 +63,7 @@
  xl.0.57: bindList elem factory accepts templates
  xl.0.58: bindList.off unsubscribes from model updates, default app state uses state.replace
  xl.0.59: jiant.refs removed, j 2.41 compatible
+ xl.0.60: pageableFilterableSortable one more parameter: mapping
  */
 
 (function() {
@@ -72,7 +73,7 @@
   var tmpJiantXl = {
 
     version: function() {
-      return 59;
+      return 60;
     },
 
     ctl2state: function(ctl, state, selectedCssClass, goProxy) {
@@ -244,7 +245,7 @@
       };
     },
 
-    pageableFilterableSortable: function(state, container, pager, template, ajax, filterModel, perItemCb, noItemsLabel, onCompleteCb) {
+    pageableFilterableSortable: function(state, container, pager, template, ajax, filterModel, perItemCb, noItemsLabel, onCompleteCb, mapping) {
       function refresh(pageNum) {
         var parsedNum = parseInt(pageNum);
         parsedNum = isNaN(parsedNum) ? 0 : parsedNum;
@@ -255,7 +256,7 @@
           container.empty();
           noItemsLabel && (data.content.length ? noItemsLabel.hide() : noItemsLabel.show());
           $.each(data.content, function(idx, item) {
-            var row = template.parseTemplate(item);
+            var row = template.parseTemplate(item, undefined, undefined, mapping);
             container.append(row);
             perItemCb && perItemCb(item, row, idx);
           });
