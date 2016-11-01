@@ -45,6 +45,7 @@
  2.72.2: jiant.et.ctl2root sends to states nearest root via jiant.goRoot(app)
  2.72.3: i18next proper translation time
  2.73: some code optimizations, removed obsolete onappinit
+ 2.73.1: minor
  */
 "use strict";
 (function(factory) {
@@ -166,10 +167,12 @@
   }
   
   function isArray(obj) {
-    return obj !== undefined && obj !== null && (Array.isArray(obj) || obj.jCollection);
+    return $.isArray(obj);// obj !== undefined && obj !== null && (Array.isArray(obj) || obj.jCollection);
   }
 
   function each(obj, cb) {
+    $.each(obj, cb);
+/*
     if (obj === null && obj === undefined) {
       return;
     }
@@ -190,6 +193,7 @@
       }
     }
     return obj;
+*/
   }
 
   function randomIntBetween(from, to) {
