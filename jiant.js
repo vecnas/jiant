@@ -44,6 +44,7 @@
  2.72.1: intl section i18nOptions could be specified for starting options for i18next: intl: { i18nOptions: {...., intl.debugIntl(prefix) prints debug into console
  2.72.2: jiant.et.ctl2root sends to states nearest root via jiant.goRoot(app)
  2.72.3: i18next proper translation time
+ 2.73: some code optimizations, removed obsolete onappinit
  */
 "use strict";
 (function(factory) {
@@ -130,7 +131,6 @@
     backupApps = {},
     bindingCurrently = {},
     pre = {},
-    onInitAppActions = [],
     uiFactory = new DefaultUiFactory(),
     statesUsed = {},
     listeners = [],
@@ -151,9 +151,46 @@
     }, reverseMap = {},
     replacementRegex = /;|,|=|\||\{|\}|:|#/gi,
     reverseRegex = /;;|;1|;2|;3|;4|;5|;6|;7/gi;
-  $.each(replacementMap, function(key, val) {
+  each(replacementMap, function(key, val) {
     reverseMap[val] = key;
   });
+
+  function copyArr(arr) {
+    var ret = [];
+    each(arr, function(i, val) {ret.push(val)});
+    return ret;
+  }
+
+  function isFunction(fn) {
+    return typeof fn === "function";
+  }
+  
+  function isArray(obj) {
+    return obj !== undefined && obj !== null && (Array.isArray(obj) || obj.jCollection);
+  }
+
+  function each(obj, cb) {
+    if (obj === null && obj === undefined) {
+      return;
+    }
+    var i = 0;
+    if (isArray(obj)) {
+      for (; i < obj.length; i++) {
+        if (cb.call(obj[i], i, obj[i]) === false) {
+          break;
+        }
+      }
+    } else if (typeof obj === "object") {
+      for (i in obj) {
+        if (obj.hasOwnProperty(i)) {
+          if (cb.call(obj[i], i, obj[i]) === false) {
+            break;
+          }
+        }
+      }
+    }
+    return obj;
+  }
 
   function randomIntBetween(from, to) {
     return Math.floor((Math.random()*(to - from + 1)) + from);
@@ -231,14 +268,14 @@
   }
 
   function msieDom2Html(elem) {
-    $.each(elem.find("*"), function(idx, child) {
-      $.each(child.attributes, function(i, attr) {
+    each(elem.find("*"), function(idx, child) {
+      each(child.attributes, function(i, attr) {
         if (attr.value.indexOf(" ") < 0 && attr.value.indexOf("!!") >= 0) {
           $(child).attr(attr.name, attr.value.replace(/!!/g, "e2013e03e11eee "));
         }
       });
     });
-    return $.trim($(elem).html()).replace(/!!/g, "!! ").replace(/e2013e03e11eee /g, "!! ");
+    return $(elem).html().trim().replace(/!!/g, "!! ").replace(/e2013e03e11eee /g, "!! ");
   }
 
   function nvl(val, defVal, path) {
@@ -246,7 +283,7 @@
       return defVal;
     }
     if (path) {
-      var v = $.isFunction(val[path]) ? val[path]() : val[path];
+      var v = isFunction(val[path]) ? val[path]() : val[path];
       if (v === undefined || v === null) {
         return defVal;
       }
@@ -259,7 +296,7 @@
     data = data || {};
     if (mapping) {
       data = $.extend({}, data);
-      $.each(mapping, function(key, val) {
+      each(mapping, function(key, val) {
         data[key] = data[val];
       });
     }
@@ -267,7 +304,7 @@
     try {
       var func = tmId ? _tmplCache[tmId] : null;
       if (!func) {
-        var str = $.trim($(that).html());
+        var str = $(that).html().trim();
         if (!jiant.isMSIE) {
           str = str.replace(/!!/g, "!! ");
         } else {
@@ -280,7 +317,7 @@
             .replace(/'(?=[^#]*#>)/g, "\t")
             .split("'").join("\\'")
             .split("\t").join("'")
-            .replace(/!! (.+?)!! /g, "', $.isFunction($1) ? $1() : $1,'")
+            .replace(/!! (.+?)!! /g, "', jiant.intro.isFunction($1) ? $1() : $1,'")
             .split("!?").join("');")
             .split("?!").join("p.push('")
           + "');}return p.join('');";
@@ -288,7 +325,7 @@
         func = new Function("obj", strFunc);
         _tmplCache[tmId] = func;
       }
-      return $.trim(func(data));
+      return func(data).trim();
     } catch (e) {
       err = e.message;
       logError("Error parse template: " + err);
@@ -406,14 +443,14 @@
         data.xhrFields = {withCredentials: true};
         data.crossDomain = true;
       }
-      $.each(listeners, function(i, l) {l.submittingForm && l.submittingForm(appRoot, key, name, data)});
+      each(listeners, function(i, l) {l.submittingForm && l.submittingForm(appRoot, key, name, data)});
       return $.ajax(data);
     };
   }
 
   function printp(method, args) {
     var s = args[0] + "";
-    $.each(args, function(idx, arg) {
+    each(args, function(idx, arg) {
       if (idx > 0) {
         var pos = s.indexOf("!!");
         if (pos >= 0) {
@@ -429,7 +466,7 @@
 
   function printShort(method, args) {
     var s = "";
-    $.each(args, function(idx, arg) {
+    each(args, function(idx, arg) {
       s += arg;
       s += " ";
     });
@@ -441,7 +478,7 @@
       method = "error";
     }
     try {
-      window.console && window.console[method] && $.each(args, function(idx, arg) {
+      window.console && window.console[method] && each(args, function(idx, arg) {
         window.console[method](arg);
       });
     } catch (ex) {
@@ -479,7 +516,7 @@
       roots = [],
       lastPage = 0,
       lastTotalCls;
-    $.each(uiElem, function(i, elem) {
+    each(uiElem, function(i, elem) {
       var root = $("<ul></ul>");
       root.addClass("pagination");
       $(elem).append(root);
@@ -500,7 +537,7 @@
       }
     };
     uiElem.updatePager = function(page) {
-      $.each(roots, function(idx, root) {
+      each(roots, function(idx, root) {
         root.empty();
         lastTotalCls && root.removeClass(lastTotalCls);
         lastTotalCls = "totalPages_" + page.totalPages;
@@ -586,7 +623,7 @@
       offset = Math.min(offset, container.children().length - 1);
       prev.css("visibility", offset > 0 ? "visible" : "hidden");
       next.css("visibility", offset < container.children().length - pageSize ? "visible" : "hidden");
-      $.each(container.children(), function(idx, domElem) {
+      each(container.children(), function(idx, domElem) {
         var elem = $(domElem);
 //        logInfo("comparing " + idx + " vs " + offset + " - " + (offset+pageSize));
         if (idx >= offset && idx < offset + pageSize) {
@@ -614,7 +651,7 @@
   function _bindContent(appRoot, viewRoot, viewId, viewElem, prefix) {
     var typeSpec = {};
     viewRoot._jiantSpec = typeSpec;
-    $.each(viewRoot, function (componentId, componentContentOrArr) {
+    each(viewRoot, function (componentId, componentContentOrArr) {
       var componentContent = getComponentType(componentContentOrArr);
       typeSpec[componentId] = componentContentOrArr;
       if (componentId in {appPrefix: 1, impl: 1, _jiantSpec: 1}) {
@@ -640,11 +677,11 @@
   }
 
   function getComponentType(tpOrArr) {
-    if (! $.isArray(tpOrArr)) {
+    if (! isArray(tpOrArr)) {
       return tpOrArr;
     }
     var tp;
-    $.each(tpOrArr, function(i, item) {
+    each(tpOrArr, function(i, item) {
       if (item !== jiant.optional) {
         tp = item;
         return false;
@@ -654,11 +691,11 @@
   }
 
   function isFlagPresent(tpOrArr, flag) {
-    if (! $.isArray(tpOrArr)) {
+    if (! isArray(tpOrArr)) {
       return false;
     }
     var b = false;
-    $.each(tpOrArr, function(i, item) {
+    each(tpOrArr, function(i, item) {
       if (item === flag) {
         b = true;
         return false;
@@ -687,25 +724,25 @@
     viewRoot[componentId] = {};
     viewRoot[componentId].customRenderer = function(obj, elem, val, isUpdate, viewOrTemplate) {
       if (viewOrTemplate[markerName]) {
-        $.each(viewOrTemplate[markerName], function(i, cls) {
+        each(viewOrTemplate[markerName], function(i, cls) {
           cls && viewOrTemplate.removeClass(cls);
         });
       }
       viewOrTemplate[markerName] = [];
       if (flag) {
-        var _v = $.isArray(val) && val.length == 0 ? undefined : val;
+        var _v = isArray(val) && val.length == 0 ? undefined : val;
         if (!!_v) {
           viewOrTemplate[markerName].push(componentId);
           viewOrTemplate.addClass(componentId);
         }
       } else {
         if (val !== undefined && val !== null) {
-          if (!$.isArray(val) && val && $.isFunction(val.split)) {
+          if (!isArray(val) && val && isFunction(val.split)) {
             val = val.split(",");
-          } else if (!$.isArray(val)) {
+          } else if (!isArray(val)) {
             val = [val];
           }
-          $.each(val, function(i, v) {
+          each(val, function(i, v) {
             var cls = componentId + "_" + v;
             viewOrTemplate[markerName].push(cls);
             viewOrTemplate.addClass(cls);
@@ -716,7 +753,7 @@
   }
 
   function ensureSafeExtend(spec, jqObject) {
-    $.each(spec, function(key, content) {
+    each(spec, function(key, content) {
       if (jqObject[key]) {
         jiant.info("unsafe extension: " + key + " already defined in base jQuery, shouldn't be used, now overriding!");
         jqObject[key] = undefined;
@@ -737,7 +774,7 @@
       // array or object
       var json = [],
         arr = (obj && obj.constructor == Array);
-      $.each(obj, function (k, v) {
+      each(obj, function (k, v) {
         t = typeof(v);
         if (t == "string") {
           v = '"' + v + '"';
@@ -787,8 +824,8 @@
   }
 
   function ensureExists(appPrefix, dirtyList, obj, idName, className, optional) {
-    if (idName && dirtyList && ($.inArray(idName, dirtyList) >= 0
-      || (appPrefix && $.inArray(idName.substring(appPrefix.length), dirtyList) >= 0))) {
+    if (idName && dirtyList && (dirtyList.indexOf(idName) >= 0
+      || (appPrefix && dirtyList.indexOf(idName.substring(appPrefix.length)) >= 0))) {
       return true;
     }
     if (!obj || !obj.length) {
@@ -870,8 +907,8 @@
       setupNumLabel(appRoot, uiElem);
     } else if (customElementTypes[elemType]) {
       customElementTypes[elemType](uiElem, viewOrTm, appRoot);
-    } else if ($.isArray(elemType)) {
-      $.each(elemType, function(i, tp) {
+    } else if (isArray(elemType)) {
+      each(elemType, function(i, tp) {
         setupExtras(appRoot, uiElem, tp, key, elemKey, viewOrTm, prefix);
       });
     }
@@ -880,17 +917,17 @@
 
   function isServiceName(key) {
     var words = ["parseTemplate", "parseTemplate2Text", "propagate", "customRenderer"];
-    return $.inArray(key, words) >= 0;
+    return words.indexOf(key) >= 0;
   }
 
   function assignPropagationFunction(viewId, spec, viewOrTm) {
     var map = {};
-    $.each(spec, function (key, elem) {
+    each(spec, function (key, elem) {
       map[key] = elem;
     });
     var fn = function(data, subscribe4updates, reverseBinding, mapping) {
       subscribe4updates = (subscribe4updates === undefined) ? true : subscribe4updates;
-      $.each(map, function (key, elem) {
+      each(map, function (key, elem) {
         var fnKey = "_j" + key,
           actualKey = (mapping && mapping[key]) ? mapping[key] : key,
           val = data[actualKey],
@@ -899,15 +936,15 @@
           elemType = viewOrTm._jiantSpec[key];
         if (spec[key].customRenderer || (data && val !== undefined && val !== null && !isServiceName(key))) {
           elem = viewOrTm[key];
-          var actualVal = $.isFunction(val) ? val.apply(data) : val;
+          var actualVal = isFunction(val) ? val.apply(data) : val;
           getRenderer(spec[key], elemType)(data, elem, actualVal, false, viewOrTm);
-          if (subscribe4updates && $.isFunction(data.on)&& (spec[key].customRenderer || $.isFunction(val))) { // 3rd ?
+          if (subscribe4updates && isFunction(data.on)&& (spec[key].customRenderer || isFunction(val))) { // 3rd ?
             if (fn[fnKey]) {
               oldData = fn[fnKey][0];
               oldData && oldData.off(fn[fnKey][1]);
               fn[fnKey][2] && elem.off && elem.off("change", fn[fnKey][2]);
             }
-            if (!$.isFunction(val)) { // ?
+            if (!isFunction(val)) { // ?
               actualKey = null;
             }
             handler = data.on(actualKey, function(obj, newVal) {
@@ -928,13 +965,13 @@
               }
               function elem2arr(elem) {
                 var arr = [];
-                $.each(elem, function (idx, item) {!!$(item).prop("checked") && arr.push(convert($(item).val()));});
+                each(elem, function (idx, item) {!!$(item).prop("checked") && arr.push(convert($(item).val()));});
                 return arr;
               }
               function joinOrUndef(arr) {
                 return arr.length == 0 || (arr.length == 1 && arr[0] === undefined) ? undefined : arr.join();
               }
-              if (val && $.isFunction(val)) {
+              if (val && isFunction(val)) {
                 if (etype === jiant.inputSet) {
                   val.call(data, elem2arr(elem));
                 } else if (etype === jiant.inputSetAsString) {
@@ -960,13 +997,13 @@
           }
         }
       });
-      if (spec.customRenderer && $.isFunction(spec.customRenderer)) {
+      if (spec.customRenderer && isFunction(spec.customRenderer)) {
         spec.customRenderer(data, viewOrTm);
       }
     };
     viewOrTm.propagate = fn;
     viewOrTm.unpropagate = function() {
-      $.each(map, function (key, elem) {
+      each(map, function (key, elem) {
         var fnKey = "_j" + key;
         if (fn[fnKey]) {
           var oldData = fn[fnKey][0];
@@ -978,7 +1015,7 @@
   }
 
   function getRenderer(obj, elemType) {
-    if (obj && obj.customRenderer && $.isFunction(obj.customRenderer)) {
+    if (obj && obj.customRenderer && isFunction(obj.customRenderer)) {
       return obj.customRenderer;
     } else if (elemType === jiant.inputSet) {
       return updateInputSet;
@@ -986,7 +1023,7 @@
       return updateImgBg;
     } else if (elemType === jiant.inputSetAsString) {
       return function(obj, elem, val, isUpdate, viewOrTemplate) {
-        updateInputSet(obj, elem, !val ? [val] : $.isArray(val) ? val : $.isNumeric(val) ? [val] : ("" + val).split(","), isUpdate, viewOrTemplate);
+        updateInputSet(obj, elem, !val ? [val] : isArray(val) ? val : $.isNumeric(val) ? [val] : ("" + val).split(","), isUpdate, viewOrTemplate);
       };
     } else {
       return updateViewElement;
@@ -1005,11 +1042,11 @@
     if (!elem || !elem[0]) {
       return;
     }
-    $.each(elem, function(idx, item) {
+    each(elem, function(idx, item) {
       item = $(item);
       var check = item.val() == val + "";
-      if (!check && $.isArray(val)) {
-        $.each(val, function(i, subval) {
+      if (!check && isArray(val)) {
+        each(val, function(i, subval) {
           if (subval + "" == item.val() + "") {
             check = true;
             return false;
@@ -1031,7 +1068,7 @@
       if (tp == "checkbox") {
         elem.prop("checked", !!val);
       } else if (tp == "radio") {
-        $.each(elem, function(idx, subelem) {
+        each(elem, function(idx, subelem) {
           $(subelem).prop("checked", subelem.value == (val + ""));
         });
       } else {
@@ -1045,7 +1082,7 @@
   }
 
   function _bindViews(appRoot, root, appUiFactory) {
-    $.each(root, function(viewId, viewContent) {
+    each(root, function(viewId, viewContent) {
       var prefix = ("appPrefix" in viewContent) ? viewContent.appPrefix : appRoot.appPrefix,
         view = appUiFactory.view(prefix, viewId, viewContent);
       bindView(appRoot, viewId, viewContent, view);
@@ -1059,7 +1096,7 @@
         delete viewContent[key];
       }
       appRoot.views[viewId] = viewContent;
-      $.each(spec, function(key, val) {
+      each(spec, function(key, val) {
         viewContent[key] = val;
       })
     }
@@ -1070,7 +1107,7 @@
     assignPropagationFunction(viewId, viewContent, viewContent);
     $.extend(viewContent, view);
     maybeAddDevHook(view, viewId, undefined, prefix);
-    $.each(listeners, function(i, l) {l.boundView && l.boundView(appRoot, appRoot.views, viewId, prefix, viewContent)});
+    each(listeners, function(i, l) {l.boundView && l.boundView(appRoot, appRoot.views, viewId, prefix, viewContent)});
   }
 
 // ------------ templates ----------------
@@ -1080,12 +1117,12 @@
   }
 
   function _bindTemplates(appRoot, root, appUiFactory) {
-    $.each(root, function(tmId, tmContent) {
+    each(root, function(tmId, tmContent) {
       var prefix = ("appPrefix" in tmContent) ? tmContent.appPrefix : appRoot.appPrefix,
         tm = appUiFactory.template(prefix, tmId, tmContent);
       root[tmId]._jiantSpec = {};
       root[tmId]._jiantType = jTypeTemplate;
-      $.each(tmContent, function (componentId, elemTypeOrArr) {
+      each(tmContent, function (componentId, elemTypeOrArr) {
         var elemType = getComponentType(elemTypeOrArr);
         if (!(componentId in {appPrefix: 1, impl: 1, _jiantSpec: 1, _jiantType: 1})) {
           root[tmId]._jiantSpec[componentId] = elemType;
@@ -1111,7 +1148,7 @@
       root[tmId].parseTemplate = function(data, subscribeForUpdates, reverseBind, mapping) {
         var retVal = $("<!-- -->" + parseTemplate(tm, data, tmId, mapping)); // add comment to force jQuery to read it as HTML fragment
         retVal._jiantSpec = root[tmId]._jiantSpec;
-        $.each(tmContent, function (elem, elemTypeOrArr) {
+        each(tmContent, function (elem, elemTypeOrArr) {
           var elemType = getComponentType(elemTypeOrArr);
           if (elemType === jiant.lookup) {
             info("    loookup element, no checks/bindings: " + elem);
@@ -1128,14 +1165,14 @@
         retVal.splice(0, 1); // remove first comment
         assignPropagationFunction(tmId, tmContent, retVal);
         data && retVal.propagate(data, !!subscribeForUpdates, !!reverseBind, mapping);
-        $.each(listeners, function(i, l) {l.parsedTemplate && l.parsedTemplate(appRoot, root, tmId, root[tmId], data, retVal)});
+        each(listeners, function(i, l) {l.parsedTemplate && l.parsedTemplate(appRoot, root, tmId, root[tmId], data, retVal)});
         retVal.addClass("jianttm_" + tmId);
         return retVal;
       };
       root[tmId].parseTemplate2Text = function(data, mapping) {
         return parseTemplate(tm, data, tmId, mapping);
       };
-      $.each(listeners, function(i, l) {l.boundTemplate && l.boundTemplate(appRoot, root, tmId, prefix, root[tmId])});
+      each(listeners, function(i, l) {l.boundTemplate && l.boundTemplate(appRoot, root, tmId, prefix, root[tmId])});
     });
   }
 
@@ -1163,7 +1200,7 @@
       Collection = function(data) {
         if (data) {
           var that = this;
-          $.each(data, function(idx, obj) {that.push(obj)});
+          each(data, function(idx, obj) {that.push(obj)});
         }
       },
       specBus = $({}),
@@ -1174,16 +1211,16 @@
       jiant.infop("App !!, model !! uses deprecated model repository format, switch to new, with model.jRepo = {} section", appId, modelName);
     }
     spec[defaultsName] = spec[defaultsName] || {};
-    $.each(repoFunctions, function(i, fn) {
+    each(repoFunctions, function(i, fn) {
       repoRoot[fn] = repoRoot[fn] || function(obj) {};
     });
-    $.each(objFunctions, function(i, fn) {
+    each(objFunctions, function(i, fn) {
       spec[fn] = spec[fn] || function(obj) {};
     });
     if (spec.id) {
       repoRoot.findById = repoRoot.findById || function(val) {};
     }
-    $.each(repoRoot, function(fname, funcSpec) {
+    each(repoRoot, function(fname, funcSpec) {
       if (isFindByFunction(fname)) {
         var listBy = "listBy" + fname.substring(6);
         if (! repoRoot[listBy]) {
@@ -1192,11 +1229,11 @@
       }
     });
     if (repoMode) {
-      $.each(repoRoot, function(fname, funcSpec) {
+      each(repoRoot, function(fname, funcSpec) {
         bindFn(repoRoot, fname, funcSpec);
       });
     }
-    $.each(spec, function(fname, funcSpec) {
+    each(spec, function(fname, funcSpec) {
       bindFn(spec, fname, funcSpec);
     });
     spec.asap = proxy("asap");
@@ -1228,16 +1265,16 @@
     repoRoot.add = function(arr) {
       var newArr = new Collection();
       if (arr != undefined && arr != null) {
-        arr = $.isArray(arr) ? arr : [arr];
+        arr = isArray(arr) ? arr : [arr];
         if (arr.length != 0) {
-          $.each(arr, function(idx, item) {
+          each(arr, function(idx, item) {
             var newItem = $.extend({}, spec[defaultsName], item),
               newObj = new Model();
             storage.push(newObj);
             newArr.push(newObj);
-            $.each(newItem, function(name, val) {
+            each(newItem, function(name, val) {
               if (spec[defaultsName][name]) {
-                val = $.isFunction(val) ? val(newItem) : val;
+                val = isFunction(val) ? val(newItem) : val;
               }
               if (isModelAccessor(newObj[name])) {
                 val = isModelAccessor(val) ? val.apply(item) : val;
@@ -1245,7 +1282,7 @@
               }
             });
             addIndexes(newObj);
-            $.each(newItem, function(name, val) {
+            each(newItem, function(name, val) {
               if (isModelAccessor(newObj[name])) {
                 newObj[name](newObj[name](), true, false, undefined);
               }
@@ -1253,11 +1290,11 @@
           });
           trigger(specBus, "add", [newArr], [newArr]);
           if (specBus[evt("update")] || specBus[evt()]) {
-            $.each(newArr, function(idx, item) {
+            each(newArr, function(idx, item) {
               trigger(specBus, "update", [item], [item, "update"]);
             });
           }
-          $.each(newArr, function(idx, item) {
+          each(newArr, function(idx, item) {
             item.on(function(model, action) {
               if (action == "remove") {
                 removeIndexes(item);
@@ -1277,10 +1314,10 @@
 
     function indexPresent(arr) {
       var present = false;
-      $.each(indexesSpec, function(i, index) {
+      each(indexesSpec, function(i, index) {
         if (index.length == arr.length) {
           var matching = true;
-          $.each(index, function(j, elem) {
+          each(index, function(j, elem) {
             matching = matching && elem === arr[j];
           });
           if (matching) {
@@ -1293,9 +1330,9 @@
     }
 
     function addIndexes(obj) {
-      $.each(indexesSpec, function(i, index) {
+      each(indexesSpec, function(i, index) {
         var node = indexes;
-        $.each(index, function(j, name) {
+        each(index, function(j, name) {
           var key = name + "=" + obj[name]();
           node[key] = node[key] || {};
           node = node[key];
@@ -1307,8 +1344,8 @@
     }
 
     function removeIndexes(obj) {
-      $.each(obj[reverseIndexes], function(i, arr) {
-        arr.splice($.inArray(obj, arr), 1);
+      each(obj[reverseIndexes], function(i, arr) {
+        arr.splice(arr.indexOf(obj), 1);
       });
       obj[reverseIndexes] = [];
     }
@@ -1332,14 +1369,14 @@
 
     // ----------------------------------------------- updateAll -----------------------------------------------
     repoRoot.updateAll = function(arr, removeMissing, matcherCb) {
-      arr = $.isArray(arr) ? arr : (arr ? [arr] : []);
+      arr = isArray(arr) ? arr : (arr ? [arr] : []);
       matcherCb = matcherCb ? matcherCb : function(modelObj, outerObj) {return modelObj.id ? modelObj.id() == outerObj.id : false;};
       var toRemove = [];
       var toAdd = [];
-      $.each(arr, function(idx, item) {toAdd.push(item);});
-      $.each(storage, function(idx, oldItem) {
+      each(arr, function(idx, item) {toAdd.push(item);});
+      each(storage, function(idx, oldItem) {
         var matchingObj;
-        $.each(arr, function(idx, newItem) {
+        each(arr, function(idx, newItem) {
           if (matcherCb(oldItem, newItem)) {
             matchingObj = newItem;
             return false;
@@ -1351,14 +1388,14 @@
         matchingObj && idx >= 0 && toAdd.splice(idxAdd, 1);
         matchingObj && oldItem.update(matchingObj);
       });
-      removeMissing && $.each(toRemove, function(idx, item) {
+      removeMissing && each(toRemove, function(idx, item) {
         repoRoot.remove(item);
       });
       toAdd.length > 0 && repoRoot.add(toAdd);
     };
 
-    $.each(spec[defaultsName], function(key, val) {
-      val = $.isFunction(val) ? val(spec) : val;
+    each(spec[defaultsName], function(key, val) {
+      val = isFunction(val) ? val(spec) : val;
       if (isModelAccessor(spec[key])) {
         spec[key](val);
       }
@@ -1415,7 +1452,7 @@
           bus[eventName] = (bus[eventName] || 0) + 1;
           bus.one(eventName, function () {
             bus[eventName]--;
-            var args = $.makeArray(arguments);
+            var args = copyArr(arguments);
             args.splice(0, 1);
             cb && cb.apply(that, args);
           })
@@ -1425,7 +1462,7 @@
 
     function assignOnOffHandlers(obj, overrideField) {
       obj.on = function(field, cb) {
-        if ($.isFunction(field)) {
+        if (isFunction(field)) {
           cb = field;
           field = overrideField;
         }
@@ -1433,7 +1470,7 @@
             bus = this[objectBus],
             eventName = evt(field);
         var handler = function(evt) {
-          var args = $.makeArray(arguments);
+          var args = copyArr(arguments);
           args.splice(0, 1);
           var res = cb && cb.apply(cb, args);
           if (res === false) {
@@ -1461,8 +1498,8 @@
       };
       obj.off = function(handlerOrArr) {
         var bus = this[objectBus];
-        handlerOrArr = $.isArray(handlerOrArr) ? handlerOrArr : [handlerOrArr];
-        $.each(handlerOrArr, function(i, handler) {
+        handlerOrArr = isArray(handlerOrArr) ? handlerOrArr : [handlerOrArr];
+        each(handlerOrArr, function(i, handler) {
           bus[handler.eventName]--;
           bus.handlers[handler.eventName].splice(bus.handlers[handler.eventName].indexOf(handler.cb), 1);
           return bus.off(handler.eventName, handler);
@@ -1500,12 +1537,12 @@
           if (arguments.length == 0) {
             smthChanged = true;
           } else {
-            treatMissingAsUndefined && $.each(this[modelStorage], function(key, val) {
+            treatMissingAsUndefined && each(this[modelStorage], function(key, val) {
               (key in objFrom) || (objFrom[key] = undefined);
             });
-            $.each(objFrom, function(key, val) {
+            each(objFrom, function(key, val) {
               if (isModelAccessor(that[key])) {
-                val = $.isFunction(val) ? val() : val;
+                val = isFunction(val) ? val() : val;
                 var oldVal = that[key]();
                 if (oldVal !== val) {
                   toTrigger[key] = oldVal;
@@ -1514,7 +1551,7 @@
                 }
               }
             });
-            $.each(toTrigger, function(key, oldVal) {
+            each(toTrigger, function(key, oldVal) {
               that[key](that[key](), true, false, oldVal);
             });
           }
@@ -1529,8 +1566,8 @@
         repoRoot[fname] = function() {
           function subsum(all, fieldName) {
             var ret;
-            $.each(all, function(i, item) {
-              if (item[fieldName] && $.isFunction(item[fieldName])) {
+            each(all, function(i, item) {
+              if (item[fieldName] && isFunction(item[fieldName])) {
                 var val = item[fieldName]();
                 ret = ret === undefined ? val : val === undefined ? undefined : (ret + val);
               }
@@ -1538,7 +1575,7 @@
             return ret;
           }
           var ret;
-          $.each(arr, function(idx, name) {
+          each(arr, function(idx, name) {
             var fieldName = name.substring(0, 1).toLowerCase() + name.substring(1);
             var perField = subsum(storage, fieldName);
             ret = ret === undefined ? perField : perField === undefined ? undefined : (ret + perField);
@@ -1548,7 +1585,7 @@
       } else if (fname == "filter" && !objMode) {
         repoRoot[fname] = function(cb) {
           var ret = [];
-          $.each(repoRoot.all(), function(i, obj) {
+          each(repoRoot.all(), function(i, obj) {
             if (cb(obj)) {
               ret.push(obj);
             }
@@ -1561,7 +1598,7 @@
         }
       } else if (fname.indexOf("listBy") == 0 && fname.length > 6 && isUpperCaseChar(fname, 6) && !objMode) {
         var arr = fname.substring(6).split("And");
-        $.each(arr, function(idx, name) {
+        each(arr, function(idx, name) {
           arr[idx] = name.substring(0, 1).toLowerCase() + name.substring(1);
           if (! spec[arr[idx]]) {
             errorp("Non existing field used by model method !!, field name: !!, model name: !!, app id: !!", fname, arr[idx], modelName, appId);
@@ -1573,7 +1610,7 @@
         repoRoot[fname] = function() {
           var node = indexes,
             args = arguments;
-          $.each(arr, function(i, name) {
+          each(arr, function(i, name) {
             var key = name + "=" + args[i];
             node = node[key];
             if (node === undefined) {
@@ -1589,7 +1626,7 @@
         Model.prototype[fname] = function() {
           var outerArgs = arguments,
             newVals = {};
-          $.each(arr, function(idx, name) {
+          each(arr, function(idx, name) {
             var fieldName = name.substring(0, 1).toLowerCase() + name.substring(1);
             newVals[fieldName] = outerArgs[idx];
           });
@@ -1601,7 +1638,7 @@
         spec[fname] = proxy(fname);
         Model.prototype[fname] = function (val) {
           var that = this;
-          $.each(this, function(name, fn) {
+          each(this, function(name, fn) {
             isModelAccessor(fn) && that[name](val, true);
           });
         }
@@ -1622,12 +1659,12 @@
           }
           function obj2map(obj) {
             var ret = {};
-            $.each(obj, function(key, val) {
+            each(obj, function(key, val) {
               val2map(ret, val, key);
             });
             return ret;
           }
-          $.each(that, function(key) {
+          each(that, function(key) {
             var actualKey = (mapping && mapping[key]) ? mapping[key] : key,
               fn = that[actualKey];
             if (isModelAccessor(fn) || isModelSupplier(fn)) {
@@ -1689,7 +1726,7 @@
         //}
         //assignOnOffHandlers(); // spec[fname], specBus, fname
       } else if (isEventHandlerName(fname)) {
-      } else if (fname != modelStorage && fname != objectBus && $.isFunction(funcSpec)) {
+      } else if (fname != modelStorage && fname != objectBus && isFunction(funcSpec)) {
         collectionFunctions.push(fname);
         spec[fname] = proxy(fname);
         Model.prototype[fname] = funcSpec;
@@ -1710,16 +1747,16 @@
   }
 
   function attachCollectionFunctions(arr, collectionFunctions) {
-    $.each(collectionFunctions, function(idx, fn) {
+    each(collectionFunctions, function(idx, fn) {
       arr[fn] = function() {
         var ret = [],
           args = arguments;
-        $.each(this, function(idx, obj) {
+        each(this, function(idx, obj) {
           ret.push(obj[fn].apply(obj, args));
         });
         if (isEventHandlerName(fn)) {
           ret.off = function() {
-            $.each(ret, function(i, item) {
+            each(ret, function(i, item) {
               item.off();
             });
           }
@@ -1740,11 +1777,11 @@
   }
 
   function isModelAccessor(fn) {
-    return fn && fn.jiant_accessor && $.isFunction(fn);
+    return fn && fn.jiant_accessor && isFunction(fn);
   }
 
   function isModelSupplier(fn) {
-    return fn && fn.jiant_supplier && $.isFunction(fn);
+    return fn && fn.jiant_supplier && isFunction(fn);
   }
 
   function isModel(obj) {
@@ -1762,9 +1799,9 @@
   }
 
   function _bindModels(appRoot, models, appId) {
-    $.each(models, function(name, spec) {
+    each(models, function(name, spec) {
       bindModel(name, spec, appId);
-      $.each(listeners, function(i, l) {l.boundModel && l.boundModel(appRoot, models, name, models[name])});
+      each(listeners, function(i, l) {l.boundModel && l.boundModel(appRoot, models, name, models[name])});
     });
   }
 
@@ -1778,7 +1815,7 @@
     if (spec._jAppId) {
       var superImpl = $.extend(true, {}, spec),
         newImpl = implFn($, boundApps[spec._jAppId], superImpl);
-      $.each(newImpl, function(fname, fbody) {
+      each(newImpl, function(fname, fbody) {
         spec[fname] = fbody;
       });
     } else {
@@ -1788,14 +1825,14 @@
   }
 
   function _bindLogic(appRoot, logics, appId) {
-    $.each(logics, function(name, spec) {
-      if ($.isFunction(spec)) {
+    each(logics, function(name, spec) {
+      if (isFunction(spec)) {
         if (isEmptyFunction(spec)) {
           jiant.logError("don't declare empty logic functions, use objects for namespace grouping");
         }
       } else {
-        $.each(spec, function(fname, fnbody) {
-          if ($.isFunction(fnbody)) {
+        each(spec, function(fname, fnbody) {
+          if (isFunction(fnbody)) {
             var params = getParamNames(fnbody);
             if (isEmptyFunction(fnbody)) {
               spec[fname] = function() {
@@ -1809,8 +1846,8 @@
         });
         spec.implement = function(obj) {
           spec._jAppId = appId;
-          $.each(spec, function(fname, fnbody) {
-            if ($.isFunction(fnbody) && !(fname in {"implement": 1, "_jAppId": 1, "_jOverrides": 1})) {
+          each(spec, function(fname, fnbody) {
+            if (isFunction(fnbody) && !(fname in {"implement": 1, "_jAppId": 1, "_jOverrides": 1})) {
               if (! fname in obj) {
                 jiant.logError("Logic function " + fname + " is not implemented by declared implementation");
               } else {
@@ -1818,10 +1855,10 @@
               }
             }
           });
-          spec._jOverrides && spec._jOverrides.length && $.each(spec._jOverrides, function(i, implFn) {
+          spec._jOverrides && spec._jOverrides.length && each(spec._jOverrides, function(i, implFn) {
             var superImpl = $.extend(true, {}, spec),
               newImpl = implFn($, boundApps[spec._jAppId], superImpl);
-            $.each(newImpl, function(fname, fbody) {
+            each(newImpl, function(fname, fbody) {
               spec[fname] = fbody;
             });
           });
@@ -1834,22 +1871,22 @@
           loadIntl(spec, appRoot);
         }
       }
-      $.each(listeners, function(i, l) {l.boundLogic && l.boundLogic(appRoot, logics, name, spec)});
+      each(listeners, function(i, l) {l.boundLogic && l.boundLogic(appRoot, logics, name, spec)});
     });
   }
 
   function logUnboundCount(appId, name) {
     var len = 0;
-    awaitingDepends[appId] && $.each(awaitingDepends[appId], function() {len++});
-    $.each(listeners, function(i, l) {l.logicImplemented && l.logicImplemented(appId, name, len)});
+    awaitingDepends[appId] && each(awaitingDepends[appId], function() {len++});
+    each(listeners, function(i, l) {l.logicImplemented && l.logicImplemented(appId, name, len)});
   }
 
   function loadLibs(arr, cb) {
     var pseudoDeps = [];
-    if (!$.isArray(arr)) {
+    if (!isArray(arr)) {
       arr = [arr];
     }
-    $.each(arr, function(idx, url) {
+    each(arr, function(idx, url) {
       var pseudoName = "ext" + new Date().getTime() + Math.random();
       pseudoDeps.push(pseudoName);
       declare(pseudoName, url);
@@ -1869,10 +1906,10 @@
       var ms = new Date().getTime() - startedAt;
       lib && jiant.infop("Loaded external library !! in !! ms", objOrUrlorFn, ms);
       externalDeclarations[name] = lib ? {} : objOrUrlorFn;
-      $.each(awaitingDepends, function(appId, depList) {
+      each(awaitingDepends, function(appId, depList) {
         copyLogic(appId, name);
       });
-      $.each(awaitingDepends, function(appId, depList) {
+      each(awaitingDepends, function(appId, depList) {
         checkForExternalAwaiters(appId, name);
       });
     }
@@ -1892,7 +1929,7 @@
     if (obj && awaitingDepends[appId] && awaitingDepends[appId][name] && app) {
       app.logic || (app.logic = {});
       app.logic[name] || (app.logic[name] = {});
-      $.each($.isFunction(obj) ? obj($, app) : obj, function(fname, fspec) {
+      each(isFunction(obj) ? obj($, app) : obj, function(fname, fspec) {
         app.logic[name][fname] = fspec;
       });
     }
@@ -1912,7 +1949,7 @@
     }
     var awaiters = awaitingDepends[appId][name];
     delete awaitingDepends[appId][name];
-    awaiters && $.each(awaiters, function(idx, cb) {
+    awaiters && each(awaiters, function(idx, cb) {
       eventBus.trigger(dependencyResolvedEventName(appId, name));
 //            handleBound(appId, cb);
     });
@@ -1932,10 +1969,10 @@
       docStyles = document.styleSheets, // local reference
       ssCount = docStyles.length; // Initial stylesheet count
 
-    if (!$.isArray(arr)) {
+    if (!isArray(arr)) {
       arr = [arr];
     }
-    $.each(arr, function (idx, url) {
+    each(arr, function (idx, url) {
       info("Start loading CSS: " + url);
       loadedCss.push(handleCss(url));
     });
@@ -2024,7 +2061,7 @@
 // ------------ semaphores staff ----------------
 
   function _bindSemaphores(appRoot, semaphores, appId) {
-    $.each(semaphores, function(name, spec) {
+    each(semaphores, function(name, spec) {
       semaphores[name].release = function() {
         if (semaphores[name].released) {
           logError("re-releasing semaphore already released, ignoring: " + appId + ".semaphores." + name);
@@ -2039,7 +2076,7 @@
           cb && cb.apply(cb, semaphores[name].releasedArgs);
         } else {
           eventBus.on(appId + "." + name + ".semaphore", function() {
-            var args = $.makeArray(arguments);
+            var args = copyArr(arguments);
             args.splice(0, 1);
             cb && cb.apply(cb, args);
           });
@@ -2051,7 +2088,7 @@
 // ------------ events staff ----------------
 
   function _bindEvents(appRoot, events, appId) {
-    $.each(events, function(name, spec) {
+    each(events, function(name, spec) {
       events[name].listenersCount = 0;
       events[name].fire = function() {
         perAppBus[appId].trigger(name + ".event", arguments);
@@ -2059,7 +2096,7 @@
       events[name].on = function (cb) {
         events[name].listenersCount++;
         var handler = function () {
-          var args = $.makeArray(arguments);
+          var args = copyArr(arguments);
           args.splice(0, 1);
           cb && cb.apply(cb, args);
         };
@@ -2081,7 +2118,7 @@
         return perAppBus[appId].off(name + ".event", handler);
       };
 
-      $.each(listeners, function(i, l) {l.boundEvent && l.boundEvent(appRoot, events, name, events[name])});
+      each(listeners, function(i, l) {l.boundEvent && l.boundEvent(appRoot, events, name, events[name])});
     });
   }
 
@@ -2102,19 +2139,19 @@
     if (! states[""]) {
       states[""] = {};
     }
-    $.each(states, function(name, stateSpec) {
+    each(states, function(name, stateSpec) {
       var params = stateSpec.go ? getParamNames(stateSpec.go) : [];
       stateSpec.go = go(name, stateSpec.root, stateSpec, stateExternalBase, appId, true, params);
       stateSpec.replace = go(name, stateSpec.root, stateSpec, stateExternalBase, appId, false, params);
       stateSpec.start = function(cb) {
         var trace;
-        $.each(listeners, function(i, l) {l.stateStartRegisterHandler && l.stateStartRegisterHandler(appRoot, name, stateSpec)});
-        statesUsed[appId + name] && $.each(listeners, function(i, l) {l.stateError && l.stateError(appRoot, name, stateSpec, "State start handler registered after state triggered")});
+        each(listeners, function(i, l) {l.stateStartRegisterHandler && l.stateStartRegisterHandler(appRoot, name, stateSpec)});
+        statesUsed[appId + name] && each(listeners, function(i, l) {l.stateError && l.stateError(appRoot, name, stateSpec, "State start handler registered after state triggered")});
         trace = getStackTrace();
         eventBus.on(appId + "state_" + name + "_start", function() {
-          var args = $.makeArray(arguments);
+          var args = copyArr(arguments);
           args.splice(0, 1);
-          $.each(listeners, function(i, l) {l.stateStartCallHandler && l.stateStartCallHandler(appRoot, name, stateSpec, trace, args)});
+          each(listeners, function(i, l) {l.stateStartCallHandler && l.stateStartCallHandler(appRoot, name, stateSpec, trace, args)});
           cb && cb.apply(cb, args);
         });
         var current = parseState(appId);
@@ -2126,17 +2163,17 @@
       };
       stateSpec.end = function(cb) {
         var trace;
-        $.each(listeners, function(i, l) {l.stateEndRegisterHandler && l.stateEndRegisterHandler(appRoot, name, stateSpec)});
-        statesUsed[appId + name] && $.each(listeners, function(i, l) {l.stateError && l.stateError(appRoot, name, stateSpec, "State end handler registered after state triggered")});
+        each(listeners, function(i, l) {l.stateEndRegisterHandler && l.stateEndRegisterHandler(appRoot, name, stateSpec)});
+        statesUsed[appId + name] && each(listeners, function(i, l) {l.stateError && l.stateError(appRoot, name, stateSpec, "State end handler registered after state triggered")});
         trace = getStackTrace();
         eventBus.on(appId + "state_" + name + "_end", function() {
-          $.each(listeners, function(i, l) {l.stateEndCallHandler && l.stateEndCallHandler(appRoot, name, stateSpec, trace)});
-          var args = $.makeArray(arguments);
+          each(listeners, function(i, l) {l.stateEndCallHandler && l.stateEndCallHandler(appRoot, name, stateSpec, trace)});
+          var args = copyArr(arguments);
           args.splice(0, 1);
           cb && cb.apply(cb, args);
         });
       };
-      $.each(listeners, function(i, l) {l.boundState && l.boundState(appRoot, states, name, stateSpec)});
+      each(listeners, function(i, l) {l.boundState && l.boundState(appRoot, states, name, stateSpec)});
     });
     $(window).hashchange(makeHashListener(appRoot, appId));
     lastStates[appId] = parseState(appId).now[0];
@@ -2157,19 +2194,19 @@
         return;
       }
       params.splice(0, 1);
-      $.each(params, function (idx, p) {
+      each(params, function (idx, p) {
         if (p == "undefined") {
           params[idx] = undefined;
         }
       });
       if (lastStates[appId] != undefined && lastStates[appId] != stateId) {
-        $.each(listeners, function(i, l) {l.stateEndTrigger && l.stateEndTrigger(appRoot, lastStates[appId])});
+        each(listeners, function(i, l) {l.stateEndTrigger && l.stateEndTrigger(appRoot, lastStates[appId])});
         eventBus.trigger(appId + "state_" + lastStates[appId] + "_end");
       }
       lastStates[appId] = stateId;
       lastEncodedStates[appId] = getAppState(appId);
       stateId = (stateId ? stateId : "");
-      $.each(listeners, function(i, l) {l.stateStartTrigger && l.stateStartTrigger(appRoot, stateId, params)});
+      each(listeners, function(i, l) {l.stateStartTrigger && l.stateStartTrigger(appRoot, stateId, params)});
       !statesUsed[appId + stateId] && (statesUsed[appId + stateId] = 1);
       //            jiant.logInfo(lastEncodedStates[appId] + " params are ", params);
       eventBus.trigger(appId + "state_" + stateId + "_start", params);
@@ -2182,7 +2219,7 @@
       var parsed = parseState(appId),
         prevState = parsed.now;
       parsed.now = [stateId];
-      $.each(arguments, function(idx, arg) {
+      each(arguments, function(idx, arg) {
         if (arg !== undefined) {
           parsed.now.push(pack(arg));
         } else if ((prevState[0] == stateId || isSameStatesGroup(appId, prevState[0], stateId)) && prevState[idx + 1] != undefined) {
@@ -2220,11 +2257,11 @@
       }
       if (root) {
         parsed.root = [];
-        $.each(parsed.now, function(idx, param) {
+        each(parsed.now, function(idx, param) {
           parsed.root.push(param);
         });
       } else {
-        $.each(parsed.root, function(idx, param) {
+        each(parsed.root, function(idx, param) {
           parsed.root[idx] = pack(param);
         });
       }
@@ -2242,7 +2279,7 @@
     function _go(appId) {
       var parsed = parseState(appId);
       parsed.now = [];
-      $.each(parsed.root, function(idx, param) {
+      each(parsed.root, function(idx, param) {
         parsed.now.push(pack(param));
         parsed.root[idx] = pack(param);
       });
@@ -2252,7 +2289,7 @@
       var appId = extractApplicationId(appOrId);
       _go(appId);
     } else {
-      $.each(getStates(), function(appId, state) {
+      each(getStates(), function(appId, state) {
         _go(appId);
       });
     }
@@ -2262,7 +2299,7 @@
     var states = getStates(),
       result = "";
     var s = parsed.now + "|" + parsed.root;
-    $.each(states, function(stateAppId, state) {
+    each(states, function(stateAppId, state) {
       if (appId == stateAppId) {
         result += (stateAppId + "=" + s + "=");
       } else {
@@ -2286,7 +2323,7 @@
       data = state.split("="),
       retVal = {};
 //          jiant.logInfo("parsing state: " + state);
-    $.each(data, function(idx, elem) {
+    each(data, function(idx, elem) {
       (idx % 2 == 0) && elem && data[idx + 1] != undefined && (retVal[elem] = data[idx + 1]);
 //            (idx % 2 == 0) && elem && data[idx + 1] != undefined && jiant.logInfo("state parsed: " + elem + " === " + data[idx+1]);
     });
@@ -2299,7 +2336,7 @@
       return s === undefined ? "" : s;
     } else {
       var retVal = "";
-      $.each(getStates(), function(key, val) {
+      each(getStates(), function(key, val) {
         retVal = val;
         return false;
       });
@@ -2311,9 +2348,9 @@
     var state = getAppState(appId),
       arr = state.split("|"),
       parsed = {now: [], root: []};
-    $.each(arr, function(idx, item) {
+    each(arr, function(idx, item) {
       var args = item.split(",");
-      $.each(args, function(idxInner, arg) {
+      each(args, function(idxInner, arg) {
         parsed[idx == 0 ? "now" : "root"].push(unpack(arg));
       });
     });
@@ -2325,7 +2362,7 @@
   function pack(s) {
     if ($.isPlainObject(s)) {
       var retVal = "{";
-      $.each(s, function(key, val) {
+      each(s, function(key, val) {
         retVal += pack(key);
         retVal += ":";
         retVal += pack(val);
@@ -2347,7 +2384,7 @@
     if (s && s[0] == "{") {
       var retVal = {};
       var arr = s.substring(1, s.length).split("}");
-      $.each(arr, function(idx, item) {
+      each(arr, function(idx, item) {
         var sub = item.split(":");
         (sub.length == 2) && (retVal[unpack(sub[0])] = unpack(sub[1]));
       });
@@ -2384,28 +2421,28 @@
   }
 
   function _bindAjax(appRoot, root, ajaxPrefix, ajaxSuffix, crossDomain) {
-    $.each(root, function(uri, funcSpec) {
+    each(root, function(uri, funcSpec) {
       var params = getParamNames(funcSpec);
       params && params.length > 0 ? params.splice(params.length - 1, 1) : params = [];
-      root[uri] = makeAjaxPerformer(appRoot, ajaxPrefix, ajaxSuffix, uri, params, $.isFunction(root[uri]) ? root[uri]() : undefined, crossDomain);
+      root[uri] = makeAjaxPerformer(appRoot, ajaxPrefix, ajaxSuffix, uri, params, isFunction(root[uri]) ? root[uri]() : undefined, crossDomain);
       root[uri]._jiantSpec = funcSpec;
       root[uri]._jiantSpecName = uri;
-      $.each(listeners, function(i, l) {l.boundAjax && l.boundAjax(appRoot, root, uri, root[uri])});
+      each(listeners, function(i, l) {l.boundAjax && l.boundAjax(appRoot, root, uri, root[uri])});
     });
   }
 
   function parseForAjaxCall(root, path, actual, traverse) {
-    if ($.isArray(actual) || (actual && actual.jCollection)) {
+    if (isArray(actual) || (actual && actual.jCollection)) {
       var compound = false;
-      $.each(actual, function(i, obj) {
+      each(actual, function(i, obj) {
         compound = compound || $.isPlainObject(obj) || (obj && obj.jModelName);
         return !compound;
       });
-      $.each(actual, function(i, obj) {
+      each(actual, function(i, obj) {
         parseForAjaxCall(root, path + (compound ? ("[" + i + "]") : ""), obj, true);
       });
     } else if ($.isPlainObject(actual) || (actual && actual.jModelName)) {
-      $.each(actual, function(key, value) {
+      each(actual, function(key, value) {
         if (key === jiant.flags.ajaxSubmitAsMap) {
           return;
         }
@@ -2438,14 +2475,14 @@
         callback,
         errHandler,
         outerArgs = arguments;
-      if ($.isFunction(outerArgs[outerArgs.length - 2])) {
+      if (isFunction(outerArgs[outerArgs.length - 2])) {
         callback = outerArgs[outerArgs.length - 2];
         errHandler = outerArgs[outerArgs.length - 1];
-      } else if ($.isFunction(outerArgs[outerArgs.length - 1])) {
+      } else if (isFunction(outerArgs[outerArgs.length - 1])) {
         callback = outerArgs[outerArgs.length - 1];
       }
-      $.each(params, function(idx, param) {
-        if (idx < outerArgs.length && !$.isFunction(outerArgs[idx]) && outerArgs[idx] != undefined && outerArgs[idx] != null) {
+      each(params, function(idx, param) {
+        if (idx < outerArgs.length && !isFunction(outerArgs[idx]) && outerArgs[idx] != undefined && outerArgs[idx] != null) {
           var actual = outerArgs[idx];
           parseForAjaxCall(callData, param, actual);
         }
@@ -2457,15 +2494,15 @@
         sfx = (ajaxSuffix || ajaxSuffix == "") ? ajaxSuffix : jiant.AJAX_SUFFIX,
         url = hardUrl ? hardUrl : (pfx + uri + sfx),
         time = new Date().getTime();
-      $.each(listeners, function(i, l) {l.ajaxCallStarted && l.ajaxCallStarted(appRoot, uri, url, callData)});
+      each(listeners, function(i, l) {l.ajaxCallStarted && l.ajaxCallStarted(appRoot, uri, url, callData)});
       var settings = {data: callData, traditional: true, success: function(data) {
-        $.each(listeners, function(i, l) {l.ajaxCallCompleted && l.ajaxCallCompleted(appRoot, uri, url, callData, new Date().getTime() - time)});
+        each(listeners, function(i, l) {l.ajaxCallCompleted && l.ajaxCallCompleted(appRoot, uri, url, callData, new Date().getTime() - time)});
         if (callback) {
           try {
             data = $.parseJSON(data);
           } catch (ex) {
           }
-          $.each(listeners, function(i, l) {l.ajaxCallResults && l.ajaxCallResults(appRoot, uri, url, callData, data)});
+          each(listeners, function(i, l) {l.ajaxCallResults && l.ajaxCallResults(appRoot, uri, url, callData, data)});
           callback(data);
         }
       }, error: function (jqXHR, textStatus, errorText) {
@@ -2479,7 +2516,7 @@
         } else {
           jiant.handleErrorFn(jqXHR.responseText);
         }
-        $.each(listeners, function(i, l) {l.ajaxCallError && l.ajaxCallError(appRoot, uri, url, callData, new Date().getTime() - time, jqXHR.responseText, jqXHR)});
+        each(listeners, function(i, l) {l.ajaxCallError && l.ajaxCallError(appRoot, uri, url, callData, new Date().getTime() - time, jqXHR.responseText, jqXHR)});
       }};
       if (crossDomain) {
         settings.contentType = "application/json";
@@ -2498,9 +2535,9 @@
 // ------------ internationalization, texts ------------
 
   function translate(appRoot, val) {
-    if ($.isArray(val)) {
+    if (isArray(val)) {
       var arr = [];
-      $.each(val, function(i, key) {
+      each(val, function(i, key) {
         arr.push(appRoot.logic.intl.t(key));
       });
       return arr.join(", ");
@@ -2611,14 +2648,14 @@
         completeIntl();
       }
       function completeIntl() {
-        $.each(intlRoot, function(fname, fspec) {
+        each(intlRoot, function(fname, fspec) {
           if (fspec.spec) {
             implSpec[fname] = intlRoot.i18n ? implementIntlFunctionWithI18N(fname, fspec, data, intlRoot.javaSubst) : implementIntlFunction(fname, fspec, data);
           }
         });
         intlRoot.implement(implSpec);
         intlRoot.debugIntl = function(prefix) {
-          $.each(data, function(key, val) {
+          each(data, function(key, val) {
             key.startsWith(prefix) && infop("!! = !!", key, val);
           });
         };
@@ -2652,7 +2689,7 @@
         var args = {};
         if (arguments) {
           if (javaSubst) {
-            $.each(arguments, function(i, a) {i > 0 && (args["" + (i - 1)] = a)});
+            each(arguments, function(i, a) {i > 0 && (args["" + (i - 1)] = a)});
           } else {
             args = arguments[1];
           }
@@ -2665,10 +2702,10 @@
         var args = {};
         if (arguments) {
           if (javaSubst) {
-            $.each(arguments, function(i, a) {args["" + i] = a});
+            each(arguments, function(i, a) {args["" + i] = a});
           } else {
             var paramNames = getParamNames(fspec);
-            $.each(arguments, function(i, a) {i > 0 && i < paramNames.length && (args[paramNames[i]] = a)});
+            each(arguments, function(i, a) {i > 0 && i < paramNames.length && (args[paramNames[i]] = a)});
           }
         }
         ensureIntlKey(data, fname);
@@ -2704,7 +2741,7 @@
   // loadModule after .app executes module immediately
   function loadModule(app, modules, cb, replace) {
     var appId = extractApplicationId(app);
-    if (! $.isArray(modules)) {
+    if (! isArray(modules)) {
       modules = [modules];
     }
     if (boundApps[appId]) { // after
@@ -2713,7 +2750,7 @@
       _loadModules(bindingCurrently[appId], modules, appId, false, cb, replace);
     } else { // before
       preApp(appId, function($, app) {
-        $.each(modules, function(i, m) {
+        each(modules, function(i, m) {
           app.modules.push(m);
         });
       });
@@ -2726,14 +2763,14 @@
     cb = cb || function() {};
     if ($.isPlainObject(root)) {
       modules2load = parseObjectModules(root, appId);
-    } else if ($.isArray(root)) {
+    } else if (isArray(root)) {
       modules2load = parseArrayModules(root, appId);
     } else {
       logError("Unrecognized modules type", root);
     }
     if (modules2load.length) {
       if (replaceProvided) {
-        $.each(modules2load, function(i, m) {
+        each(modules2load, function(i, m) {
           m.replace = replace;
         });
       }
@@ -2744,7 +2781,7 @@
   }
 
   function executeExternal(appRoot, cb, arr, idx, module) {
-    module.css && $.each(module.css, function(i, url) {
+    module.css && each(module.css, function(i, url) {
       if (addedLibs[url]) {
         return;
       }
@@ -2754,7 +2791,7 @@
         $("<style>").html(css).appendTo("head");
       }
     });
-    module.html && $.each(module.html, function(i, url) {
+    module.html && each(module.html, function(i, url) {
       // if (addedLibs[url]) {
       //   return;
       // }
@@ -2769,7 +2806,7 @@
         }
       }
     });
-    module.js && $.each(module.js, function(i, url) {
+    module.js && each(module.js, function(i, url) {
       if (addedLibs[url]) {
         return;
       }
@@ -2790,9 +2827,9 @@
     var moduleSpec = arr[idx],
       mname = moduleSpec.name,
       module = modules[mname];
-    if ($.isFunction(module)) {
+    if (isFunction(module)) {
       var args = [$, appRoot, jiant, moduleSpec];
-      module.parsedDeps && $.each(module.parsedDeps, function(i, name) {
+      module.parsedDeps && each(module.parsedDeps, function(i, name) {
         args.push(appRoot.modules[name]);
       });
       appRoot.modules[mname] = module.apply(this, args);
@@ -2835,7 +2872,7 @@
       appRoot.modules = {};
     }
     var arr = [];
-    $.each(modules2load, function(i, moduleSpec) {
+    each(modules2load, function(i, moduleSpec) {
       arr.push(moduleSpec);
     });
     arr.sort(function(a, b) {
@@ -2847,7 +2884,7 @@
 
   function addIfNeed(modules2load, depModule) {
     var found = false;
-    $.each(modules2load, function(i, moduleSpec) {
+    each(modules2load, function(i, moduleSpec) {
       if (moduleSpec.name == depModule.name) {
         found = true;
         moduleSpec.order = Math.min(moduleSpec.order, depModule.order);
@@ -2879,15 +2916,15 @@
       }
       var deps = modules[moduleName].deps,
         darr = modules[moduleName].parsedDeps = [];
-      deps && $.each(deps, function(i, dep) {
+      deps && each(deps, function(i, dep) {
         if (typeof dep === "string") {
           darr.push(loadDep("", dep, moduleSpec))
         } else {
-          $.each(dep, function(path, arr) {
-            if (! $.isArray(arr)) {
+          each(dep, function(path, arr) {
+            if (! isArray(arr)) {
               arr = [arr];
             }
-            $.each(arr, function(i, val) {
+            each(arr, function(i, val) {
               darr.push(loadDep(path, val, moduleSpec));
             });
           });
@@ -2943,7 +2980,7 @@
     moduleLoads.push({
       appRoot: appRoot, modules2load: modules2load, initial: initial, cb: cb, loading: loading
     });
-    $.each(modules2load, function(i, moduleSpec) {
+    each(modules2load, function(i, moduleSpec) {
       _loadModule(appRoot, appId, modules2load, initial, cb, moduleSpec, loading);
     });
     cbIf0();
@@ -2951,19 +2988,19 @@
 
   function parseArrayModules(root, appId) {
     var ret = [], j = 0;
-    $.each(root, function(i, module) {
+    each(root, function(i, module) {
       if (typeof module === "string") {
         ret.push(parseObjModule(module, {path: module}, appId, j));
       } else {
-        $.each(module, function(key, val) {
+        each(module, function(key, val) {
           if (typeof val === "string") {
             ret.push(parseObjModule(val, {path: key + "/" + val}, appId, j));
-          } else if ($.isArray(val)) {
-            $.each(val, function(i, subval) {
+          } else if (isArray(val)) {
+            each(val, function(i, subval) {
               if (typeof subval === "string") {
                 ret.push(parseObjModule(subval, {path: key + "/" + subval}, appId, j));
               } else {
-                $.each(subval, function(k, v) {
+                each(subval, function(k, v) {
                   v.path = v.path || (key + "/" + k);
                   ret.push(parseObjModule(k, v, appId, j));
                   j++;
@@ -2984,7 +3021,7 @@
 
   function parseObjectModules(root, appId) {
     var ret = [], i = 0;
-    $.each(root, function(name, module) {
+    each(root, function(name, module) {
       if (typeof module === "string") {
         ret.push(parseObjModule(name, {path: module}, appId, i));
       } else {
@@ -3006,12 +3043,12 @@
 
   function loadPath(module, path) {
     if (module[path]) {
-      if (! $.isArray(module[path])) {
+      if (! isArray(module[path])) {
         module[path] = [module[path]];
       }
       module[path + "Count"] = module[path + "Count"] ? (module[path + "Count"] + module[path].length) : module[path].length;
       module[path + "Loaded"] = {};
-      $.each(module[path], function(i, url) {
+      each(module[path], function(i, url) {
         if (loadedLibs[url]) {
           module[path + "Loaded"][url] = loadedLibs[url];
           module[path + "Count"]--;
@@ -3039,7 +3076,7 @@
             loadedLibs[url] = data;
             var waiters = loadingLibs[url];
             delete loadingLibs[url];
-            $.each(waiters, function(i, w) {
+            each(waiters, function(i, w) {
               w();
             });
           }).always(function() {
@@ -3118,13 +3155,13 @@
     maybeShort(root, "models", "m");
     root.modules = root.modules || [];
     if (pre[appId]) {
-      $.each(pre[appId], function(i, cb) {
+      each(pre[appId], function(i, cb) {
         cb($, root, jiant);
       });
       delete pre[appId];
     }
     if (appId !== "*" && pre["*"]) {
-      $.each(pre["*"], function(i, cb) {
+      each(pre["*"], function(i, cb) {
         cb($, root, jiant);
       });
     }
@@ -3147,18 +3184,16 @@
       perAppBus[appId] = $({});
       boundApps[appId] = root;
       loadedLogics[appId] || (loadedLogics[appId] = {});
-      $.each(externalDeclarations, function(name, impl) {
+      each(externalDeclarations, function(name, impl) {
         loadedLogics[appId][name] || (loadedLogics[appId][name] = externalDeclarations[name]);
         copyLogic(appId, name);
         awakeAwaitingDepends(appId, name);
       });
       delete bindingCurrently[appId];
-      var appInitEvent = appId + "onAppInit" + appId;
-      eventBus.trigger(appInitEvent);
-      $.when.apply($, onInitAppActions).done(function() {eventBus.trigger(appBoundEventName(appId))});
+      eventBus.trigger(appBoundEventName(appId));
       devMode && setTimeout(function() {
         if (awaitingDepends[appId]) {
-          $.each(awaitingDepends[appId], function(key, arr) {
+          each(awaitingDepends[appId], function(key, arr) {
             if (arr && arr.length) {
               errorp("Some logic depends for application " + appId + " are not implemented by your code, logic name: ", key);
               logError(awaitingDepends[appId]);
@@ -3195,7 +3230,7 @@
     if (typeof devMode !== "boolean") {
       devMode = undefined;
     }
-    $.each(listeners, function(i, l) {l.bindStarted && l.bindStarted(root)});
+    each(listeners, function(i, l) {l.bindStarted && l.bindStarted(root)});
     var appUiFactory = root.uiFactory ? root.uiFactory : uiFactory;
     if (viewsUrl) {
       var injectionPoint;
@@ -3214,7 +3249,7 @@
     } else {
       _bindUi(root, devMode, appUiFactory);
     }
-    $.each(listeners, function(i, l) {l.bindCompleted && l.bindCompleted(root)});
+    each(listeners, function(i, l) {l.bindCompleted && l.bindCompleted(root)});
   }
 
   function extractApplicationId(appId) {
@@ -3236,12 +3271,12 @@
       cb = dependenciesList;
       dependenciesList = [];
     }
-    if (! $.isArray(appIdArr)) {
+    if (! isArray(appIdArr)) {
       appIdArr = [appIdArr];
     }
-    if (appIdArr.length > 1 && $.isArray(dependenciesList) && dependenciesList.length > 0) {
-      $.each(dependenciesList, function(idx, arr) {
-        if (!$.isArray(arr)) {
+    if (appIdArr.length > 1 && isArray(dependenciesList) && dependenciesList.length > 0) {
+      each(dependenciesList, function(idx, arr) {
+        if (!isArray(arr)) {
           jiant.error("Used multiple applications onApp and supplied wrong dependency list, use multi-array, " +
             "like [[app1DepList], [app2DepList]]");
         }
@@ -3251,8 +3286,8 @@
     } else if (! dependenciesList) {
       dependenciesList = [];
     }
-    $.each(listeners, function(i, l) {l.onUiBoundCalled && l.onUiBoundCalled(appIdArr, dependenciesList, cb)});
-    $.each(appIdArr, function(idx, appId) {
+    each(listeners, function(i, l) {l.onUiBoundCalled && l.onUiBoundCalled(appIdArr, dependenciesList, cb)});
+    each(appIdArr, function(idx, appId) {
       if (appId === undefined || appId === null) {
         logError("Called onApp with undefined application, apps array is ", appIdArr);
       } else if ($.isPlainObject(appId)) {
@@ -3261,7 +3296,7 @@
       }
       (! awaitingDepends[appId]) && (awaitingDepends[appId] = {});
       (! loadedLogics[appId]) && (loadedLogics[appId] = {});
-      dependenciesList[idx] && $.each(dependenciesList[idx], function(idx, depName) {
+      dependenciesList[idx] && each(dependenciesList[idx], function(idx, depName) {
         (!awaitingDepends[appId][depName]) && (awaitingDepends[appId][depName] = []);
         if ((!loadedLogics[appId][depName]) && externalDeclarations[depName]) {
           copyLogic(appId, depName);
@@ -3290,7 +3325,7 @@
 
   function handleBoundArr(appIdArr, cb) {
     var allBound = true;
-    $.each(appIdArr, function(idx, appId) {
+    each(appIdArr, function(idx, appId) {
       if (! boundApps[appId]) {
         eventBus.one(appBoundEventName(appId), function() {
           handleBoundArr(appIdArr, cb);
@@ -3301,9 +3336,9 @@
     });
     if (allBound) {
       var allDependsResolved = true, params = [$];
-      $.each(appIdArr, function(idx, appId) {
-        $.each(awaitingDepends[appId], function(depName, cbArr) {
-          allDependsResolved = allDependsResolved && ($.inArray(cb, cbArr) < 0);
+      each(appIdArr, function(idx, appId) {
+        each(awaitingDepends[appId], function(depName, cbArr) {
+          allDependsResolved = allDependsResolved && (cbArr.indexOf(cb) < 0);
           !allDependsResolved && eventBus.one(dependencyResolvedEventName(appId, depName), function() {
             handleBoundArr(appIdArr, cb);
           });
@@ -3326,32 +3361,16 @@
     return appId + "jiant_dependency_resolved_" + depName;
   }
 
-  function onAppInit(appId, cb) {
-    var deferred = new $.Deferred();
-    onInitAppActions.push(deferred.promise());
-    var readyCb = function() {
-      deferred.resolve();
-    };
-    if (boundApps[appId]) {
-      jiant.logError("Defining and calling onApp() before onAppInit().");
-    } else {
-      var eventId = appId + "onAppInit" + appId;
-      eventBus.on(eventId, function () {
-        cb && cb($, boundApps[appId], readyCb);
-      });
-    }
-  }
-
   function forget(appOrId, deep) {
     var appId = extractApplicationId(appOrId),
       app = boundApps[appId];
     if (app && deep) {
-      $.each(app.models, function(i, m) {
+      each(app.models, function(i, m) {
         m.reset(undefined);
         getRepo(m).all().remove();
       });
-      $.each(app.views, function (i, v) {
-        $.each(v._jiantSpec, function (name, spec) {
+      each(app.views, function (i, v) {
+        each(v._jiantSpec, function (name, spec) {
           if (jiant.cssFlag === spec) {
             v.removeClass(name);
           } else if (jiant.cssMarker === spec) {
@@ -3375,7 +3394,7 @@
     if (! fromApp) {
       return;
     }
-    $.each(toApp, function(key, val) {
+    each(toApp, function(key, val) {
       delete toApp[key];
     });
     $.extend(true, toApp, fromApp);
@@ -3387,7 +3406,7 @@
 
   function setUiFactory(factory) {
     var ok = true;
-    $.each(["template", "viewComponent", "view"], function(idx, name) {
+    each(["template", "viewComponent", "view"], function(idx, name) {
       if (! factory[name]) {
         jiant.logError("UI Factory doesn't implement method " + name + ", ignoring bad factory");
         ok = false;
@@ -3400,7 +3419,7 @@
     loadLibs(["https://rawgit.com/vecnas/jiant/master/arbor.js"], function() {
       loadLibs(["https://rawgit.com/vecnas/jiant/master/arbor-tween.js"], function() {
         loadLibs(["https://rawgit.com/vecnas/jiant/master/graph.js"], function() {
-          appId || $.each(boundApps, function(key, val) {
+          appId || each(boundApps, function(key, val) {
             appId = key;
             return false;
           });
@@ -3414,7 +3433,7 @@
 
   function asObjArray(arr, name, idxName) {
     var ret = [];
-    $.each(arr, function(i, val) {
+    each(arr, function(i, val) {
       var obj = {};
       obj[name] = val;
       idxName && (obj[idxName] = i);
@@ -3440,7 +3459,7 @@
 
   function check(bool, err) {
     if (! bool) {
-      var args = $.makeArray(arguments);
+      var args = copyArr(arguments);
       args.splice(0, 1);
       logError(args);
       jiant.DEV_MODE && alert(err);
@@ -3452,7 +3471,7 @@
   }
 
   function version() {
-    return 272;
+    return 273;
   }
 
   function Jiant() {}
@@ -3485,7 +3504,6 @@
     onApp: onApp,
     preUiBound: preApp,
     preApp: preApp,
-    onAppInit: onAppInit,
     refreshState: refreshState,
     getCurrentState: getCurrentState,
     setUiFactory: setUiFactory,
@@ -3570,6 +3588,7 @@
     },
 
     intro: {
+      isFunction: isFunction,
       isTemplate: function(obj) {return obj && obj._jiantType === jTypeTemplate}
     },
 
