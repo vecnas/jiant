@@ -46,6 +46,7 @@
  2.72.3: i18next proper translation time
  2.73: some code optimizations, removed obsolete onappinit
  2.73.1: minor
+ 2.74: bindModel(modelName, spec, appId) is available via jiant.bindModel
  */
 "use strict";
 (function(factory) {
@@ -165,7 +166,7 @@
   function isFunction(fn) {
     return typeof fn === "function";
   }
-  
+
   function isArray(obj) {
     return $.isArray(obj);// obj !== undefined && obj !== null && (Array.isArray(obj) || obj.jCollection);
   }
@@ -810,7 +811,7 @@
       }
     });
   }
-  
+
   function copy2cb(txt) {
     info(txt);
     if (document.execCommand) {
@@ -3475,7 +3476,7 @@
   }
 
   function version() {
-    return 273;
+    return 274;
   }
 
   function Jiant() {}
@@ -3499,6 +3500,7 @@
     module: module,
     loadModule: loadModule,
     bindView: bindView,
+    bindModel: bindModel,
     loadLibs: loadLibs,
     loadCss: loadCss,
     goRoot: goRoot,
