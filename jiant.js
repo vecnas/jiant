@@ -47,6 +47,7 @@
  2.73: some code optimizations, removed obsolete onappinit
  2.73.1: minor
  2.74: bindModel(modelName, spec, appId) is available via jiant.bindModel
+ 2.74.1: module always loaded by GET, to handle global setting ajax method = POST to influence module loading method
  */
 "use strict";
 (function(factory) {
@@ -2958,6 +2959,7 @@
         infop("           url: " + url);
         $.ajax({
           url: url,
+          method: "GET",
           timeout: appRoot.modulesTimeout || 15000,
           cache: true,
           crossDomain: true,
