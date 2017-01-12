@@ -48,6 +48,7 @@
  2.73.1: minor
  2.74: bindModel(modelName, spec, appId) is available via jiant.bindModel
  2.74.1: module always loaded by GET, to handle global setting ajax method = POST to influence module loading method
+ 2.75: loadModule, preApp fixes to expected behaviour, GET enforced for external html/css modules load
  */
 "use strict";
 (function(factory) {
@@ -130,6 +131,7 @@
     modules = {},
     eventBus = $({}),
     perAppBus = {},
+    preApping = {},
     boundApps = {},
     backupApps = {},
     bindingCurrently = {},
@@ -2755,6 +2757,9 @@
     } else if (bindingCurrently[appId]) { // during
       _loadModules(bindingCurrently[appId], modules, appId, false, cb, replace);
     } else { // before
+      if (cb) {
+        logError("loadModule called before .app with callback, callback will be ignored. loadModule arguments: ", arguments);
+      }
       preApp(appId, function($, app) {
         each(modules, function(i, m) {
           app.modules.push(m);
@@ -3075,6 +3080,7 @@
           $.ajax({
             url: url,
             timeout: jiant.LIB_LOAD_TIMEOUT,
+            method: "GET",
             cache: true,
             crossDomain: true,
             dataType: "text"
@@ -3161,6 +3167,7 @@
     maybeShort(root, "states", "s");
     maybeShort(root, "models", "m");
     root.modules = root.modules || [];
+    preApping[appId] = root;
     if (pre[appId]) {
       each(pre[appId], function(i, cb) {
         cb($, root, jiant);
@@ -3172,6 +3179,7 @@
         cb($, root, jiant);
       });
     }
+    delete preApping[appId];
     bindingCurrently[appId] = root;
     if (root.modulesSpec) {
       root.modules = root.modulesSpec;
@@ -3318,16 +3326,17 @@
   function preApp(appId, cb) {
     if (typeof appId != "string") {
       errorp("preApp first parameter must be application id string, got !!", typeof appId);
-      return;
     } else if (boundApps[appId]) {
       errorp("Application !! already bound, preApp should be called before bindUi", appId);
-      return;
     } else if (bindingCurrently[appId]) {
       errorp("Application !! binding in progress, preApp should be called before bindUi", appId);
-      return;
+    } else {
+      var arr = pre[appId] = nvl(pre[appId], []);
+      arr.push(cb);
+      if (preApping[appId]) {
+        cb($, preApping[appId], jiant);
+      }
     }
-    var arr = pre[appId] = nvl(pre[appId], []);
-    arr.push(cb);
   }
 
   function handleBoundArr(appIdArr, cb) {
@@ -3478,7 +3487,7 @@
   }
 
   function version() {
-    return 274;
+    return 275;
   }
 
   function Jiant() {}
