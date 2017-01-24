@@ -49,6 +49,7 @@
  2.74: bindModel(modelName, spec, appId) is available via jiant.bindModel
  2.74.1: module always loaded by GET, to handle global setting ajax method = POST to influence module loading method
  2.75: loadModule, preApp fixes to expected behaviour, GET enforced for external html/css modules load
+ 2.76: jiant.href introduced, for mapping value to "href" attr, view/tm _scan flag introduced, for auto scan and mapping view/template fields to spec
  */
 "use strict";
 (function(factory) {
@@ -662,7 +663,7 @@
     each(viewRoot, function (componentId, componentContentOrArr) {
       var componentContent = getComponentType(componentContentOrArr);
       typeSpec[componentId] = componentContentOrArr;
-      if (componentId in {appPrefix: 1, impl: 1, _jiantSpec: 1}) {
+      if (componentId in {appPrefix: 1, impl: 1, _jiantSpec: 1, _scan: 1}) {
         //skip
       } else if (viewRoot[componentId] === jiant.lookup) {
         jiant.logInfo("    loookup element, no checks/bindings: " + componentId);
@@ -1027,6 +1028,8 @@
       return obj.customRenderer;
     } else if (elemType === jiant.inputSet) {
       return updateInputSet;
+    } else if (elemType === jiant.href) {
+      return updateHref;
     } else if (elemType === jiant.imgBg) {
       return updateImgBg;
     } else if (elemType === jiant.inputSetAsString) {
@@ -1035,6 +1038,14 @@
       };
     } else {
       return updateViewElement;
+    }
+  }
+
+  function updateHref(obj, elem, val, isUpdate, viewOrTemplate) {
+    if (!!val) {
+      elem.attr("href", val);
+    } else {
+      elem.attr("href", "");
     }
   }
 
@@ -1092,7 +1103,10 @@
   function _bindViews(appRoot, root, appUiFactory) {
     each(root, function(viewId, viewContent) {
       var prefix = ("appPrefix" in viewContent) ? viewContent.appPrefix : appRoot.appPrefix,
-        view = appUiFactory.view(prefix, viewId, viewContent);
+          view = appUiFactory.view(prefix, viewId, viewContent);
+      if ("_scan" in viewContent) {
+        scanForSpec(prefix, viewContent, view);
+      }
       bindView(appRoot, viewId, viewContent, view);
     });
   }
@@ -1118,6 +1132,39 @@
     each(listeners, function(i, l) {l.boundView && l.boundView(appRoot, appRoot.views, viewId, prefix, viewContent)});
   }
 
+  function getAutoType(child, name) {
+    switch (child.tagName.toUpperCase()) {
+      case "INPUT": return jiant.input;
+      case "IMG": return jiant.image;
+      case "FORM": return jiant.form;
+      case "BUTTON": return jiant.ctl;
+      case "A": return jiant.href;
+      default:
+        var lowerName = name.toLowerCase();
+        if (lowerName.indexOf("container") >= 0) {
+          return jiant.container;
+        } else if (lowerName.indexOf("ctl") >= 0) {
+          return jiant.ctl;
+        }
+        return jiant.label;
+    }
+  }
+
+  function scanForSpec(prefix, content, elem) {
+    var children = elem[0].getElementsByTagName("*");
+    $.each(children, function(i, child) {
+      var classes = child.className.split(/\s+/);
+      $.each(classes, function(j, cls) {
+        if (cls.startsWith(prefix)) {
+          var name = cls.substring(prefix.length);
+          if (! (name in content)) {
+            content[name] = getAutoType(child, name);
+          }
+        }
+      });
+    });
+  }
+
 // ------------ templates ----------------
 
   function parseTemplate2Text(tm, data, cacheKey) {
@@ -1127,12 +1174,15 @@
   function _bindTemplates(appRoot, root, appUiFactory) {
     each(root, function(tmId, tmContent) {
       var prefix = ("appPrefix" in tmContent) ? tmContent.appPrefix : appRoot.appPrefix,
-        tm = appUiFactory.template(prefix, tmId, tmContent);
+          tm = appUiFactory.template(prefix, tmId, tmContent);
       root[tmId]._jiantSpec = {};
       root[tmId]._jiantType = jTypeTemplate;
+      if ("_scan" in tmContent) {
+        scanForSpec(prefix, tmContent, tm);
+      }
       each(tmContent, function (componentId, elemTypeOrArr) {
         var elemType = getComponentType(elemTypeOrArr);
-        if (!(componentId in {appPrefix: 1, impl: 1, _jiantSpec: 1, _jiantType: 1})) {
+        if (!(componentId in {appPrefix: 1, impl: 1, _jiantSpec: 1, _jiantType: 1, _scan: 1})) {
           root[tmId]._jiantSpec[componentId] = elemType;
           if (elemType === jiant.lookup) {
             jiant.logInfo("    loookup element, no checks/bindings: " + componentId);
@@ -1164,7 +1214,7 @@
           } else if (elemType === jiant.meta) {
           } else if (elemType.jiant_data) {
             setupDataFunction(retVal, elem);
-          } else if (! (elem in {"parseTemplate": 1, "parseTemplate2Text": 1, "appPrefix": 1, "impl": 1, "_jiantSpec": 1})) {
+          } else if (! (elem in {parseTemplate: 1, parseTemplate2Text: 1, appPrefix: 1, impl: 1, _jiantSpec: 1, _scan: 1})) {
             retVal[elem] = $.merge(retVal.filter("." + prefix + elem), retVal.find("." + prefix + elem));
             setupExtras(appRoot, retVal[elem], root[tmId]._jiantSpec[elem], tmId, elem, retVal, prefix);
             maybeAddDevHook(retVal[elem], tmId, elem, prefix);
@@ -3487,7 +3537,7 @@
   }
 
   function version() {
-    return 275;
+    return 276;
   }
 
   function Jiant() {}
@@ -3576,6 +3626,7 @@
     image: "jiant.image",
     imgBg: "jiant.imgBg",
     input: "jiant.input",
+    href: "jiant.href",
     inputSet: "jiant.inputSet",
     inputSetAsString: "jiant.inputSetAsString",
     inputDate: "jiant.inputDate",
