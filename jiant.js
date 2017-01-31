@@ -50,6 +50,7 @@
  2.74.1: module always loaded by GET, to handle global setting ajax method = POST to influence module loading method
  2.75: loadModule, preApp fixes to expected behaviour, GET enforced for external html/css modules load
  2.76: jiant.href introduced, for mapping value to "href" attr, view/tm _scan flag introduced, for auto scan and mapping view/template fields to spec
+ 2.76.1: removed obsolete devMode internally, now could be set properly from query string
  */
 "use strict";
 (function(factory) {
@@ -3193,8 +3194,8 @@
     return false;
   }
 
-  function _bindUi(root, devMode, appUiFactory) {
-    ! devMode && maybeSetDevModeFromQueryString();
+  function _bindUi(root, appUiFactory) {
+    maybeSetDevModeFromQueryString();
     errString = "";
     bindingsResult = true;
     var appId = (root.id ? root.id : "no_app_id");
@@ -3256,7 +3257,7 @@
       });
       delete bindingCurrently[appId];
       eventBus.trigger(appBoundEventName(appId));
-      devMode && setTimeout(function() {
+      jiant.DEV_MODE && setTimeout(function() {
         if (awaitingDepends[appId]) {
           each(awaitingDepends[appId], function(key, arr) {
             if (arr && arr.length) {
@@ -3309,10 +3310,10 @@
         injectionPoint = $("body");
       }
       injectionPoint.load(viewsUrl, {}, function () {
-        _bindUi(root, devMode, appUiFactory);
+        _bindUi(root, appUiFactory);
       });
     } else {
-      _bindUi(root, devMode, appUiFactory);
+      _bindUi(root, appUiFactory);
     }
     each(listeners, function(i, l) {l.bindCompleted && l.bindCompleted(root)});
   }
