@@ -51,6 +51,7 @@
  2.75: loadModule, preApp fixes to expected behaviour, GET enforced for external html/css modules load
  2.76: jiant.href introduced, for mapping value to "href" attr, view/tm _scan flag introduced, for auto scan and mapping view/template fields to spec
  2.76.1: removed obsolete devMode internally, now could be set properly from query string
+ 2.76.2: jRepo to model copied functions bug fixed
  */
 "use strict";
 (function(factory) {
@@ -1733,7 +1734,7 @@
           });
           return ret;
         }
-      } else if ((isModelAccessor(funcSpec) || isEmptyFunction(funcSpec)) && ! isEventHandlerName(fname)) {
+      } else if ((isModelAccessor(funcSpec) || isEmptyFunction(funcSpec)) && ! isEventHandlerName(fname) && !repoMode) {
         var trans = funcSpec === jiant.transientFn;
         collectionFunctions.push(fname);
         collectionFunctions.push(fname + "_on");
@@ -1785,7 +1786,7 @@
         //}
         //assignOnOffHandlers(); // spec[fname], specBus, fname
       } else if (isEventHandlerName(fname)) {
-      } else if (fname != modelStorage && fname != objectBus && isFunction(funcSpec)) {
+      } else if (fname != modelStorage && fname != objectBus && isFunction(funcSpec) && !repoMode) {
         collectionFunctions.push(fname);
         spec[fname] = proxy(fname);
         Model.prototype[fname] = funcSpec;
