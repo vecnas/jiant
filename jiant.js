@@ -1735,7 +1735,7 @@
           });
           return ret;
         }
-      } else if ((isModelAccessor(funcSpec) || isEmptyFunction(funcSpec)) && ! isEventHandlerName(fname) && objMode) {
+      } else if ((isModelAccessor(funcSpec) || isEmptyFunction(funcSpec)) && ! isEventHandlerName(fname) && (objMode || !repoMode)) {
         var trans = funcSpec === jiant.transientFn;
         collectionFunctions.push(fname);
         collectionFunctions.push(fname + "_on");
@@ -1787,7 +1787,7 @@
         //}
         //assignOnOffHandlers(); // spec[fname], specBus, fname
       } else if (isEventHandlerName(fname)) {
-      } else if (fname != modelStorage && fname != objectBus && isFunction(funcSpec) && objMode) {
+      } else if (fname != modelStorage && fname != objectBus && isFunction(funcSpec) && (objMode || !repoMode)) {
         collectionFunctions.push(fname);
         spec[fname] = proxy(fname);
         Model.prototype[fname] = funcSpec;
