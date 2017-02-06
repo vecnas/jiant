@@ -318,3 +318,56 @@ unsubscribes from previous model when bound to new, inputInt() change value by u
  2.51: .unpropagate fixed
  2.52: value="undefined" mapped to undefined for inputSet/inputSetAsString and radio, both forward and reverse bindings, lib load time reported
  2.53: view/template component type could be specified as array: [jiant.label, jiant.optional], jiant.optional added for optionally presented elements
+ 2.53.1: states .replace fixed to use defaults if specified
+ 2.54: model per field subscriptions added to collection functions, formatMoney(amount, grpDelim, decDelim, decimals) - more parameters
+ 2.55: jiant.forget completely restores base app structure, cleaning anything added later
+ 2.56: shortenings added to app always, forget resets all modeles to undefined, events separated to bus per app
+ 2.56.1: dependency for embedded into main script modules properly handled
+ 2.56.2: jiant.visualize updated
+ 2.56.3: removed model cleanup on forget
+ 2.57: .forget(app, deep) - one more "deep" parameter, to reset models to undefined and to remove css marker/flag classes
+ 2.57.1: loadLibs forgets pseudo app
+ 2.58: jiant.loadCss(arrOrUrl, cb) loads css into document
+ 2.59: jiant.loadModule(app, moduleSpec) loads module into specified application
+ 2.60: module(name, {js: ..., css: ..., html: ..., injectId: ...}) supported for external components loading
+ 2.60.1: .js also added to remote url path
+ 2.60.2: default lib load timeout increased from 500 to 5000 ms
+ 2.60.3: extra logging removed
+ 2.61: proper order of js/css/html loading in frames of same module
+ 2.61.1: proper loaded js eval
+ 2.62: libs are loaded on module load, checks for missing libs on module execution
+ 2.62.1: module load info print in dev mode - by whom initiated
+ 2.62.2: jiant.loadModule accepts both string and array as module spec for load (2nd parameter)
+ 2.62.3: recursion fixed when called loadModule during app init
+ 2.63: loadModule(app, modules, cb, injectTo, replace) - 2 more parameters, moved from jiant.module() declaration
+ 2.63.1: states - prev state vals applied before defaults
+ 2.63.2: goRoot(appOrId) accepts app or application id (was only id before)
+ 2.64: parsed template element gets extra CSS class jianttm_<templateId>, to simplify finding template parse results
+ 2.64.1: some cleanup
+ 2.65: removed models.onAndNow(replaced by .asapAndOn), added .nowAndOn, .asapAndOn, .once, also added .once for events
+ 2.65.1: nowAndOn fix
+ 2.66: bindView already bound view fixed, proper call is jiant.bindView(app, "testView", app.views.testView, $(app.views.testView[0]));
+ 2.66.1: updateAll(undefined) doesn't break anymore
+ 2.66.2: bindView parameter viewContent now updated with new state, not keeps old
+ 2.66.3: empty key not reported as missing translation anymore
+ 2.67: app.handleErrorFn could be declared to handle ajax errors specifically per application
+ 2.67.1: model.subscribers() fixed
+ 2.67.2: nowAndOn returns .on handler, could be used to unsubscribe later
+ 2.68: models .off fixed, now also supports list.off(list.on), also list.on().off() chains
+ 2.69: model.jRepo.filter(cb)::Collection, model.jRepo.toCollection(arr)::Collection functions added
+ 2.69.1: removed "injectTo" from load modules functionality
+ 2.69.2: cacheKey passed for jiant.parseTemplate2Text(data, cacheKey), template.parseTemplate2Text(data, mapping)
+ 2.70: statenameCtl: jiant.et.ctl2state new element type sends to state statename (name suffix "Ctl" is optional), jiant.et.ctlBack sends to history back
+ 2.71: ctrl_alt_click in dev mode copies to clipboard and prints to console CSS path to element, for easier styling, jiant.copy2clipboard(txt) available
+ 2.72: i18n (i18next) v 3 compatible, intl new options: (interpolation) prefix/suffix
+ 2.72.1: intl section i18nOptions could be specified for starting options for i18next: intl: { i18nOptions: {...., intl.debugIntl(prefix) prints debug into console
+ 2.72.2: jiant.et.ctl2root sends to states nearest root via jiant.goRoot(app)
+ 2.72.3: i18next proper translation time
+ 2.73: some code optimizations, removed obsolete onappinit
+ 2.73.1: minor
+ 2.74: bindModel(modelName, spec, appId) is available via jiant.bindModel
+ 2.74.1: module always loaded by GET, to handle global setting ajax method = POST to influence module loading method
+ 2.75: loadModule, preApp fixes to expected behaviour, GET enforced for external html/css modules load
+ 2.76: jiant.href introduced, for mapping value to "href" attr, view/tm _scan flag introduced, for auto scan and mapping view/template fields to spec
+ 2.76.1: removed obsolete devMode internally, now could be set properly from query string
+ 2.76.2: jRepo to model copied functions bug fixed
