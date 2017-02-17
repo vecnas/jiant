@@ -1,5 +1,6 @@
 /*
  2.76.3: fix of wrong condition in models fill
+ 2.77: changing model in on .add handler now properly reflected in indexes
  */
 "use strict";
 (function(factory) {
@@ -1296,12 +1297,6 @@
               }
             });
           });
-          trigger(specBus, "add", [newArr], [newArr]);
-          if (specBus[evt("update")] || specBus[evt()]) {
-            each(newArr, function(idx, item) {
-              trigger(specBus, "update", [item], [item, "update"]);
-            });
-          }
           each(newArr, function(idx, item) {
             item.on(function(model, action) {
               if (action == "remove") {
@@ -1311,6 +1306,12 @@
               }
             }); // any change, due to findBy synthetic fields
           });
+          trigger(specBus, "add", [newArr], [newArr]);
+          if (specBus[evt("update")] || specBus[evt()]) {
+            each(newArr, function(idx, item) {
+              trigger(specBus, "update", [item], [item, "update"]);
+            });
+          }
         }
       }
       return newArr;
@@ -3487,7 +3488,7 @@
   }
 
   function version() {
-    return 276;
+    return 277;
   }
 
   function Jiant() {}
