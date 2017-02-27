@@ -1,6 +1,7 @@
 /*
  2.76.3: fix of wrong condition in models fill
  2.77: changing model in on .add handler now properly reflected in indexes
+ 2.77.1: intl attaches app.modulesSuffix to intl url
  */
 "use strict";
 (function(factory) {
@@ -2617,10 +2618,15 @@
       //error("Intl data url not provided, internationalization will not be loaded");
       return;
     }
+    var url = intlRoot.url;
+    if (appRoot.modulesSuffix) {
+      var delim = intlRoot.url.indexOf("?") >= 0 ? "&" : "?";
+      url = url + delim + appRoot.modulesSuffix;
+    }
     intlRoot.t = function(val) {};
     intlRoot.t.spec = true;
     intlRoot.t.empty = true;
-    $.getJSON(intlRoot.url, function(data) {
+    $.getJSON(url, function(data) {
       var implSpec = {}, option = intlRoot["i18nOptions"] || {debug: jiant.DEV_MODE};
       if (intlRoot.i18n) {
         if (isI18n()) {
