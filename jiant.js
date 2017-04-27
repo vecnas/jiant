@@ -3,6 +3,7 @@
  2.77: changing model in on .add handler now properly reflected in indexes
  2.77.1: intl attaches app.modulesSuffix to intl url
  2.78: .propagate skips jquery objects in models, to avoid re-attaching stored views
+ 2.79: jiant.registerCustomRenderer(name, function(obj, elem, val, isUpdate, viewOrTemplate) { added, to provide ability attach named custom renderers to elems
  */
 "use strict";
 (function(factory) {
@@ -69,6 +70,7 @@
     },
 
     customElementTypes = {},
+    customElementRenderers = {},
     bindingsResult = true,
     errString,
     pickTime,
@@ -896,7 +898,7 @@
           oldData,
           handler,
           elemType = viewOrTm._jiantSpec[key];
-        if (spec[key].customRenderer || (data && val !== undefined && val !== null && !isServiceName(key) && !(val instanceof $))) {
+        if (spec[key].customRenderer || customElementRenderers[elemType] || (data && val !== undefined && val !== null && !isServiceName(key) && !(val instanceof $))) {
           elem = viewOrTm[key];
           var actualVal = isFunction(val) ? val.apply(data) : val;
           getRenderer(spec[key], elemType)(data, elem, actualVal, false, viewOrTm);
@@ -979,6 +981,8 @@
   function getRenderer(obj, elemType) {
     if (obj && obj.customRenderer && isFunction(obj.customRenderer)) {
       return obj.customRenderer;
+    } else if (customElementRenderers[elemType]) {
+      return customElementRenderers[elemType];
     } else if (elemType === jiant.inputSet) {
       return updateInputSet;
     } else if (elemType === jiant.href) {
@@ -3481,6 +3485,13 @@
     customElementTypes[customTypeName] = handler;
   }
 
+  function registerCustomRenderer(customRendererName, handler) {
+    if (! (typeof customRendererName === 'string' || customRendererName instanceof String)) {
+      alert("Custom renderer name should be string");
+    }
+    customElementRenderers[customRendererName] = handler;
+  }
+
   function check(bool, err) {
     if (! bool) {
       var args = copyArr(arguments);
@@ -3495,7 +3506,7 @@
   }
 
   function version() {
-    return 278;
+    return 279;
   }
 
   function Jiant() {}
@@ -3541,6 +3552,7 @@
 
     handleErrorFn: defaultAjaxErrorsHandle,
     registerCustomType: registerCustomType,
+    registerCustomRenderer: registerCustomRenderer,
     logInfo: logInfo,
     logError: logError,
     info: info,
