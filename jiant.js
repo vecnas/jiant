@@ -896,7 +896,7 @@
           oldData,
           handler,
           elemType = viewOrTm._jiantSpec[key];
-        if (spec[key].customRenderer || (data && val !== undefined && val !== null && !isServiceName(key) && (! data instanceof $))) {
+        if (spec[key].customRenderer || (data && val !== undefined && val !== null && !isServiceName(key) && !(val instanceof $))) {
           elem = viewOrTm[key];
           var actualVal = isFunction(val) ? val.apply(data) : val;
           getRenderer(spec[key], elemType)(data, elem, actualVal, false, viewOrTm);
