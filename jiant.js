@@ -2,6 +2,7 @@
  2.76.3: fix of wrong condition in models fill
  2.77: changing model in on .add handler now properly reflected in indexes
  2.77.1: intl attaches app.modulesSuffix to intl url
+ 2.78: .propagate skips jquery objects in models, to avoid re-attaching stored views
  */
 "use strict";
 (function(factory) {
@@ -895,7 +896,7 @@
           oldData,
           handler,
           elemType = viewOrTm._jiantSpec[key];
-        if (spec[key].customRenderer || (data && val !== undefined && val !== null && !isServiceName(key))) {
+        if (spec[key].customRenderer || (data && val !== undefined && val !== null && !isServiceName(key) && (! data instanceof $))) {
           elem = viewOrTm[key];
           var actualVal = isFunction(val) ? val.apply(data) : val;
           getRenderer(spec[key], elemType)(data, elem, actualVal, false, viewOrTm);
@@ -3494,7 +3495,7 @@
   }
 
   function version() {
-    return 277;
+    return 278;
   }
 
   function Jiant() {}
