@@ -5,6 +5,7 @@
  2.78: .propagate skips jquery objects in models, to avoid re-attaching stored views
  2.79: jiant.registerCustomRenderer(name, function(obj, elem, val, isUpdate, viewOrTemplate) { added, to provide ability attach named custom renderers to elems
  2.80: jiant.comp[onent] added to declare templates/views hierarchy, example: templates.itemSlotTm = {item: jiant.comp("itemTm"}, should refer to template name
+ 2.80.1: .comp fields access: tmOut.fieldOut.fieldIn
  */
 "use strict";
 (function(factory) {
@@ -676,8 +677,12 @@
 
   function getCompRenderer(appRoot, tmId, componentId) {
     return function(obj, elem, val, isUpdate, viewOrTemplate, settings) {
+      var el = appRoot.templates[tmId].parseTemplate(obj, settings.subscribeForUpdates, settings.reverseBind, (settings.mapping || {})[componentId]);
+      $.each(appRoot.templates[tmId]._jiantSpec, function(cId, cElem) {
+        viewOrTemplate[componentId][cId] = el[cId];
+      });
+      elem.html(el);
       // elem.empty();
-      elem.html(appRoot.templates[tmId].parseTemplate(obj, settings.subscribeForUpdates, settings.reverseBind, (settings.mapping || {})[componentId]));
       // $.each(obj, function(i, item) {
       // });
     };
