@@ -4,6 +4,7 @@
  2.77.1: intl attaches app.modulesSuffix to intl url
  2.78: .propagate skips jquery objects in models, to avoid re-attaching stored views
  2.79: jiant.registerCustomRenderer(name, function(obj, elem, val, isUpdate, viewOrTemplate) { added, to provide ability attach named custom renderers to elems
+ 2.80: jiant.comp[onent] added to declare templates/views hierarchy, example: templates.itemSlotTm = {item: jiant.comp("itemTm"}, should refer to template name
  */
 "use strict";
 (function(factory) {
@@ -630,12 +631,17 @@
         viewRoot[componentId].customRenderer = function(obj, elem, val, isUpdate, viewOrTemplate) {viewRoot[componentId](val)}
       } else if (viewRoot[componentId] === jiant.cssMarker || viewRoot[componentId] === jiant.cssFlag) {
         setupCssFlagsMarkers(viewRoot, componentId);
+      } else if (isFlagPresent(componentContentOrArr, jiant.comp)) {
+        viewRoot[componentId].customRenderer.customRenderer = getCompRenderer(appRoot, componentContent, componentId);
       } else {
         var uiElem = uiFactory.viewComponent(viewElem, viewId, prefix, componentId, componentContent);
         ensureExists(prefix, appRoot.dirtyList, uiElem, prefix + viewId, prefix + componentId, isFlagPresent(componentContentOrArr, jiant.optional));
         viewRoot[componentId] = uiElem;
         setupExtras(appRoot, uiElem, componentContent, viewId, componentId, viewRoot, prefix);
         //        logInfo("    bound UI for: " + componentId);
+      }
+      if (isFlagPresent(componentContentOrArr, jiant.comp) && ! (componentContent in root)) {
+        error("jiant.comp element refers to non-existing template name: " + componentContent + ", view.elem " + viewId + "." + componentId);
       }
     });
   }
@@ -646,7 +652,7 @@
     }
     var tp;
     each(tpOrArr, function(i, item) {
-      if (item !== jiant.optional) {
+      if (item !== jiant.optional && item !== jiant.comp) {
         tp = item;
         return false;
       }
@@ -666,6 +672,15 @@
       }
     });
     return b;
+  }
+
+  function getCompRenderer(appRoot, tmId, componentId) {
+    return function(obj, elem, val, isUpdate, viewOrTemplate, settings) {
+      // elem.empty();
+      elem.html(appRoot.templates[tmId].parseTemplate(obj, settings.subscribeForUpdates, settings.reverseBind, (settings.mapping || {})[componentId]));
+      // $.each(obj, function(i, item) {
+      // });
+    };
   }
 
   function setupLookup(viewRoot, componentId, viewElem, prefix) {
@@ -890,6 +905,7 @@
       map[key] = elem;
     });
     var fn = function(data, subscribe4updates, reverseBinding, mapping) {
+      var propSettings = {subscribe4updates: subscribe4updates, reverseBinding: reverseBinding, mapping: mapping};
       subscribe4updates = (subscribe4updates === undefined) ? true : subscribe4updates;
       each(map, function (key, elem) {
         var fnKey = "_j" + key,
@@ -901,7 +917,7 @@
         if (spec[key].customRenderer || customElementRenderers[elemType] || (data && val !== undefined && val !== null && !isServiceName(key) && !(val instanceof $))) {
           elem = viewOrTm[key];
           var actualVal = isFunction(val) ? val.apply(data) : val;
-          getRenderer(spec[key], elemType)(data, elem, actualVal, false, viewOrTm);
+          getRenderer(spec[key], elemType)(data, elem, actualVal, false, viewOrTm, propSettings);
           if (subscribe4updates && isFunction(data.on)&& (spec[key].customRenderer || isFunction(val))) { // 3rd ?
             if (fn[fnKey]) {
               oldData = fn[fnKey][0];
@@ -915,7 +931,7 @@
               if (arguments.length == 2 && newVal == "remove") {
                 return;
               }
-              getRenderer(spec[key], elemType)(data, elem, newVal, true, viewOrTm)
+              getRenderer(spec[key], elemType)(data, elem, newVal, true, viewOrTm, propSettings);
             });
             fn[fnKey] = [data, handler];
           }
@@ -1152,10 +1168,15 @@
             };
           } else if (elemType === jiant.cssMarker || elemType === jiant.cssFlag) {
             setupCssFlagsMarkers(tmContent, componentId);
+          } else if (isFlagPresent(elemTypeOrArr, jiant.comp)) {
+            tmContent[componentId].customRenderer = getCompRenderer(appRoot, elemType, componentId);
           } else {
             var comp = appUiFactory.viewComponent(tm, tmId, prefix, componentId, elemType);
             ensureExists(prefix, appRoot.dirtyList, comp, prefix + tmId, prefix + componentId, isFlagPresent(elemTypeOrArr, jiant.optional));
             tmContent[componentId] = {};
+          }
+          if (isFlagPresent(elemTypeOrArr, jiant.comp) && ! (elemType in root)) {
+            error("jiant.comp element refers to non-existing template name: " + elemType + ", tm.elem " + tmId + "." + componentId);
           }
         }
       });
@@ -3505,8 +3526,12 @@
     return [optional, tp];
   }
 
+  function comp(tp) {
+    return [comp, tp];
+  }
+
   function version() {
-    return 279;
+    return 280;
   }
 
   function Jiant() {}
@@ -3585,6 +3610,8 @@
     removeListener: removeListener,
 
     optional: optional,
+
+    comp: comp,
 
     collection: "jiant.collection",
     container: "jiant.container",
