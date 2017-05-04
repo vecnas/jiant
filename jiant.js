@@ -6,6 +6,7 @@
  2.79: jiant.registerCustomRenderer(name, function(obj, elem, val, isUpdate, viewOrTemplate) { added, to provide ability attach named custom renderers to elems
  2.80: jiant.comp[onent] added to declare templates/views hierarchy, example: templates.itemSlotTm = {item: jiant.comp("itemTm"}, should refer to template name
  2.80.1: .comp fields access: tmOut.fieldOut.fieldIn
+ 2.80.2: minor fix for views comp
  */
 "use strict";
 (function(factory) {
@@ -633,7 +634,7 @@
       } else if (viewRoot[componentId] === jiant.cssMarker || viewRoot[componentId] === jiant.cssFlag) {
         setupCssFlagsMarkers(viewRoot, componentId);
       } else if (isFlagPresent(componentContentOrArr, jiant.comp)) {
-        viewRoot[componentId].customRenderer.customRenderer = getCompRenderer(appRoot, componentContent, componentId);
+        viewRoot[componentId].customRenderer = getCompRenderer(appRoot, componentContent, componentId);
       } else {
         var uiElem = uiFactory.viewComponent(viewElem, viewId, prefix, componentId, componentContent);
         ensureExists(prefix, appRoot.dirtyList, uiElem, prefix + viewId, prefix + componentId, isFlagPresent(componentContentOrArr, jiant.optional));
