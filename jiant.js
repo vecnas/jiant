@@ -7,6 +7,7 @@
  2.80: jiant.comp[onent] added to declare templates/views hierarchy, example: templates.itemSlotTm = {item: jiant.comp("itemTm"}, should refer to template name
  2.80.1: .comp fields access: tmOut.fieldOut.fieldIn
  2.80.2: minor fix for views comp
+ 2.81 link to embedded template changed, tm.templateSource() method added to templates, returns source code of template
  */
 "use strict";
 (function(factory) {
@@ -679,9 +680,10 @@
   function getCompRenderer(appRoot, tmId, componentId) {
     return function(obj, elem, val, isUpdate, viewOrTemplate, settings) {
       var el = appRoot.templates[tmId].parseTemplate(obj, settings.subscribeForUpdates, settings.reverseBind, (settings.mapping || {})[componentId]);
-      $.each(appRoot.templates[tmId]._jiantSpec, function(cId, cElem) {
-        viewOrTemplate[componentId][cId] = el[cId];
-      });
+      // $.each(appRoot.templates[tmId]._jiantSpec, function(cId, cElem) {
+      //   viewOrTemplate[componentId][cId] = el[cId];
+      // });
+      viewOrTemplate[componentId] = el;
       elem.html(el);
       // elem.empty();
       // $.each(obj, function(i, item) {
@@ -1187,6 +1189,7 @@
         }
       });
       ensureExists(prefix, appRoot.dirtyList, tm, prefix + tmId);
+      root[tmId].templateSource = function() {return tm.html().trim()};
       root[tmId].parseTemplate = function(data, subscribeForUpdates, reverseBind, mapping) {
         var retVal = $("<!-- -->" + parseTemplate(tm, data, tmId, mapping)); // add comment to force jQuery to read it as HTML fragment
         retVal._jiantSpec = root[tmId]._jiantSpec;
@@ -1198,7 +1201,7 @@
           } else if (elemType === jiant.meta) {
           } else if (elemType.jiant_data) {
             setupDataFunction(retVal, elem);
-          } else if (! (elem in {parseTemplate: 1, parseTemplate2Text: 1, appPrefix: 1, impl: 1, _jiantSpec: 1, _scan: 1})) {
+          } else if (! (elem in {parseTemplate: 1, parseTemplate2Text: 1, templateSource: 1, appPrefix: 1, impl: 1, _jiantSpec: 1, _scan: 1})) {
             retVal[elem] = $.merge(retVal.filter("." + prefix + elem), retVal.find("." + prefix + elem));
             setupExtras(appRoot, retVal[elem], root[tmId]._jiantSpec[elem], tmId, elem, retVal, prefix);
             maybeAddDevHook(retVal[elem], tmId, elem, prefix);
@@ -3537,7 +3540,7 @@
   }
 
   function version() {
-    return 280;
+    return 281;
   }
 
   function Jiant() {}
