@@ -9,6 +9,7 @@
  2.80.2: minor fix for views comp
  2.81 link to embedded template changed, tm.templateSource() method added to templates, returns source code of template
  2.82: loadModules minor fix, semaphore re-release enabled, proper subpath pass to comp subelements
+ 2.82.1: .comp in views fix
  */
 "use strict";
 (function(factory) {
@@ -635,16 +636,16 @@
         viewRoot[componentId].customRenderer = function(obj, elem, val, isUpdate, viewOrTemplate) {viewRoot[componentId](val)}
       } else if (viewRoot[componentId] === jiant.cssMarker || viewRoot[componentId] === jiant.cssFlag) {
         setupCssFlagsMarkers(viewRoot, componentId);
-      } else if (isFlagPresent(componentContentOrArr, jiant.comp)) {
-        viewRoot[componentId].customRenderer = getCompRenderer(appRoot, componentContent, componentId);
       } else {
         var uiElem = uiFactory.viewComponent(viewElem, viewId, prefix, componentId, componentContent);
         ensureExists(prefix, appRoot.dirtyList, uiElem, prefix + viewId, prefix + componentId, isFlagPresent(componentContentOrArr, jiant.optional));
         viewRoot[componentId] = uiElem;
         setupExtras(appRoot, uiElem, componentContent, viewId, componentId, viewRoot, prefix);
-        //        logInfo("    bound UI for: " + componentId);
+        if (isFlagPresent(componentContentOrArr, jiant.comp)) {
+          viewRoot[componentId].customRenderer = getCompRenderer(appRoot, componentContent, componentId);
+        }
       }
-      if (isFlagPresent(componentContentOrArr, jiant.comp) && ! (componentContent in root)) {
+      if (isFlagPresent(componentContentOrArr, jiant.comp) && ! (componentContent in appRoot.templates)) {
         error("jiant.comp element refers to non-existing template name: " + componentContent + ", view.elem " + viewId + "." + componentId);
       }
     });
@@ -683,14 +684,10 @@
       var mapping = settings.mapping || {},
           actualObj = componentId in mapping ? obj[mapping[componentId]] : componentId in obj ? obj[componentId] : obj,
           el = appRoot.templates[tmId].parseTemplate(actualObj, settings.subscribeForUpdates, settings.reverseBind, mapping[componentId]);
-      // $.each(appRoot.templates[tmId]._jiantSpec, function(cId, cElem) {
-      //   viewOrTemplate[componentId][cId] = el[cId];
-      // });
-      viewOrTemplate[componentId] = el;
+      $.each(appRoot.templates[tmId]._jiantSpec, function(cId, cElem) {
+        viewOrTemplate[componentId][cId] = el[cId];
+      });
       elem.html(el);
-      // elem.empty();
-      // $.each(obj, function(i, item) {
-      // });
     };
   }
 
