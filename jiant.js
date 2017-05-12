@@ -8,6 +8,7 @@
  2.80.1: .comp fields access: tmOut.fieldOut.fieldIn
  2.80.2: minor fix for views comp
  2.81 link to embedded template changed, tm.templateSource() method added to templates, returns source code of template
+ 2.82: loadModules minor fix, semaphore re-release enabled, proper subpath pass to comp subelements
  */
 "use strict";
 (function(factory) {
@@ -679,7 +680,9 @@
 
   function getCompRenderer(appRoot, tmId, componentId) {
     return function(obj, elem, val, isUpdate, viewOrTemplate, settings) {
-      var el = appRoot.templates[tmId].parseTemplate(obj, settings.subscribeForUpdates, settings.reverseBind, (settings.mapping || {})[componentId]);
+      var mapping = settings.mapping || {},
+          actualObj = componentId in mapping ? obj[mapping[componentId]] : componentId in obj ? obj[componentId] : obj,
+          el = appRoot.templates[tmId].parseTemplate(actualObj, settings.subscribeForUpdates, settings.reverseBind, mapping[componentId]);
       // $.each(appRoot.templates[tmId]._jiantSpec, function(cId, cElem) {
       //   viewOrTemplate[componentId][cId] = el[cId];
       // });
@@ -1183,7 +1186,7 @@
             ensureExists(prefix, appRoot.dirtyList, comp, prefix + tmId, prefix + componentId, isFlagPresent(elemTypeOrArr, jiant.optional));
             tmContent[componentId] = {};
           }
-          if (isFlagPresent(elemTypeOrArr, jiant.comp) && ! (elemType in root)) {
+          if (isFlagPresent(elemTypeOrArr, jiant.comp) && !(elemType in root)) {
             error("jiant.comp element refers to non-existing template name: " + elemType + ", tm.elem " + tmId + "." + componentId);
           }
         }
@@ -2108,10 +2111,10 @@
   function _bindSemaphores(appRoot, semaphores, appId) {
     each(semaphores, function(name, spec) {
       semaphores[name].release = function() {
-        if (semaphores[name].released) {
-          logError("re-releasing semaphore already released, ignoring: " + appId + ".semaphores." + name);
-          return;
-        }
+        // if (semaphores[name].released) {
+        //   logError("re-releasing semaphore already released, ignoring: " + appId + ".semaphores." + name);
+        //   return;
+        // }
         semaphores[name].released = true;
         semaphores[name].releasedArgs = arguments;
         eventBus.trigger(appId + "." + name + ".semaphore", arguments);
@@ -2812,7 +2815,7 @@
 
   function _loadModules(appRoot, root, appId, initial, cb, replace) {
     var modules2load = [],
-      replaceProvided = arguments.length >= 7;
+      replaceProvided = arguments.length >= 6;
     cb = cb || function() {};
     if ($.isPlainObject(root)) {
       modules2load = parseObjectModules(root, appId);
@@ -3540,7 +3543,7 @@
   }
 
   function version() {
-    return 281;
+    return 282;
   }
 
   function Jiant() {}
