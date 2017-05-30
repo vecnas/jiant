@@ -10,6 +10,7 @@
  2.81 link to embedded template changed, tm.templateSource() method added to templates, returns source code of template
  2.82: loadModules minor fix, semaphore re-release enabled, proper subpath pass to comp subelements
  2.82.1: .comp in views fix
+ 2.82.2: appRoot.formatGroupsDelim could be set for numLabel formatting
  */
 "use strict";
 (function(factory) {
@@ -138,28 +139,28 @@
 
   function each(obj, cb) {
     $.each(obj, cb);
-/*
-    if (obj === null && obj === undefined) {
-      return;
-    }
-    var i = 0;
-    if (isArray(obj)) {
-      for (; i < obj.length; i++) {
-        if (cb.call(obj[i], i, obj[i]) === false) {
-          break;
-        }
-      }
-    } else if (typeof obj === "object") {
-      for (i in obj) {
-        if (obj.hasOwnProperty(i)) {
-          if (cb.call(obj[i], i, obj[i]) === false) {
-            break;
-          }
-        }
-      }
-    }
-    return obj;
-*/
+    /*
+     if (obj === null && obj === undefined) {
+     return;
+     }
+     var i = 0;
+     if (isArray(obj)) {
+     for (; i < obj.length; i++) {
+     if (cb.call(obj[i], i, obj[i]) === false) {
+     break;
+     }
+     }
+     } else if (typeof obj === "object") {
+     for (i in obj) {
+     if (obj.hasOwnProperty(i)) {
+     if (cb.call(obj[i], i, obj[i]) === false) {
+     break;
+     }
+     }
+     }
+     }
+     return obj;
+     */
   }
 
   function randomIntBetween(from, to) {
@@ -682,8 +683,8 @@
   function getCompRenderer(appRoot, tmId, componentId) {
     return function(obj, elem, val, isUpdate, viewOrTemplate, settings) {
       var mapping = settings.mapping || {},
-          actualObj = componentId in mapping ? obj[mapping[componentId]] : componentId in obj ? obj[componentId] : obj,
-          el = appRoot.templates[tmId].parseTemplate(actualObj, settings.subscribeForUpdates, settings.reverseBind, mapping[componentId]);
+        actualObj = componentId in mapping ? obj[mapping[componentId]] : componentId in obj ? obj[componentId] : obj,
+        el = appRoot.templates[tmId].parseTemplate(actualObj, settings.subscribeForUpdates, settings.reverseBind, mapping[componentId]);
       $.each(appRoot.templates[tmId]._jiantSpec, function(cId, cElem) {
         viewOrTemplate[componentId][cId] = el[cId];
       });
@@ -1084,7 +1085,7 @@
   function _bindViews(appRoot, root, appUiFactory) {
     each(root, function(viewId, viewContent) {
       var prefix = ("appPrefix" in viewContent) ? viewContent.appPrefix : appRoot.appPrefix,
-          view = appUiFactory.view(prefix, viewId, viewContent);
+        view = appUiFactory.view(prefix, viewId, viewContent);
       if ("_scan" in viewContent) {
         scanForSpec(prefix, viewContent, view);
       }
@@ -1155,7 +1156,7 @@
   function _bindTemplates(appRoot, root, appUiFactory) {
     each(root, function(tmId, tmContent) {
       var prefix = ("appPrefix" in tmContent) ? tmContent.appPrefix : appRoot.appPrefix,
-          tm = appUiFactory.template(prefix, tmId, tmContent);
+        tm = appUiFactory.template(prefix, tmId, tmContent);
       root[tmId]._jiantSpec = {};
       root[tmId]._jiantType = jTypeTemplate;
       if ("_scan" in tmContent) {
@@ -1512,8 +1513,8 @@
           field = overrideField;
         }
         var that = this,
-            bus = this[objectBus],
-            eventName = evt(field);
+          bus = this[objectBus],
+          eventName = evt(field);
         var handler = function(evt) {
           var args = copyArr(arguments);
           args.splice(0, 1);
@@ -2437,7 +2438,7 @@
     } else {
       return s === "undefined" ? undefined
         : (parseInt(s) + "" == s) ? parseInt(s)
-        : s;
+          : s;
     }
   }
 
@@ -2598,7 +2599,7 @@
       if (isNaN(num) || val != num + "") {
         prev.call(uiElem, val);
       } else {
-        prev.call(uiElem, formatMoney(num));
+        prev.call(uiElem, formatMoney(num, appRoot.formatGroupsDelim || undefined ));
       }
     };
   }
@@ -2682,9 +2683,9 @@
             };
           } else {
             option.interpolation = option.interpolation || {
-              prefix: intlRoot.prefix || '__',
-              suffix: intlRoot.suffix || '__'
-            };
+                prefix: intlRoot.prefix || '__',
+                suffix: intlRoot.suffix || '__'
+              };
           }
           i18next.use({
             type: 'backend',
