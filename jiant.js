@@ -11,6 +11,9 @@
  2.82: loadModules minor fix, semaphore re-release enabled, proper subpath pass to comp subelements
  2.82.1: .comp in views fix
  2.82.2: appRoot.formatGroupsDelim could be set for numLabel formatting
+ 2.83: ajax method from now may return object {url: "", method: "[post|get|smth else]", paramMapping: {name: "paramName"}},
+       /person/:id/save substitution supported by param names
+
  */
 "use strict";
 (function(factory) {
@@ -118,7 +121,8 @@
       "'" : ";7"
     }, reverseMap = {},
     replacementRegex = /;|,|=|\||\{|\}|:|#/gi,
-    reverseRegex = /;;|;1|;2|;3|;4|;5|;6|;7/gi;
+    reverseRegex = /;;|;1|;2|;3|;4|;5|;6|;7/gi,
+      restRegexp = /:([^\/]+)(\/|$)/g;
   each(replacementMap, function(key, val) {
     reverseMap[val] = key;
   });
@@ -2515,12 +2519,43 @@
     }
   }
 
-  function makeAjaxPerformer(appRoot, ajaxPrefix, ajaxSuffix, uri, params, hardUrl, crossDomain) {
+  function substring(s) {
+    s = s.substring(1);
+    return s.endsWith("/") ? s.substring(0, s.length - 1) : s;
+  }
+
+  function replaceSubsInUrl(url, subs) {
+    return url.replace(restRegexp, function(key) {
+      key = substring(key);
+      return key in subs ? subs[key] + "/" : "/";
+    });
+  }
+
+  function extractSubsInUrl(url) {
+    var arr = url.match(restRegexp) || [];
+    each(arr, function(i, obj) {
+      arr[i] = substring(obj);
+    });
+    return arr;
+  }
+
+  function makeAjaxPerformer(appRoot, ajaxPrefix, ajaxSuffix, uri, params, specRetVal, crossDomain) {
+    var pfx = (ajaxPrefix || ajaxPrefix === "") ? ajaxPrefix : jiant.AJAX_PREFIX,
+        sfx = (ajaxSuffix || ajaxSuffix === "") ? ajaxSuffix : jiant.AJAX_SUFFIX,
+        callSpec = (specRetVal && (typeof specRetVal !== "string")) ? specRetVal : {},
+        subsInUrl;
+    callSpec.url = callSpec.url || (typeof specRetVal === "string" ? specRetVal : (pfx + uri + sfx));
+    subsInUrl = extractSubsInUrl(callSpec.url);
+    if (! ("paramMapping" in callSpec)) {
+      callSpec.paramMapping = {};
+    }
     return function() {
       var callData = {},
-        callback,
-        errHandler,
-        outerArgs = arguments;
+          callback,
+          errHandler,
+          outerArgs = arguments,
+          url = callSpec.url,
+          time = new Date().getTime();
       if (isFunction(outerArgs[outerArgs.length - 2])) {
         callback = outerArgs[outerArgs.length - 2];
         errHandler = outerArgs[outerArgs.length - 1];
@@ -2528,19 +2563,25 @@
         callback = outerArgs[outerArgs.length - 1];
       }
       each(params, function(idx, param) {
-        if (idx < outerArgs.length && !isFunction(outerArgs[idx]) && outerArgs[idx] != undefined && outerArgs[idx] != null) {
-          var actual = outerArgs[idx];
-          parseForAjaxCall(callData, param, actual);
+        if (idx < outerArgs.length && !isFunction(outerArgs[idx]) && outerArgs[idx] !== undefined && outerArgs[idx] !== null) {
+          var actual = outerArgs[idx],
+              paramName = callSpec.paramMapping[param] || param;
+          parseForAjaxCall(callData, paramName, actual);
         }
       });
       if (! callData["antiCache3721"]) {
         callData["antiCache3721"] = new Date().getTime();
       }
-      var pfx = (ajaxPrefix || ajaxPrefix == "") ? ajaxPrefix : jiant.AJAX_PREFIX,
-        sfx = (ajaxSuffix || ajaxSuffix == "") ? ajaxSuffix : jiant.AJAX_SUFFIX,
-        url = hardUrl ? hardUrl : (pfx + uri + sfx),
-        time = new Date().getTime();
       each(listeners, function(i, l) {l.ajaxCallStarted && l.ajaxCallStarted(appRoot, uri, url, callData)});
+      var subs = {};
+      $.each(subsInUrl, function(i, sub) {
+        var subMapped = callSpec.paramMapping[sub] || sub;
+        if (subMapped in callData) {
+          subs[subMapped] = callData[subMapped];
+          delete callData[subMapped];
+        }
+      });
+      url = replaceSubsInUrl(url, subs);
       var settings = {data: callData, traditional: true, success: function(data) {
         each(listeners, function(i, l) {l.ajaxCallCompleted && l.ajaxCallCompleted(appRoot, uri, url, callData, new Date().getTime() - time)});
         if (callback) {
@@ -2564,6 +2605,7 @@
         }
         each(listeners, function(i, l) {l.ajaxCallError && l.ajaxCallError(appRoot, uri, url, callData, new Date().getTime() - time, jqXHR.responseText, jqXHR)});
       }};
+      settings.method = callSpec.method;
       if (crossDomain) {
         settings.contentType = "application/json";
         settings.dataType = 'jsonp';
@@ -3541,7 +3583,7 @@
   }
 
   function version() {
-    return 282;
+    return 283;
   }
 
   function Jiant() {}
