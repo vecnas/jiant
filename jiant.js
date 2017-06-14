@@ -13,6 +13,7 @@
  2.82.2: appRoot.formatGroupsDelim could be set for numLabel formatting
  2.83: ajax method from now may return object {url: "", method: "[post|get|smth else]", paramMapping: {name: "paramName"}},
        /person/:id/save substitution supported by param names
+ 2.84: ports in url fixed, non-absolute ajax urls prefixed by ajaxPrefix
 
  */
 "use strict";
@@ -122,7 +123,7 @@
     }, reverseMap = {},
     replacementRegex = /;|,|=|\||\{|\}|:|#/gi,
     reverseRegex = /;;|;1|;2|;3|;4|;5|;6|;7/gi,
-      restRegexp = /:([^\/]+)(\/|$)/g;
+    restRegexp = /:([^\/]+)(\/|$)/g;
   each(replacementMap, function(key, val) {
     reverseMap[val] = key;
   });
@@ -2440,10 +2441,12 @@
       });
       return retVal;
     } else {
-      return s === "undefined" ? undefined
-        : (parseInt(s) + "" == s) ? parseInt(s)
-          : s;
+      return s === "undefined" ? undefined : isNumberString(s) ? parseInt(s) : s;
     }
+  }
+
+  function isNumberString(s) {
+    return (parseInt(s) + "") === s;
   }
 
   function getCurrentState(appId) {
@@ -2519,23 +2522,27 @@
     }
   }
 
-  function substring(s) {
+  function subslash(s) {
     s = s.substring(1);
     return s.endsWith("/") ? s.substring(0, s.length - 1) : s;
   }
 
   function replaceSubsInUrl(url, subs) {
     return url.replace(restRegexp, function(key) {
-      key = substring(key);
-      return key in subs ? subs[key] + "/" : "/";
+      var lenBefore = key.length;
+      key = subslash(key);
+      return (key in subs ? subs[key] : (":" + key)) + ((lenBefore - key.length >= 2) ? "/" : "");
     });
   }
 
   function extractSubsInUrl(url) {
     var arr = url.match(restRegexp) || [];
     each(arr, function(i, obj) {
-      arr[i] = substring(obj);
+      arr[i] = subslash(obj);
     });
+    if (isNumberString(arr[0])) {
+      arr = arr.slice(1, arr.length);
+    }
     return arr;
   }
 
@@ -2544,7 +2551,10 @@
         sfx = (ajaxSuffix || ajaxSuffix === "") ? ajaxSuffix : jiant.AJAX_SUFFIX,
         callSpec = (specRetVal && (typeof specRetVal !== "string")) ? specRetVal : {},
         subsInUrl;
-    callSpec.url = callSpec.url || (typeof specRetVal === "string" ? specRetVal : (pfx + uri + sfx));
+    callSpec.url = callSpec.url || (typeof specRetVal === "string" ? specRetVal : (uri + sfx));
+    if (!callSpec.url.startsWith("http://") && !callSpec.url.startsWith("https://")) {
+      callSpec.url = pfx + ((callSpec.url.startsWith("/") || pfx.endsWith("/") || pfx.length === 0) ? "" : "/") + callSpec.url;
+    }
     subsInUrl = extractSubsInUrl(callSpec.url);
     if (! ("paramMapping" in callSpec)) {
       callSpec.paramMapping = {};
@@ -2582,7 +2592,7 @@
         }
       });
       url = replaceSubsInUrl(url, subs);
-      var settings = {data: callData, traditional: true, success: function(data) {
+      var settings = {data: callData, traditional: true, method: callSpec.method, success: function(data) {
         each(listeners, function(i, l) {l.ajaxCallCompleted && l.ajaxCallCompleted(appRoot, uri, url, callData, new Date().getTime() - time)});
         if (callback) {
           try {
@@ -2605,7 +2615,6 @@
         }
         each(listeners, function(i, l) {l.ajaxCallError && l.ajaxCallError(appRoot, uri, url, callData, new Date().getTime() - time, jqXHR.responseText, jqXHR)});
       }};
-      settings.method = callSpec.method;
       if (crossDomain) {
         settings.contentType = "application/json";
         settings.dataType = 'jsonp';
@@ -3583,7 +3592,7 @@
   }
 
   function version() {
-    return 283;
+    return 284;
   }
 
   function Jiant() {}
