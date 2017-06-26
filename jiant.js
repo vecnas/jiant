@@ -14,6 +14,7 @@
  2.83: ajax method from now may return object {url: "", method: "[post|get|smth else]", paramMapping: {name: "paramName"}},
        /person/:id/save substitution supported by param names
  2.84: ports in url fixed, non-absolute ajax urls prefixed by ajaxPrefix
+ 2.84.1: labelNum gets class "nowrap", which could by defined in .css as white-space: nowrap
 
  */
 "use strict";
@@ -2653,6 +2654,7 @@
         prev.call(uiElem, formatMoney(num, appRoot.formatGroupsDelim || undefined ));
       }
     };
+    uiElem.addClass("nowrap");
   }
 
   function intlProxy(appRoot, elem, fname) {
