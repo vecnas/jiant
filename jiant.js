@@ -16,6 +16,7 @@
  2.84: ports in url fixed, non-absolute ajax urls prefixed by ajaxPrefix
  2.84.1: labelNum gets class "nowrap", which could by defined in .css as white-space: nowrap
  2.85: ajax method returnable object may contain section headers: {paramName: headerName} for param to headers mapping
+ 2.85.1: added check for empty function in jRepo model spec, to allow non-empty custom implementation
  */
 "use strict";
 (function(factory) {
@@ -1648,7 +1649,7 @@
         repoRoot[fname] = function() {
           return repoRoot["listBy" + fname.substring(6)].apply(repoRoot, arguments)[0];
         }
-      } else if (fname.indexOf("listBy") == 0 && fname.length > 6 && isUpperCaseChar(fname, 6) && !objMode) {
+      } else if (fname.indexOf("listBy") == 0 && fname.length > 6 && isUpperCaseChar(fname, 6) && !objMode && isEmptyFunction(funcSpec)) {
         var arr = fname.substring(6).split("And");
         each(arr, function(idx, name) {
           arr[idx] = name.substring(0, 1).toLowerCase() + name.substring(1);
