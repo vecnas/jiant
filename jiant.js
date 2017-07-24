@@ -15,7 +15,7 @@
        /person/:id/save substitution supported by param names
  2.84: ports in url fixed, non-absolute ajax urls prefixed by ajaxPrefix
  2.84.1: labelNum gets class "nowrap", which could by defined in .css as white-space: nowrap
-
+ 2.85: ajax method returnable object may contain section headers: {paramName: headerName} for param to headers mapping
  */
 "use strict";
 (function(factory) {
@@ -2486,6 +2486,9 @@
   }
 
   function parseForAjaxCall(root, path, actual, traverse) {
+    if (path === null) {
+      return;
+    }
     if (isArray(actual) || (actual && actual.jCollection)) {
       var compound = false;
       each(actual, function(i, obj) {
@@ -2551,7 +2554,8 @@
     var pfx = (ajaxPrefix || ajaxPrefix === "") ? ajaxPrefix : jiant.AJAX_PREFIX,
         sfx = (ajaxSuffix || ajaxSuffix === "") ? ajaxSuffix : jiant.AJAX_SUFFIX,
         callSpec = (specRetVal && (typeof specRetVal !== "string")) ? specRetVal : {},
-        subsInUrl;
+        subsInUrl,
+        headers = {};
     callSpec.url = callSpec.url || (typeof specRetVal === "string" ? specRetVal : (uri + sfx));
     if (!callSpec.url.startsWith("http://") && !callSpec.url.startsWith("https://")) {
       callSpec.url = pfx + ((callSpec.url.startsWith("/") || pfx.endsWith("/") || pfx.length === 0) ? "" : "/") + callSpec.url;
@@ -2559,6 +2563,9 @@
     subsInUrl = extractSubsInUrl(callSpec.url);
     if (! ("paramMapping" in callSpec)) {
       callSpec.paramMapping = {};
+    }
+    if (! ("headers" in callSpec)) {
+      callSpec.headers = {};
     }
     return function() {
       var callData = {},
@@ -2577,7 +2584,11 @@
         if (idx < outerArgs.length && !isFunction(outerArgs[idx]) && outerArgs[idx] !== undefined && outerArgs[idx] !== null) {
           var actual = outerArgs[idx],
               paramName = callSpec.paramMapping[param] || param;
-          parseForAjaxCall(callData, paramName, actual);
+          if (!(param in callSpec.headers)) {
+            parseForAjaxCall(callData, paramName, actual);
+          } else {
+            headers[callSpec.headers[param]] = actual;
+          }
         }
       });
       if (! callData["antiCache3721"]) {
@@ -2593,7 +2604,7 @@
         }
       });
       url = replaceSubsInUrl(url, subs);
-      var settings = {data: callData, traditional: true, method: callSpec.method, success: function(data) {
+      var settings = {data: callData, traditional: true, method: callSpec.method, headers: headers, success: function(data) {
         each(listeners, function(i, l) {l.ajaxCallCompleted && l.ajaxCallCompleted(appRoot, uri, url, callData, new Date().getTime() - time)});
         if (callback) {
           try {
@@ -3594,7 +3605,7 @@
   }
 
   function version() {
-    return 284;
+    return 285;
   }
 
   function Jiant() {}
