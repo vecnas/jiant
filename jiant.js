@@ -17,6 +17,7 @@
  2.84.1: labelNum gets class "nowrap", which could by defined in .css as white-space: nowrap
  2.85: ajax method returnable object may contain section headers: {paramName: headerName} for param to headers mapping
  2.85.1: added check for empty function in jRepo model spec, to allow non-empty custom implementation
+ 2.85.2: custom models findBy supported
  */
 "use strict";
 (function(factory) {
@@ -1274,7 +1275,7 @@
       repoRoot.findById = repoRoot.findById || function(val) {};
     }
     each(repoRoot, function(fname, funcSpec) {
-      if (isFindByFunction(fname)) {
+      if (isFindByFunction(fname, funcSpec)) {
         var listBy = "listBy" + fname.substring(6);
         if (! repoRoot[listBy]) {
           repoRoot[listBy] = funcSpec;
@@ -1462,8 +1463,8 @@
 
     // ----------------------------------------------- bind other functions -----------------------------------------------
 
-    function isFindByFunction(fname) {
-      return fname.indexOf("findBy") == 0 && fname.length > 6 && isUpperCaseChar(fname, 6);
+    function isFindByFunction(fname, funcSpec) {
+      return fname.indexOf("findBy") === 0 && fname.length > 6 && isUpperCaseChar(fname, 6) && isEmptyFunction(funcSpec);
     }
 
     function trigger(bus, fname, args, argsPerObj) {
@@ -1567,27 +1568,27 @@
 
     function bindFn(fnRoot, fname, funcSpec) {
       var objMode = repoMode && fnRoot !== spec[repoName];
-      if (fname == defaultsName && $.isPlainObject(funcSpec)) {
-      } else if (fname == repoName && $.isPlainObject(funcSpec)) {
-      } else if (fname == "addAll") {
+      if (fname === defaultsName && $.isPlainObject(funcSpec)) {
+      } else if (fname === repoName && $.isPlainObject(funcSpec)) {
+      } else if (fname === "addAll") {
         alert("JIANT: Model function 'addAll' removed since 1.37, use previous versions or replace it by 'add'");
       } else if (!objMode && fname in {"updateAll": 1, "add": 1, "toCollection": 1, "all": 1}) {
       } else if (fname in {"off": 1, "nowAndOn": 1, "asapAndOn": 1, "asap": 1, "once": 1}) {
         collectionFunctions.push(fname);
-      } else if (fname == "on") {
+      } else if (fname === "on") {
         collectionFunctions.push(fname);
         spec[fname] = proxy(fname);
         assignOnOffHandlers(Model.prototype);
         assignExtraHandlers(Model.prototype);
         assignOnOffHandlers(spec);
-      } else if (fname == "update") {
+      } else if (fname === "update") {
         collectionFunctions.push(fname);
         spec[fname] = proxy(fname);
         Model.prototype[fname] = function(objFrom, treatMissingAsUndefined) {
           var smthChanged = false,
             toTrigger = {},
             that = this;
-          if (arguments.length == 0) {
+          if (arguments.length === 0) {
             smthChanged = true;
           } else {
             treatMissingAsUndefined && each(this[modelStorage], function(key, val) {
@@ -1613,8 +1614,8 @@
             trigger(specBus, fname, [this], [this, fname]);
           }
         };
-      } else if (fname == "remove") {
-      } else if (fname.indexOf("sum") == 0 && fname.length > 3 && isUpperCaseChar(fname, 3) && !objMode) {
+      } else if (fname === "remove") {
+      } else if (fname.indexOf("sum") === 0 && fname.length > 3 && isUpperCaseChar(fname, 3) && !objMode) {
         var arr = fname.substring(3).split("And");
         repoRoot[fname] = function() {
           function subsum(all, fieldName) {
@@ -1635,7 +1636,7 @@
           });
           return ret;
         }
-      } else if (fname == "filter" && !objMode) {
+      } else if (fname === "filter" && !objMode) {
         repoRoot[fname] = function(cb) {
           var ret = [];
           each(repoRoot.all(), function(i, obj) {
@@ -1645,11 +1646,11 @@
           });
           return new Collection(ret);
         };
-      } else if (isFindByFunction(fname) && !objMode) {
+      } else if (isFindByFunction(fname, funcSpec) && !objMode) {
         repoRoot[fname] = function() {
           return repoRoot["listBy" + fname.substring(6)].apply(repoRoot, arguments)[0];
         }
-      } else if (fname.indexOf("listBy") == 0 && fname.length > 6 && isUpperCaseChar(fname, 6) && !objMode && isEmptyFunction(funcSpec)) {
+      } else if (fname.indexOf("listBy") === 0 && fname.length > 6 && isUpperCaseChar(fname, 6) && !objMode && isEmptyFunction(funcSpec)) {
         var arr = fname.substring(6).split("And");
         each(arr, function(idx, name) {
           arr[idx] = name.substring(0, 1).toLowerCase() + name.substring(1);
