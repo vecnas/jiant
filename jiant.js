@@ -18,6 +18,7 @@
  2.85: ajax method returnable object may contain section headers: {paramName: headerName} for param to headers mapping
  2.85.1: added check for empty function in jRepo model spec, to allow non-empty custom implementation
  2.85.2: custom models findBy supported
+ 2.85.3: anti cache parameter added only if ajax method not specified or set to GET
  */
 "use strict";
 (function(factory) {
@@ -2593,7 +2594,7 @@
           }
         }
       });
-      if (! callData["antiCache3721"]) {
+      if ((!callSpec.method || callSpec.method.toLowerCase() === "get") && !callData["antiCache3721"]) {
         callData["antiCache3721"] = new Date().getTime();
       }
       each(listeners, function(i, l) {l.ajaxCallStarted && l.ajaxCallStarted(appRoot, uri, url, callData)});
