@@ -19,6 +19,7 @@
  2.85.1: added check for empty function in jRepo model spec, to allow non-empty custom implementation
  2.85.2: custom models findBy supported
  2.85.3: anti cache parameter added only if ajax method not specified or set to GET
+ 2.86: comp(onent) supports functions as root subobject, like obj.pet() mapped to pet: jiant.comp("petTm")
  */
 "use strict";
 (function(factory) {
@@ -692,8 +693,12 @@
   function getCompRenderer(appRoot, tmId, componentId) {
     return function(obj, elem, val, isUpdate, viewOrTemplate, settings) {
       var mapping = settings.mapping || {},
-        actualObj = componentId in mapping ? obj[mapping[componentId]] : componentId in obj ? obj[componentId] : obj,
-        el = appRoot.templates[tmId].parseTemplate(actualObj, settings.subscribeForUpdates, settings.reverseBind, mapping[componentId]);
+          actualObj = componentId in mapping ? obj[mapping[componentId]] : componentId in obj ? obj[componentId] : obj,
+          el;
+      if ($.isFunction(actualObj)) {
+        actualObj = actualObj.apply(obj);
+      }
+      el = appRoot.templates[tmId].parseTemplate(actualObj, settings.subscribeForUpdates, settings.reverseBind, mapping[componentId]);
       $.each(appRoot.templates[tmId]._jiantSpec, function(cId, cElem) {
         viewOrTemplate[componentId][cId] = el[cId];
       });
@@ -3608,7 +3613,7 @@
   }
 
   function version() {
-    return 285;
+    return 286;
   }
 
   function Jiant() {}
