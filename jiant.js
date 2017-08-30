@@ -20,6 +20,7 @@
  2.85.2: custom models findBy supported
  2.85.3: anti cache parameter added only if ajax method not specified or set to GET
  2.86: comp(onent) supports functions as root subobject, like obj.pet() mapped to pet: jiant.comp("petTm")
+ 2.87: propagate mapping now supports functions with this pointing to object, to enable {tp: function() {return translate(this.tp)}}
  */
 "use strict";
 (function(factory) {
@@ -933,7 +934,7 @@
       each(map, function (key, elem) {
         var fnKey = "_j" + key,
           actualKey = (mapping && mapping[key]) ? mapping[key] : key,
-          val = data[actualKey],
+          val = $.isFunction(actualKey) ? actualKey.apply(data) : data[actualKey],
           oldData,
           handler,
           elemType = viewOrTm._jiantSpec[key];
@@ -3613,7 +3614,7 @@
   }
 
   function version() {
-    return 286;
+    return 287;
   }
 
   function Jiant() {}
