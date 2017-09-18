@@ -21,6 +21,8 @@
  2.85.3: anti cache parameter added only if ajax method not specified or set to GET
  2.86: comp(onent) supports functions as root subobject, like obj.pet() mapped to pet: jiant.comp("petTm")
  2.87: propagate mapping now supports functions with this pointing to object, to enable {tp: function() {return translate(this.tp)}}
+ 2.88: jiant.comp accepts params: jiant.comp(tmName, params), passed to customRenderer as part of source object for better customization,
+       jiant.comp doesn't call template for null data, just sets element html to empty value
  */
 "use strict";
 (function(factory) {
@@ -654,7 +656,7 @@
         viewRoot[componentId] = uiElem;
         setupExtras(appRoot, uiElem, componentContent, viewId, componentId, viewRoot, prefix);
         if (isFlagPresent(componentContentOrArr, jiant.comp)) {
-          viewRoot[componentId].customRenderer = getCompRenderer(appRoot, componentContent, componentId);
+          viewRoot[componentId].customRenderer = getCompRenderer(appRoot, componentContent, componentId, componentContentOrArr);
         }
       }
       if (isFlagPresent(componentContentOrArr, jiant.comp) && ! (componentContent in appRoot.templates)) {
@@ -691,19 +693,31 @@
     return b;
   }
 
-  function getCompRenderer(appRoot, tmId, componentId) {
+  function getCompRenderer(appRoot, tmId, componentId, componentContentOrArr) {
     return function(obj, elem, val, isUpdate, viewOrTemplate, settings) {
       var mapping = settings.mapping || {},
           actualObj = componentId in mapping ? obj[mapping[componentId]] : componentId in obj ? obj[componentId] : obj,
-          el;
+          el, params;
       if ($.isFunction(actualObj)) {
         actualObj = actualObj.apply(obj);
       }
-      el = appRoot.templates[tmId].parseTemplate(actualObj, settings.subscribeForUpdates, settings.reverseBind, mapping[componentId]);
-      $.each(appRoot.templates[tmId]._jiantSpec, function(cId, cElem) {
-        viewOrTemplate[componentId][cId] = el[cId];
-      });
-      elem.html(el);
+      if (actualObj) {
+        if (componentContentOrArr.length != 2) {
+          $.each(componentContentOrArr, function(i, val) {
+            if (typeof val !== "string" && val !== jiant.comp) {
+              actualObj = $.extend({}, actualObj, val);
+              return false;
+            }
+          });
+        }
+        el = appRoot.templates[tmId].parseTemplate(actualObj, settings.subscribeForUpdates, settings.reverseBind, mapping[componentId]);
+        $.each(appRoot.templates[tmId]._jiantSpec, function(cId, cElem) {
+          viewOrTemplate[componentId][cId] = el[cId];
+        });
+        elem.html(el);
+      } else {
+        elem.html("");
+      }
     };
   }
 
@@ -931,6 +945,9 @@
     var fn = function(data, subscribe4updates, reverseBinding, mapping) {
       var propSettings = {subscribe4updates: subscribe4updates, reverseBinding: reverseBinding, mapping: mapping};
       subscribe4updates = (subscribe4updates === undefined) ? true : subscribe4updates;
+      if (spec.customRenderer && isFunction(spec.customRenderer)) {
+        spec.customRenderer(data, viewOrTm);
+      }
       each(map, function (key, elem) {
         var fnKey = "_j" + key,
           actualKey = (mapping && mapping[key]) ? mapping[key] : key,
@@ -1001,9 +1018,6 @@
           }
         }
       });
-      if (spec.customRenderer && isFunction(spec.customRenderer)) {
-        spec.customRenderer(data, viewOrTm);
-      }
     };
     viewOrTm.propagate = fn;
     viewOrTm.unpropagate = function() {
@@ -3609,12 +3623,12 @@
     return [optional, tp];
   }
 
-  function comp(tp) {
-    return [comp, tp];
+  function comp(tp, params) {
+    return [comp, tp, params];
   }
 
   function version() {
-    return 287;
+    return 288;
   }
 
   function Jiant() {}
