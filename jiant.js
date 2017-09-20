@@ -23,6 +23,7 @@
  2.87: propagate mapping now supports functions with this pointing to object, to enable {tp: function() {return translate(this.tp)}}
  2.88: jiant.comp accepts params: jiant.comp(tmName, params), passed to customRenderer as part of source object for better customization,
        jiant.comp doesn't call template for null data, just sets element html to empty value
+ 2.88.1: fixed jiant.comp for templates
  */
 "use strict";
 (function(factory) {
@@ -1207,7 +1208,7 @@
           } else if (elemType === jiant.cssMarker || elemType === jiant.cssFlag) {
             setupCssFlagsMarkers(tmContent, componentId);
           } else if (isFlagPresent(elemTypeOrArr, jiant.comp)) {
-            tmContent[componentId].customRenderer = getCompRenderer(appRoot, elemType, componentId);
+            tmContent[componentId].customRenderer = getCompRenderer(appRoot, elemType, componentId, elemTypeOrArr);
           } else {
             var comp = appUiFactory.viewComponent(tm, tmId, prefix, componentId, elemType);
             ensureExists(prefix, appRoot.dirtyList, comp, prefix + tmId, prefix + componentId, isFlagPresent(elemTypeOrArr, jiant.optional));
