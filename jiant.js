@@ -24,6 +24,7 @@
  2.88: jiant.comp accepts params: jiant.comp(tmName, params), passed to customRenderer as part of source object for better customization,
        jiant.comp doesn't call template for null data, just sets element html to empty value
  2.88.1: fixed jiant.comp for templates
+ 2.88.2: view customRenderer called after components, for back compatibility
  */
 "use strict";
 (function(factory) {
@@ -946,9 +947,6 @@
     var fn = function(data, subscribe4updates, reverseBinding, mapping) {
       var propSettings = {subscribe4updates: subscribe4updates, reverseBinding: reverseBinding, mapping: mapping};
       subscribe4updates = (subscribe4updates === undefined) ? true : subscribe4updates;
-      if (spec.customRenderer && isFunction(spec.customRenderer)) {
-        spec.customRenderer(data, viewOrTm);
-      }
       each(map, function (key, elem) {
         var fnKey = "_j" + key,
           actualKey = (mapping && mapping[key]) ? mapping[key] : key,
@@ -1019,6 +1017,9 @@
           }
         }
       });
+      if (spec.customRenderer && isFunction(spec.customRenderer)) {
+        spec.customRenderer(data, viewOrTm);
+      }
     };
     viewOrTm.propagate = fn;
     viewOrTm.unpropagate = function() {
@@ -3757,7 +3758,8 @@
 
     key: {left: 37, up: 38, right: 39, down: 40, del: 46, backspace: 8, tab: 9, end: 35, home: 36, enter: 13, ctrl: 17,
       escape: 27, dot: 190, dotExtra: 110, comma: 188,
-      a: 65, c: 67, u: 85, w: 87, space: 32, 1: 49, 2: 50, 3: 51, 4: 52, 5: 53, 6: 54}
+      a: 65, c: 67, u: 85, w: 87, space: 32, 1: 49, 2: 50, 3: 51, 4: 52, 5: 53, 6: 54, 7: 55, 8: 56, 9: 57,
+      f1: 112, f2: 113, f3: 114, f4: 115, f5: 116, f6: 117, f7: 118, f8: 119, f9: 120}
 
   };
 
