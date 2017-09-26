@@ -25,6 +25,7 @@
        jiant.comp doesn't call template for null data, just sets element html to empty value
  2.88.1: fixed jiant.comp for templates
  2.88.2: view customRenderer called after components, for back compatibility
+ 2.88.3: model once fixes for model itself and collection functions
  */
 "use strict";
 (function(factory) {
@@ -1567,11 +1568,15 @@
         return handler;
       };
       obj.once = function(field, cb) {
+        if (isFunction(field)) {
+          cb = field;
+          field = overrideField;
+        }
         var that = this,
-          handler = obj.on(field, function() {
-            obj.off(handler);
-            cb && cb.apply(that, arguments);
-          });
+            handler = that.on(field, function() {
+              that.off(handler);
+              cb && cb.apply(that, arguments);
+            });
       };
       obj.off = function(handlerOrArr) {
         var bus = this[objectBus];
