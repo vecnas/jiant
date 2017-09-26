@@ -26,6 +26,7 @@
  2.88.1: fixed jiant.comp for templates
  2.88.2: view customRenderer called after components, for back compatibility
  2.88.3: model once fixes for model itself and collection functions
+ 2.89: alt_shift_click in dev mode prints bound model and binding stack trace to console
  */
 "use strict";
 (function(factory) {
@@ -807,7 +808,7 @@
     }
   }
 
-  function maybeAddDevHook(uiElem, key, elem, prefix) {
+  function maybeAddDevHook(uiElem, key, elem, prefix, viewOrTm) {
     jiant.DEV_MODE && uiElem.click(function(event) {
       if (event.shiftKey && event.altKey) {
         var message = key + (elem ? ("." + elem) : "");
@@ -816,7 +817,12 @@
           message += pseudoserializeJSON($._data(uiElem[0], "events"));
         }
         info(message);
-        alert(message);
+        if (viewOrTm._jiantPropagationInfo) {
+          logInfo("Last propagated by: ", viewOrTm._jiantPropagationInfo, viewOrTm._jiantPropagationInfo.trace);
+        } else {
+          logInfo("No propagation for this view");
+        }
+        // alert(message);
         event.preventDefault();
         event.stopImmediatePropagation();
       } else if (event.ctrlKey && event.altKey) {
@@ -932,7 +938,7 @@
         setupExtras(appRoot, uiElem, tp, key, elemKey, viewOrTm, prefix);
       });
     }
-    maybeAddDevHook(uiElem, key, elemKey, prefix);
+    maybeAddDevHook(uiElem, key, elemKey, prefix, viewOrTm);
   }
 
   function isServiceName(key) {
@@ -955,7 +961,8 @@
           oldData,
           handler,
           elemType = viewOrTm._jiantSpec[key];
-        if (spec[key].customRenderer || customElementRenderers[elemType] || (data && val !== undefined && val !== null && !isServiceName(key) && !(val instanceof $))) {
+        if (spec[key].customRenderer || customElementRenderers[elemType]
+            || (data && val !== undefined && val !== null && !isServiceName(key) && !(val instanceof $))) {
           elem = viewOrTm[key];
           var actualVal = isFunction(val) ? val.apply(data) : val;
           getRenderer(spec[key], elemType)(data, elem, actualVal, false, viewOrTm, propSettings);
@@ -1021,6 +1028,16 @@
       if (spec.customRenderer && isFunction(spec.customRenderer)) {
         spec.customRenderer(data, viewOrTm);
       }
+      if (jiant.DEV_MODE) {
+        viewOrTm._jiantPropagationInfo = {
+          modelName: data ? data.jModelName : "",
+          data: data,
+          subscribe4updates: subscribe4updates,
+          reverseBinding: reverseBinding,
+          mapping: mapping,
+          trace: jiant.getStackTrace()
+        };
+      }
     };
     viewOrTm.propagate = fn;
     viewOrTm.unpropagate = function() {
@@ -1032,6 +1049,9 @@
           fn[fnKey][2] && elem.off && elem.off("change", fn[fnKey][2]);
         }
       });
+      if (jiant.DEV_MODE) {
+        delete viewOrTm._jiantPropagationInfo;
+      }
     }
   }
 
@@ -1142,7 +1162,7 @@
     ensureSafeExtend(viewContent, view);
     assignPropagationFunction(viewId, viewContent, viewContent);
     $.extend(viewContent, view);
-    maybeAddDevHook(view, viewId, undefined, prefix);
+    maybeAddDevHook(view, viewId, undefined, prefix, view);
     each(listeners, function(i, l) {l.boundView && l.boundView(appRoot, appRoot.views, viewId, prefix, viewContent)});
   }
 
@@ -1237,7 +1257,7 @@
           } else if (! (elem in {parseTemplate: 1, parseTemplate2Text: 1, templateSource: 1, appPrefix: 1, impl: 1, _jiantSpec: 1, _scan: 1})) {
             retVal[elem] = $.merge(retVal.filter("." + prefix + elem), retVal.find("." + prefix + elem));
             setupExtras(appRoot, retVal[elem], root[tmId]._jiantSpec[elem], tmId, elem, retVal, prefix);
-            maybeAddDevHook(retVal[elem], tmId, elem, prefix);
+            maybeAddDevHook(retVal[elem], tmId, elem, prefix, retVal);
           }
         });
         retVal.splice(0, 1); // remove first comment
@@ -1285,8 +1305,9 @@
       singleton = new Model(),
       objFunctions = ["on", "once", "off", "update", "reset", "remove", "asMap"],
       repoFunctions = ["updateAll", "add", "all", "remove", "filter", "toCollection"];
+    Model.prototype.jModelName = modelName;
     if (jiant.DEV_MODE && !spec[repoName]) {
-      jiant.infop("App !!, model !! uses deprecated model repository format, switch to new, with model.jRepo = {} section", appId, modelName);
+      infop("App !!, model !! uses deprecated model repository format, switch to new, with model.jRepo = {} section", appId, modelName);
     }
     spec[defaultsName] = spec[defaultsName] || {};
     each(repoFunctions, function(i, fn) {
@@ -3635,7 +3656,7 @@
   }
 
   function version() {
-    return 288;
+    return 289;
   }
 
   function Jiant() {}
@@ -3645,7 +3666,7 @@
     AJAX_SUFFIX: "",
     DEV_MODE: false,
     PAGER_RADIUS: 6,
-    LIB_LOAD_TIMEOUT: 5000,
+    LIB_LOAD_TIMEOUT: 15000,
     isMSIE: eval("/*@cc_on!@*/!1"),
     STATE_EXTERNAL_BASE: undefined,
     getAwaitingDepends: getAwaitingDepends, // for application debug purposes
