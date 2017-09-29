@@ -28,6 +28,7 @@
  2.88.3: model once fixes for model itself and collection functions
  2.89: alt_shift_click in dev mode prints bound model and binding stack trace to console
  2.90: some refactoring, jiant.data, cssFlag and cssMarker now accept field name mapping, like a: cssFlag("amount", "cls") produces "a" class mapped to amount field as "cls" class name
+ 2.90.1: same as previous, with templates support
  */
 "use strict";
 (function(factory) {
@@ -651,7 +652,7 @@
       } else if (componentTp === jiant.meta) {
         //skipping, app meta info
       } else if (componentTp === jiant.data) {
-        setupDataFunction(viewRoot, componentId, getAt(elemTypeOrArr, 1), getAt(elemTypeOrArr, 2));
+        setupDataFunction(viewRoot, viewRoot, componentId, getAt(elemTypeOrArr, 1), getAt(elemTypeOrArr, 2));
         viewRoot[componentId].customRenderer = function(obj, elem, val, isUpdate, viewOrTemplate) {viewRoot[componentId](val)}
       } else if (componentTp === jiant.cssMarker || componentTp === jiant.cssFlag) {
         setupCssFlagsMarkers(viewRoot, componentId, componentTp, getAt(elemTypeOrArr, 1), getAt(elemTypeOrArr, 2));
@@ -735,8 +736,8 @@
     viewRoot[componentId] = function() {return viewElem.find("." + prefix + componentId);};
   }
 
-  function setupDataFunction(viewRoot, componentId, mappingId, dataName) {
-    linkComponent(viewRoot, componentId, mappingId);
+  function setupDataFunction(viewRoot, linkRoot, componentId, mappingId, dataName) {
+    linkComponent(linkRoot, componentId, mappingId);
     dataName = dataName || componentId;
     viewRoot[componentId] = function(val) {
       if (arguments.length === 0) {
@@ -753,7 +754,8 @@
       viewRoot.jMapping[mappingId] = viewRoot.jMapping[mappingId] || [];
       viewRoot.jMapping[mappingId].push(componentId);
       viewRoot.jMapped = viewRoot.jMapped || {};
-      viewRoot.jMapped[componentId] = mappingId;
+      viewRoot.jMapped[componentId] = viewRoot.jMapped[componentId] || [];
+      viewRoot.jMapped[componentId].push(mappingId);
     }
   }
 
@@ -962,7 +964,7 @@
   }
 
   function isServiceName(key) {
-    var words = ["parseTemplate", "parseTemplate2Text", "propagate", "customRenderer", "jMapping", "jMapped"];
+    var words = ["parseTemplate", "parseTemplate2Text", "propagate", "customRenderer", "jMapping", "jMapped", "_jiantSpec"];
     return words.indexOf(key) >= 0;
   }
 
@@ -1250,7 +1252,7 @@
           } else if (elemType === jiant.meta) {
             //skipping, app meta info
           } else if (elemType === jiant.data) {
-            tmContent[componentId] = {jiant_data: 1};
+            tmContent[componentId] = {jiant_data: 1, jiant_data_spec: elemTypeOrArr};
             tmContent[componentId].customRenderer = function(obj, elem, val, isUpdate, viewOrTemplate) {
               viewOrTemplate[componentId](val);
             };
@@ -1275,18 +1277,21 @@
       root[tmId].parseTemplate = function(data, subscribeForUpdates, reverseBind, mapping) {
         var retVal = $("<!-- -->" + parseTemplate(tm, data, tmId, mapping)); // add comment to force jQuery to read it as HTML fragment
         retVal._jiantSpec = root[tmId]._jiantSpec;
-        each(tmContent, function (elem, elemTypeOrArr) {
+        each(tmContent, function (compId, elemTypeOrArr) {
+          if (isServiceName(compId)) {
+            return;
+          }
           var elemType = getComponentType(elemTypeOrArr);
           if (elemType === jiant.lookup) {
-            info("    loookup element, no checks/bindings: " + elem);
-            setupLookup(retVal, elem, retVal, prefix);
+            info("    loookup element, no checks/bindings: " + compId);
+            setupLookup(retVal, compId, retVal, prefix);
           } else if (elemType === jiant.meta) {
           } else if (elemType.jiant_data) {
-            setupDataFunction(retVal, elem, getAt(elemTypeOrArr, 1), getAt(elemTypeOrArr, 2));
-          } else if (! (elem in {parseTemplate: 1, parseTemplate2Text: 1, templateSource: 1, appPrefix: 1, impl: 1, _jiantSpec: 1, _scan: 1})) {
-            retVal[elem] = $.merge(retVal.filter("." + prefix + elem), retVal.find("." + prefix + elem));
-            setupExtras(appRoot, retVal[elem], root[tmId]._jiantSpec[elem], tmId, elem, retVal, prefix);
-            maybeAddDevHook(retVal[elem], tmId, elem, prefix, retVal);
+            setupDataFunction(retVal, root[tmId], compId, getAt(elemTypeOrArr.jiant_data_spec, 1), getAt(elemTypeOrArr.jiant_data_spec, 2));
+          } else if (! (compId in {parseTemplate: 1, parseTemplate2Text: 1, templateSource: 1, appPrefix: 1, impl: 1, _jiantSpec: 1, _scan: 1})) {
+            retVal[compId] = $.merge(retVal.filter("." + prefix + compId), retVal.find("." + prefix + compId));
+            setupExtras(appRoot, retVal[compId], root[tmId]._jiantSpec[compId], tmId, compId, retVal, prefix);
+            maybeAddDevHook(retVal[compId], tmId, compId, prefix, retVal);
           }
         });
         retVal.splice(0, 1); // remove first comment
