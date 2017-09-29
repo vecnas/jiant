@@ -27,6 +27,7 @@
  2.88.2: view customRenderer called after components, for back compatibility
  2.88.3: model once fixes for model itself and collection functions
  2.89: alt_shift_click in dev mode prints bound model and binding stack trace to console
+ 2.90: some refactoring, jiant.data, cssFlag and cssMarker now accept field name mapping, like a: cssFlag("amount", "cls") produces "a" class mapped to amount field as "cls" class name
  */
 "use strict";
 (function(factory) {
@@ -639,48 +640,57 @@
   function _bindContent(appRoot, viewRoot, viewId, viewElem, prefix) {
     var typeSpec = {};
     viewRoot._jiantSpec = typeSpec;
-    each(viewRoot, function (componentId, componentContentOrArr) {
-      var componentContent = getComponentType(componentContentOrArr);
-      typeSpec[componentId] = componentContentOrArr;
+    each(viewRoot, function (componentId, elemTypeOrArr) {
+      var componentTp = getComponentType(elemTypeOrArr);
+      typeSpec[componentId] = elemTypeOrArr;
       if (componentId in {appPrefix: 1, impl: 1, _jiantSpec: 1, _scan: 1}) {
         //skip
-      } else if (viewRoot[componentId] === jiant.lookup) {
+      } else if (componentTp === jiant.lookup) {
         jiant.logInfo("    loookup element, no checks/bindings: " + componentId);
         setupLookup(viewRoot, componentId, viewElem, prefix);
-      } else if (viewRoot[componentId] === jiant.meta) {
+      } else if (componentTp === jiant.meta) {
         //skipping, app meta info
-      } else if (viewRoot[componentId] === jiant.data) {
-        setupDataFunction(viewRoot, componentId);
+      } else if (componentTp === jiant.data) {
+        setupDataFunction(viewRoot, componentId, getAt(elemTypeOrArr, 1), getAt(elemTypeOrArr, 2));
         viewRoot[componentId].customRenderer = function(obj, elem, val, isUpdate, viewOrTemplate) {viewRoot[componentId](val)}
-      } else if (viewRoot[componentId] === jiant.cssMarker || viewRoot[componentId] === jiant.cssFlag) {
-        setupCssFlagsMarkers(viewRoot, componentId);
+      } else if (componentTp === jiant.cssMarker || componentTp === jiant.cssFlag) {
+        setupCssFlagsMarkers(viewRoot, componentId, componentTp, getAt(elemTypeOrArr, 1), getAt(elemTypeOrArr, 2));
       } else {
-        var uiElem = uiFactory.viewComponent(viewElem, viewId, prefix, componentId, componentContent);
-        ensureExists(prefix, appRoot.dirtyList, uiElem, prefix + viewId, prefix + componentId, isFlagPresent(componentContentOrArr, jiant.optional));
+        var uiElem = uiFactory.viewComponent(viewElem, viewId, prefix, componentId, componentTp);
+        ensureExists(prefix, appRoot.dirtyList, uiElem, prefix + viewId, prefix + componentId, isFlagPresent(elemTypeOrArr, jiant.optional));
         viewRoot[componentId] = uiElem;
-        setupExtras(appRoot, uiElem, componentContent, viewId, componentId, viewRoot, prefix);
-        if (isFlagPresent(componentContentOrArr, jiant.comp)) {
-          viewRoot[componentId].customRenderer = getCompRenderer(appRoot, componentContent, componentId, componentContentOrArr);
+        setupExtras(appRoot, uiElem, componentTp, viewId, componentId, viewRoot, prefix);
+        if (componentTp === jiant.comp) {
+          var tmName = getAt(elemTypeOrArr, 1);
+          viewRoot[componentId].customRenderer = getCompRenderer(appRoot, tmName, componentId, elemTypeOrArr);
+          if (! (tmName in appRoot.templates)) {
+            error("jiant.comp element refers to non-existing template name: " + tmName + ", view.elem: " + viewId + "." + componentId);
+          }
         }
-      }
-      if (isFlagPresent(componentContentOrArr, jiant.comp) && ! (componentContent in appRoot.templates)) {
-        error("jiant.comp element refers to non-existing template name: " + componentContent + ", view.elem " + viewId + "." + componentId);
       }
     });
   }
 
   function getComponentType(tpOrArr) {
+    return getAt(tpOrArr, 0);
+  }
+
+  function getAt(tpOrArr, pos) {
     if (! isArray(tpOrArr)) {
       return tpOrArr;
     }
-    var tp;
+    var ret;
     each(tpOrArr, function(i, item) {
-      if (item !== jiant.optional && item !== jiant.comp) {
-        tp = item;
+      if (item === jiant.optional) {
+        pos++;
+      }
+      if (i === pos) {
+        ret = item;
         return false;
       }
     });
-    return tp;
+    return ret;
+
   }
 
   function isFlagPresent(tpOrArr, flag) {
@@ -706,13 +716,9 @@
         actualObj = actualObj.apply(obj);
       }
       if (actualObj) {
-        if (componentContentOrArr.length != 2) {
-          $.each(componentContentOrArr, function(i, val) {
-            if (typeof val !== "string" && val !== jiant.comp) {
-              actualObj = $.extend({}, actualObj, val);
-              return false;
-            }
-          });
+        var param = getAt(componentContentOrArr, 2);
+        if (param) {
+          actualObj = $.extend({}, actualObj, param);
         }
         el = appRoot.templates[tmId].parseTemplate(actualObj, settings.subscribeForUpdates, settings.reverseBind, mapping[componentId]);
         $.each(appRoot.templates[tmId]._jiantSpec, function(cId, cElem) {
@@ -729,32 +735,46 @@
     viewRoot[componentId] = function() {return viewElem.find("." + prefix + componentId);};
   }
 
-  function setupDataFunction(viewRoot, componentId) {
+  function setupDataFunction(viewRoot, componentId, mappingId, dataName) {
+    linkComponent(viewRoot, componentId, mappingId);
+    dataName = dataName || componentId;
     viewRoot[componentId] = function(val) {
-      if (arguments.length == 0) {
-        return viewRoot.attr("data-" + componentId);
+      if (arguments.length === 0) {
+        return viewRoot.attr("data-" + dataName);
       } else {
-        return viewRoot.attr("data-" + componentId, val);
+        return viewRoot.attr("data-" + dataName, val);
       }
     };
   }
 
-  function setupCssFlagsMarkers(viewRoot, componentId) {
-    var flag = viewRoot[componentId] === jiant.cssFlag,
+  function linkComponent(viewRoot, componentId, mappingId) {
+    if (mappingId) {
+      viewRoot.jMapping = viewRoot.jMapping || [];
+      viewRoot.jMapping[mappingId] = viewRoot.jMapping[mappingId] || [];
+      viewRoot.jMapping[mappingId].push(componentId);
+      viewRoot.jMapped = viewRoot.jMapped || {};
+      viewRoot.jMapped[componentId] = mappingId;
+    }
+  }
+
+  function setupCssFlagsMarkers(viewRoot, componentId, componentTp, mappingId, className) {
+    var flag = componentTp === jiant.cssFlag,
       markerName = "j_prevMarkerClass_" + componentId;
+    className = className || componentId;
+    linkComponent(viewRoot, componentId, mappingId);
     viewRoot[componentId] = {};
     viewRoot[componentId].customRenderer = function(obj, elem, val, isUpdate, viewOrTemplate) {
       if (viewOrTemplate[markerName]) {
-        each(viewOrTemplate[markerName], function(i, cls) {
+        each(viewOrTemplate[markerName], function (i, cls) {
           cls && viewOrTemplate.removeClass(cls);
         });
       }
       viewOrTemplate[markerName] = [];
       if (flag) {
-        var _v = isArray(val) && val.length == 0 ? undefined : val;
+        var _v = isArray(val) && val.length === 0 ? undefined : val;
         if (!!_v) {
-          viewOrTemplate[markerName].push(componentId);
-          viewOrTemplate.addClass(componentId);
+          viewOrTemplate[markerName].push(className);
+          viewOrTemplate.addClass(className);
         }
       } else {
         if (val !== undefined && val !== null) {
@@ -763,8 +783,8 @@
           } else if (!isArray(val)) {
             val = [val];
           }
-          each(val, function(i, v) {
-            var cls = componentId + "_" + v;
+          each(val, function (i, v) {
+            var cls = className + "_" + v;
             viewOrTemplate[markerName].push(cls);
             viewOrTemplate.addClass(cls);
           })
@@ -942,7 +962,7 @@
   }
 
   function isServiceName(key) {
-    var words = ["parseTemplate", "parseTemplate2Text", "propagate", "customRenderer"];
+    var words = ["parseTemplate", "parseTemplate2Text", "propagate", "customRenderer", "jMapping", "jMapped"];
     return words.indexOf(key) >= 0;
   }
 
@@ -955,74 +975,80 @@
       var propSettings = {subscribe4updates: subscribe4updates, reverseBinding: reverseBinding, mapping: mapping};
       subscribe4updates = (subscribe4updates === undefined) ? true : subscribe4updates;
       each(map, function (key, elem) {
-        var fnKey = "_j" + key,
-          actualKey = (mapping && mapping[key]) ? mapping[key] : key,
+        var actualKey = (mapping && mapping[key]) ? mapping[key] : key,
           val = $.isFunction(actualKey) ? actualKey.apply(data) : data[actualKey],
           oldData,
           handler,
           elemType = viewOrTm._jiantSpec[key];
-        if (spec[key].customRenderer || customElementRenderers[elemType]
+        if (spec[key].customRenderer || customElementRenderers[elemType] || (spec.jMapping && spec.jMapping[key])
             || (data && val !== undefined && val !== null && !isServiceName(key) && !(val instanceof $))) {
-          elem = viewOrTm[key];
           var actualVal = isFunction(val) ? val.apply(data) : val;
-          getRenderer(spec[key], elemType)(data, elem, actualVal, false, viewOrTm, propSettings);
-          if (subscribe4updates && isFunction(data.on)&& (spec[key].customRenderer || isFunction(val))) { // 3rd ?
-            if (fn[fnKey]) {
-              oldData = fn[fnKey][0];
-              oldData && oldData.off(fn[fnKey][1]);
-              fn[fnKey][2] && elem.off && elem.off("change", fn[fnKey][2]);
+          $.each([key].concat(spec.jMapping && spec.jMapping[key]? spec.jMapping[key] : []), function(i, compKey) {
+            if (compKey === key && spec.jMapped && spec.jMapped[compKey]) {
+              return;
             }
-            if (!isFunction(val)) { // ?
-              actualKey = null;
+            var compElem = viewOrTm[compKey],
+                compType = viewOrTm._jiantSpec[compKey],
+                fnKey = "_j" + compKey;
+            getRenderer(spec[compKey], compType)(data, compElem, actualVal, false, viewOrTm, propSettings);
+            if (subscribe4updates && isFunction(data.on)&& (spec[compKey].customRenderer || isFunction(val))) { // 3rd ?
+              if (fn[fnKey]) {
+                oldData = fn[fnKey][0];
+                oldData && oldData.off(fn[fnKey][1]);
+                fn[fnKey][2] && compElem.off && compElem.off("change", fn[fnKey][2]);
+              }
+              if (!isFunction(val)) { // ?
+                actualKey = null;
+              }
+              handler = data.on(actualKey, function(obj, newVal) {
+                if (arguments.length === 2 && newVal === "remove") {
+                  return;
+                }
+                getRenderer(spec[compKey], compType)(data, compElem, newVal, true, viewOrTm, propSettings);
+              });
+              fn[fnKey] = [data, handler];
             }
-            handler = data.on(actualKey, function(obj, newVal) {
-              if (arguments.length == 2 && newVal == "remove") {
-                return;
-              }
-              getRenderer(spec[key], elemType)(data, elem, newVal, true, viewOrTm, propSettings);
-            });
-            fn[fnKey] = [data, handler];
-          }
-          if (reverseBinding) {
-            var backHandler = function(event) {
-              var tagName = elem[0].tagName.toLowerCase(),
-                tp = elem.attr("type"),
-                etype = viewOrTm._jiantSpec[key];
-              function convert(val) {
-                return val === "undefined" ? undefined : val;
-              }
-              function elem2arr(elem) {
-                var arr = [];
-                each(elem, function (idx, item) {!!$(item).prop("checked") && arr.push(convert($(item).val()));});
-                return arr;
-              }
-              function joinOrUndef(arr) {
-                return arr.length == 0 || (arr.length == 1 && arr[0] === undefined) ? undefined : arr.join();
-              }
-              if (val && isFunction(val)) {
-                if (etype === jiant.inputSet) {
-                  val.call(data, elem2arr(elem));
-                } else if (etype === jiant.inputSetAsString) {
-                  val.call(data, joinOrUndef(elem2arr(elem)));
-                } else {
-                  if (tagName == "input" && tp == "checkbox") {
-                    val.call(data, !!elem.prop("checked"));
-                  } else if (tagName == "input" && tp == "radio") {
-                    val.call(data, joinOrUndef(elem2arr(elem)));
-                  } else if (tagName in {"input": 1,  "select": 1, "textarea": 1}) {
-                    val.call(data, elem.val()); // don't convert due to user may input "undefined" as string
-                  } else if (tagName == "img") {
-                    val.call(data, elem.attr("src"));
-                    // no actual event for changing html, manual 'change' trigger supported by this code
+            if (reverseBinding) {
+              var backHandler = function(event) {
+                var tagName = compElem[0].tagName.toLowerCase(),
+                  tp = compElem.attr("type"),
+                  etype = viewOrTm._jiantSpec[compKey];
+                function convert(val) {
+                  return val === "undefined" ? undefined : val;
+                }
+                function elem2arr(elem) {
+                  var arr = [];
+                  each(elem, function (idx, item) {!!$(item).prop("checked") && arr.push(convert($(item).val()));});
+                  return arr;
+                }
+                function joinOrUndef(arr) {
+                  return arr.length === 0 || (arr.length === 1 && arr[0] === undefined) ? undefined : arr.join();
+                }
+                if (val && isFunction(val)) {
+                  if (etype === jiant.inputSet) {
+                    val.call(data, elem2arr(compElem));
+                  } else if (etype === jiant.inputSetAsString) {
+                    val.call(data, joinOrUndef(elem2arr(compElem)));
                   } else {
-                    val.call(data, elem.html());
+                    if (tagName === "input" && tp === "checkbox") {
+                      val.call(data, !!compElem.prop("checked"));
+                    } else if (tagName === "input" && tp === "radio") {
+                      val.call(data, joinOrUndef(elem2arr(compElem)));
+                    } else if (tagName in {"input": 1,  "select": 1, "textarea": 1}) {
+                      val.call(data, compElem.val()); // don't convert due to user may input "undefined" as string
+                    } else if (tagName === "img") {
+                      val.call(data, compElem.attr("src"));
+                      // no actual event for changing html, manual 'change' trigger supported by this code
+                    } else {
+                      val.call(data, compElem.html());
+                    }
                   }
                 }
-              }
-            };
-            elem.change && elem.change(backHandler);
-            fn[fnKey] && fn[fnKey].push(backHandler);
-          }
+              };
+              compElem.change && compElem.change(backHandler);
+              fn[fnKey] && fn[fnKey].push(backHandler);
+            }
+          });
         }
       });
       if (spec.customRenderer && isFunction(spec.customRenderer)) {
@@ -1056,6 +1082,7 @@
   }
 
   function getRenderer(obj, elemType) {
+    elemType = getComponentType(elemType);
     if (obj && obj.customRenderer && isFunction(obj.customRenderer)) {
       return obj.customRenderer;
     } else if (customElementRenderers[elemType]) {
@@ -1097,10 +1124,10 @@
     }
     each(elem, function(idx, item) {
       item = $(item);
-      var check = item.val() == val + "";
+      var check = item.val() === val + "";
       if (!check && isArray(val)) {
         each(val, function(i, subval) {
-          if (subval + "" == item.val() + "") {
+          if (subval + "" === item.val() + "") {
             check = true;
             return false;
           }
@@ -1111,23 +1138,23 @@
   }
 
   function updateViewElement(obj, elem, val, isUpdate, viewOrTemplate) {
-    if (! elem || ! elem[0]) {
+    if (!elem || !elem[0]) {
       return;
     }
     var tagName = elem[0].tagName.toLowerCase();
     if (tagName in {"input": 1, "textarea": 1, "select": 1}) {
       var el = $(elem[0]),
         tp = el.attr("type");
-      if (tp == "checkbox") {
+      if (tp === "checkbox") {
         elem.prop("checked", !!val);
-      } else if (tp == "radio") {
+      } else if (tp === "radio") {
         each(elem, function(idx, subelem) {
-          $(subelem).prop("checked", subelem.value == (val + ""));
+          $(subelem).prop("checked", subelem.value === (val + ""));
         });
       } else {
         (val == undefined || val == null) ? elem.val(val) : elem.val(val + "");
       }
-    } else if (tagName == "img") {
+    } else if (tagName === "img") {
       elem.attr("src", val);
     } else {
       elem.html(val === undefined ? "" : val);
@@ -1228,16 +1255,18 @@
               viewOrTemplate[componentId](val);
             };
           } else if (elemType === jiant.cssMarker || elemType === jiant.cssFlag) {
-            setupCssFlagsMarkers(tmContent, componentId);
-          } else if (isFlagPresent(elemTypeOrArr, jiant.comp)) {
-            tmContent[componentId].customRenderer = getCompRenderer(appRoot, elemType, componentId, elemTypeOrArr);
+            setupCssFlagsMarkers(tmContent, componentId, elemType, getAt(elemTypeOrArr, 1), getAt(elemTypeOrArr, 2));
           } else {
             var comp = appUiFactory.viewComponent(tm, tmId, prefix, componentId, elemType);
             ensureExists(prefix, appRoot.dirtyList, comp, prefix + tmId, prefix + componentId, isFlagPresent(elemTypeOrArr, jiant.optional));
             tmContent[componentId] = {};
-          }
-          if (isFlagPresent(elemTypeOrArr, jiant.comp) && !(elemType in root)) {
-            error("jiant.comp element refers to non-existing template name: " + elemType + ", tm.elem " + tmId + "." + componentId);
+            if (elemType === jiant.comp) {
+              var tmName = getAt(elemTypeOrArr, 1);
+              tmContent[componentId].customRenderer = getCompRenderer(appRoot, tmName, componentId, elemTypeOrArr);
+              if (!(tmName in root)) {
+                error("jiant.comp element refers to non-existing template name: " + tmName + ", tm.elem " + tmId + "." + componentId);
+              }
+            }
           }
         }
       });
@@ -1253,7 +1282,7 @@
             setupLookup(retVal, elem, retVal, prefix);
           } else if (elemType === jiant.meta) {
           } else if (elemType.jiant_data) {
-            setupDataFunction(retVal, elem);
+            setupDataFunction(retVal, elem, getAt(elemTypeOrArr, 1), getAt(elemTypeOrArr, 2));
           } else if (! (elem in {parseTemplate: 1, parseTemplate2Text: 1, templateSource: 1, appPrefix: 1, impl: 1, _jiantSpec: 1, _scan: 1})) {
             retVal[elem] = $.merge(retVal.filter("." + prefix + elem), retVal.find("." + prefix + elem));
             setupExtras(appRoot, retVal[elem], root[tmId]._jiantSpec[elem], tmId, elem, retVal, prefix);
@@ -3648,15 +3677,33 @@
   }
 
   function optional(tp) {
-    return [optional, tp];
+    var arr = [optional];
+    if (isArray(tp)) {
+      each(tp, function(i, elem) {arr.push(elem)});
+    } else {
+      arr.push(tp);
+    }
+    return arr;
   }
 
   function comp(tp, params) {
     return [comp, tp, params];
   }
 
+  function data(field, dataName) {
+    return arguments.length === 0 ? data : [data, field, dataName];
+  }
+
+  function cssMarker(field, className) {
+    return arguments.length === 0 ? cssMarker : [cssMarker, field, className];
+  }
+
+  function cssFlag(field, className) {
+    return arguments.length === 0 ? cssFlag : [cssFlag, field, className];
+  }
+
   function version() {
-    return 289;
+    return 290;
   }
 
   function Jiant() {}
@@ -3758,13 +3805,13 @@
     nlabel: "jiant.nlabel",
     numLabel: "jiant.numLabel",
     meta: "jiant.meta",
-    cssFlag: "jiant.cssFlag",
-    cssMarker: "jiant.cssMarker",
+    cssFlag: cssFlag,
+    cssMarker: cssMarker,
     pager: "jiant.pager",
     slider: "jiant.slider",
     tabs: "jiant.tabs",
     fn: function (param) {},
-    data: function (val) {},
+    data: data,
     lookup: function (selector) {},
     transientFn: function(val) {},
 
