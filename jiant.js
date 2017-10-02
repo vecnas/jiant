@@ -29,6 +29,7 @@
  2.89: alt_shift_click in dev mode prints bound model and binding stack trace to console
  2.90: some refactoring, jiant.data, cssFlag and cssMarker now accept field name mapping, like a: cssFlag("amount", "cls") produces "a" class mapped to amount field as "cls" class name
  2.90.1: same as previous, with templates support
+ 2.90.2: fixed pure old cssMarker
  */
 "use strict";
 (function(factory) {
@@ -678,7 +679,7 @@
 
   function getAt(tpOrArr, pos) {
     if (! isArray(tpOrArr)) {
-      return tpOrArr;
+      return pos === 0 ? tpOrArr : null;
     }
     var ret;
     each(tpOrArr, function(i, item) {
