@@ -30,6 +30,7 @@
  2.90: some refactoring, jiant.data, cssFlag and cssMarker now accept field name mapping, like a: cssFlag("amount", "cls") produces "a" class mapped to amount field as "cls" class name
  2.90.1: same as previous, with templates support
  2.90.2: fixed pure old cssMarker
+ 2.90.3: jiant.meta accepts arguments, which could be retrieved during runtime, for any purposes
  */
 "use strict";
 (function(factory) {
@@ -3708,6 +3709,12 @@
     return arguments.length === 0 ? cssFlag : [cssFlag, field, className];
   }
 
+  function meta() {
+    var arr = [meta];
+    each(arguments, function(i, arg) {arr.push(arg)});
+    return arguments.length === 0 ? meta : arr;
+  }
+
   function version() {
     return 290;
   }
@@ -3810,7 +3817,7 @@
     label: "jiant.label",
     nlabel: "jiant.nlabel",
     numLabel: "jiant.numLabel",
-    meta: "jiant.meta",
+    meta: meta,
     cssFlag: cssFlag,
     cssMarker: cssMarker,
     pager: "jiant.pager",
