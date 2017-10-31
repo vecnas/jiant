@@ -31,6 +31,7 @@
  2.90.1: same as previous, with templates support
  2.90.2: fixed pure old cssMarker
  2.90.3: jiant.meta accepts arguments, which could be retrieved during runtime, for any purposes
+ 2.90.4: fixed cssFlag/cssMarker/data mapping to field, having no own declaration
  */
 "use strict";
 (function(factory) {
@@ -974,6 +975,11 @@
     var map = {};
     each(spec, function (key, elem) {
       map[key] = elem;
+    });
+    each(spec.jMapped, function(key, arr) {
+      $.each(arr, function(i, elem) {
+        map[elem] = map[elem] || 1;
+      });
     });
     var fn = function(data, subscribe4updates, reverseBinding, mapping) {
       var propSettings = {subscribe4updates: subscribe4updates, reverseBinding: reverseBinding, mapping: mapping};
