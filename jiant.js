@@ -976,7 +976,7 @@
     each(spec, function (key, elem) {
       map[key] = elem;
     });
-    each(spec.jMapped, function(key, arr) {
+    spec.jMapped && each(spec.jMapped, function(key, arr) {
       $.each(arr, function(i, elem) {
         map[elem] = map[elem] || 1;
       });
@@ -990,7 +990,7 @@
           oldData,
           handler,
           elemType = viewOrTm._jiantSpec[key];
-        if (spec[key].customRenderer || customElementRenderers[elemType] || (spec.jMapping && spec.jMapping[key])
+        if ((spec[key] && spec[key].customRenderer) || customElementRenderers[elemType] || (spec.jMapping && spec.jMapping[key])
             || (data && val !== undefined && val !== null && !isServiceName(key) && !(val instanceof $))) {
           var actualVal = isFunction(val) ? val.apply(data) : val;
           $.each([key].concat(spec.jMapping && spec.jMapping[key]? spec.jMapping[key] : []), function(i, compKey) {
