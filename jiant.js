@@ -32,6 +32,7 @@
  2.90.2: fixed pure old cssMarker
  2.90.3: jiant.meta accepts arguments, which could be retrieved during runtime, for any purposes
  2.90.4: fixed cssFlag/cssMarker/data mapping to field, having no own declaration
+ 2.91: fixed error when loading module which includes already loaded styles, but not yet loaded js
  */
 "use strict";
 (function(factory) {
@@ -3145,6 +3146,9 @@
     function preprocessLoadedModule(moduleSpec, moduleObj) {
       handleModuleDeps(moduleSpec.name, moduleSpec);
       if ($.isPlainObject(moduleObj)) {
+        preparePath(moduleObj, "css");
+        preparePath(moduleObj, "js");
+        preparePath(moduleObj, "html");
         loadPath(moduleObj, "css");
         loadPath(moduleObj, "js");
         loadPath(moduleObj, "html");
@@ -3253,13 +3257,18 @@
     return module;
   }
 
-  function loadPath(module, path) {
+  function preparePath(module, path) {
     if (module[path]) {
-      if (! isArray(module[path])) {
+      if (!isArray(module[path])) {
         module[path] = [module[path]];
       }
       module[path + "Count"] = module[path + "Count"] ? (module[path + "Count"] + module[path].length) : module[path].length;
       module[path + "Loaded"] = {};
+    }
+  }
+
+  function loadPath(module, path) {
+    if (module[path]) {
       each(module[path], function(i, url) {
         if (loadedLibs[url]) {
           module[path + "Loaded"][url] = loadedLibs[url];
@@ -3722,7 +3731,7 @@
   }
 
   function version() {
-    return 290;
+    return 291;
   }
 
   function Jiant() {}
