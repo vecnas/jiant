@@ -33,6 +33,7 @@
  2.90.3: jiant.meta accepts arguments, which could be retrieved during runtime, for any purposes
  2.90.4: fixed cssFlag/cssMarker/data mapping to field, having no own declaration
  2.91: fixed error when loading module which includes already loaded styles, but not yet loaded js
+ 2.92: model field .enqueue organizes queue of values on field, sets next when value reset to null/undefined; m.user.cmd.enqueue
  */
 "use strict";
 (function(factory) {
@@ -1572,6 +1573,21 @@
     }
 
     function assignExtraHandlers(obj) {
+      obj.enqueue = function(field, val) {
+        var hndlr, that = this;
+        function maybeSet() {
+          var current = that[field]();
+          if (current === null || current === undefined) {
+            that[field](val);
+            hndlr && hndlr.off();
+            return true;
+          }
+          return false;
+        }
+        if (!maybeSet()) {
+          hndlr = this[field+"_on"](maybeSet);
+        }
+      };
       obj.nowAndOn = function(field, cb) {
         cb.apply(this, [this, this[field]()]);
         return this.on(field, cb);
@@ -1665,7 +1681,7 @@
       } else if (fname === "addAll") {
         alert("JIANT: Model function 'addAll' removed since 1.37, use previous versions or replace it by 'add'");
       } else if (!objMode && fname in {"updateAll": 1, "add": 1, "toCollection": 1, "all": 1}) {
-      } else if (fname in {"off": 1, "nowAndOn": 1, "asapAndOn": 1, "asap": 1, "once": 1}) {
+      } else if (fname in {"off": 1, "nowAndOn": 1, "asapAndOn": 1, "asap": 1, "once": 1, "enqueue": 1}) {
         collectionFunctions.push(fname);
       } else if (fname === "on") {
         collectionFunctions.push(fname);
@@ -1829,6 +1845,7 @@
         collectionFunctions.push(fname + "_asap");
         collectionFunctions.push(fname + "_nowAndOn");
         collectionFunctions.push(fname + "_asapAndOn");
+        collectionFunctions.push(fname + "_enqueue");
         Model.prototype[fname] = function(val, forceEvent, dontFireUpdate, oldValOverride) {
           if (arguments.length != 0) {
             if (forceEvent || (this[modelStorage][fname] !== val && forceEvent !== false)) {
@@ -1853,18 +1870,21 @@
         spec[fname].asap = function(cb) {return singleton.asap(fname, cb)};
         spec[fname].nowAndOn = function(cb) {return singleton.nowAndOn(fname, cb)};
         spec[fname].asapAndOn = function(cb) {return singleton.asapAndOn(fname, cb)};
+        spec[fname].enqueue = function(cb) {return singleton.enqueue(fname, cb)};
         spec[fname + "_on"] = function(cb) {return spec.on(fname, cb)};
         spec[fname + "_once"] = function(cb) {return spec.once(fname, cb)};
         spec[fname + "_off"] = function(cb) {return spec.off(cb)};
         spec[fname + "_asap"] = function(cb) {return singleton.asap(fname, cb)};
         spec[fname + "_nowAndOn"] = function(cb) {return singleton.nowAndOn(fname, cb)};
         spec[fname + "_asapAndOn"] = function(cb) {return singleton.asapAndOn(fname, cb)};
+        spec[fname + "_enqueue"] = function(cb) {return singleton.enqueue(fname, cb)};
         Model.prototype[fname + "_on"] = function(cb) {return this.on(fname, cb)};
         Model.prototype[fname + "_once"] = function(cb) {return this.once(fname, cb)};
         Model.prototype[fname + "_off"] = function(cb) {return this.off(cb)};
         Model.prototype[fname + "_asap"] = function(cb) {return this.asap(fname, cb)};
         Model.prototype[fname + "_nowAndOn"] = function(cb) {return this.nowAndOn(fname, cb)};
         Model.prototype[fname + "_asapAndOn"] = function(cb) {return this.asapAndOn(fname, cb)};
+        Model.prototype[fname + "_enqueue"] = function(cb) {return this.enqueue(fname, cb)};
         spec[fname].jiant_accessor = 1;
         spec[fname].transient_fn = trans;
         //if (! objMode) {
@@ -3731,7 +3751,7 @@
   }
 
   function version() {
-    return 291;
+    return 292;
   }
 
   function Jiant() {}
