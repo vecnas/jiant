@@ -35,6 +35,8 @@
  2.91: fixed error when loading module which includes already loaded styles, but not yet loaded js
  2.92: model field .enqueue organizes queue of values on field, sets next when value reset to null/undefined; m.user.cmd.enqueue
  2.92.1: IE 11 startsWith polyfill
+ 2.93: improved templates rendering, removed devHook to improve performance on large templates amounts
+// 2.94: view component methods showOn(cbOrFld), hideOn(cbOrFld), switchClassOn(cbOrCls, cbOrFld); view methods jInit() - init, elems() - for collections
  */
 "use strict";
 (function(factory) {
@@ -147,7 +149,7 @@
   each(replacementMap, function(key, val) {
     reverseMap[val] = key;
   });
- 
+
   if (!String.prototype.startsWith) {
     String.prototype.startsWith = function(searchString, position) {
       position = position || 0;
@@ -973,12 +975,22 @@
         setupExtras(appRoot, uiElem, tp, key, elemKey, viewOrTm, prefix);
       });
     }
-    maybeAddDevHook(uiElem, key, elemKey, prefix, viewOrTm);
+    // maybeAddDevHook(uiElem, key, elemKey, prefix, viewOrTm);
   }
 
   function isServiceName(key) {
     var words = ["parseTemplate", "parseTemplate2Text", "propagate", "customRenderer", "jMapping", "jMapped", "_jiantSpec"];
     return words.indexOf(key) >= 0;
+  }
+
+  function ElemsProxy(args) {
+
+  }
+
+  function assignExtraFunctions(viewId, spec, viewOrTm) {
+    // viewOrTm.elems = function() {
+    //   return new ElemsProxy(arguments);
+    // }
   }
 
   function assignPropagationFunction(viewId, spec, viewOrTm) {
@@ -1208,8 +1220,8 @@
     viewOk && _bindContent(appRoot, viewContent, viewId, view, prefix);
     ensureSafeExtend(viewContent, view);
     assignPropagationFunction(viewId, viewContent, viewContent);
+    assignExtraFunctions(viewId, viewContent, viewContent);
     $.extend(viewContent, view);
-    maybeAddDevHook(view, viewId, undefined, prefix, view);
     each(listeners, function(i, l) {l.boundView && l.boundView(appRoot, appRoot.views, viewId, prefix, viewContent)});
   }
 
@@ -1250,6 +1262,18 @@
 
   function parseTemplate2Text(tm, data, cacheKey) {
     return parseTemplate(tm, data, cacheKey);
+  }
+
+  function fillClassMapping(elem, classMapping) {
+    var childs = elem.find("*"),
+        selfs = elem.filter("*");
+    $.each($.merge(selfs, childs), function(i, item) {
+      var clss = item.className.split(" ");
+      $.each(clss, function(i, cls) {
+        classMapping[cls] = classMapping[cls] || [];
+        classMapping[cls].push(item);
+      });
+    });
   }
 
   function _bindTemplates(appRoot, root, appUiFactory) {
@@ -1295,6 +1319,8 @@
       root[tmId].parseTemplate = function(data, subscribeForUpdates, reverseBind, mapping) {
         var retVal = $("<!-- -->" + parseTemplate(tm, data, tmId, mapping)); // add comment to force jQuery to read it as HTML fragment
         retVal._jiantSpec = root[tmId]._jiantSpec;
+        var classMapping = {};
+        fillClassMapping(retVal, classMapping);
         each(tmContent, function (compId, elemTypeOrArr) {
           if (isServiceName(compId)) {
             return;
@@ -1307,13 +1333,13 @@
           } else if (elemType.jiant_data) {
             setupDataFunction(retVal, root[tmId], compId, getAt(elemTypeOrArr.jiant_data_spec, 1), getAt(elemTypeOrArr.jiant_data_spec, 2));
           } else if (! (compId in {parseTemplate: 1, parseTemplate2Text: 1, templateSource: 1, appPrefix: 1, impl: 1, _jiantSpec: 1, _scan: 1})) {
-            retVal[compId] = $.merge(retVal.filter("." + prefix + compId), retVal.find("." + prefix + compId));
+            retVal[compId] = $(classMapping[prefix + compId]);
             setupExtras(appRoot, retVal[compId], root[tmId]._jiantSpec[compId], tmId, compId, retVal, prefix);
-            maybeAddDevHook(retVal[compId], tmId, compId, prefix, retVal);
           }
         });
         retVal.splice(0, 1); // remove first comment
         assignPropagationFunction(tmId, tmContent, retVal);
+        assignExtraFunctions(tmId, tmContent, retVal);
         data && retVal.propagate(data, !!subscribeForUpdates, !!reverseBind, mapping);
         each(listeners, function(i, l) {l.parsedTemplate && l.parsedTemplate(appRoot, root, tmId, root[tmId], data, retVal)});
         retVal.addClass("jianttm_" + tmId);
@@ -3759,7 +3785,7 @@
   }
 
   function version() {
-    return 292;
+    return 293;
   }
 
   function Jiant() {}
