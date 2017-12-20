@@ -34,6 +34,7 @@
  2.90.4: fixed cssFlag/cssMarker/data mapping to field, having no own declaration
  2.91: fixed error when loading module which includes already loaded styles, but not yet loaded js
  2.92: model field .enqueue organizes queue of values on field, sets next when value reset to null/undefined; m.user.cmd.enqueue
+ 2.92.1: IE 11 startsWith polyfill
  */
 "use strict";
 (function(factory) {
@@ -146,6 +147,13 @@
   each(replacementMap, function(key, val) {
     reverseMap[val] = key;
   });
+ 
+  if (!String.prototype.startsWith) {
+    String.prototype.startsWith = function(searchString, position) {
+      position = position || 0;
+      return this.indexOf(searchString, position) === position;
+    };
+  }
 
   function copyArr(arr) {
     var ret = [];
