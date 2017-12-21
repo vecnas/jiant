@@ -36,6 +36,7 @@
  2.92: model field .enqueue organizes queue of values on field, sets next when value reset to null/undefined; m.user.cmd.enqueue
  2.92.1: IE 11 startsWith polyfill
  2.93: improved templates rendering, removed devHook to improve performance on large templates amounts
+ 2.93.1: endsWith polyfill, fixed ajax urls construction
 // 2.94: view component methods showOn(cbOrFld), hideOn(cbOrFld), switchClassOn(cbOrCls, cbOrFld); view methods jInit() - init, elems() - for collections
  */
 "use strict";
@@ -154,6 +155,12 @@
     String.prototype.startsWith = function(searchString, position) {
       position = position || 0;
       return this.indexOf(searchString, position) === position;
+    };
+  }
+
+  if (!String.prototype.endsWith) {
+    String.prototype.endsWith = function(suffix) {
+        return this.indexOf(suffix, this.length - suffix.length) !== -1;
     };
   }
 
@@ -2705,6 +2712,9 @@
         subsInUrl,
         headers = {};
     callSpec.url = callSpec.url || (typeof specRetVal === "string" ? specRetVal : (uri + sfx));
+    if (pfx.endsWith("/") && callSpec.url.startsWith("/")) {
+      callSpec.url = callSpec.url.substring(1);
+    }
     if (!callSpec.url.startsWith("http://") && !callSpec.url.startsWith("https://")) {
       callSpec.url = pfx + ((callSpec.url.startsWith("/") || pfx.endsWith("/") || pfx.length === 0) ? "" : "/") + callSpec.url;
     }
