@@ -37,6 +37,7 @@
  2.92.1: IE 11 startsWith polyfill
  2.93: improved templates rendering, removed devHook to improve performance on large templates amounts
  2.93.1: endsWith polyfill, fixed ajax urls construction
+ 2.93.2: ajax urls concatenation fix
 // 2.94: view component methods showOn(cbOrFld), hideOn(cbOrFld), switchClassOn(cbOrCls, cbOrFld); view methods jInit() - init, elems() - for collections
  */
 "use strict";
@@ -2716,7 +2717,8 @@
       callSpec.url = callSpec.url.substring(1);
     }
     if (!callSpec.url.startsWith("http://") && !callSpec.url.startsWith("https://")) {
-      callSpec.url = pfx + ((callSpec.url.startsWith("/") || pfx.endsWith("/") || pfx.length === 0) ? "" : "/") + callSpec.url;
+      callSpec.url = pfx + ((callSpec.url.startsWith("/") || pfx.endsWith("/") || pfx.length === 0
+                            || (!callSpec.url.startsWith("/") && !pfx.endsWith("/"))) ? "" : "/") + callSpec.url;
     }
     subsInUrl = extractSubsInUrl(callSpec.url);
     if (! ("paramMapping" in callSpec)) {
