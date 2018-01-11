@@ -38,7 +38,7 @@
  2.93: improved templates rendering, removed devHook to improve performance on large templates amounts
  2.93.1: endsWith polyfill, fixed ajax urls construction
  2.93.2: ajax urls concatenation fix
-// 2.94: view component methods showOn(cbOrFld), hideOn(cbOrFld), switchClassOn(cbOrCls, cbOrFld); view methods jInit() - init, elems() - for collections
+ 2.94: view component methods showOn(cbOrFld), hideOn(cbOrFld), switchClassOn(cbOrCls, cbOrFld); view/template methods jInit() - init
  */
 "use strict";
 (function(factory) {
@@ -164,6 +164,41 @@
         return this.indexOf(suffix, this.length - suffix.length) !== -1;
     };
   }
+
+  $.fn.extend({
+    showOn: function(fldOrCb) {
+      var p = this._j.parent._j,
+          fn = isFunction(fldOrCb),
+          dir = true;
+      (!p.showing) && (p.showing = []);
+      if (!fn && fldOrCb.startsWith("!")) {
+        fldOrCb = fldOrCb.substr(1);
+        dir = false;
+      }
+      p.showing.push({el: this, fld: fldOrCb, dir: dir, fn: fn});
+    },
+    hideOn: function(fldOrCb) {
+      if (isFunction(fldOrCb)) {
+        this.showOn(function() {
+          return !fldOrCb.apply(this, arguments);
+        });
+      } else {
+        fldOrCb = (fldOrCb.startsWith("!")) ? fldOrCb.substr(1) : ("!" + fldOrCb);
+        this.showOn(fldOrCb);
+      }
+    },
+    switchClassOn: function(clsOrCb, fldOrCb) {
+      var p = this._j.parent._j,
+          fn = isFunction(fldOrCb),
+          dir = true;
+      (!p.switchClass) && (p.switchClass = []);
+      if (!fn && fldOrCb.startsWith("!")) {
+        fldOrCb = fldOrCb.substr(1);
+        dir = false;
+      }
+      p.switchClass.push({el: this, cls: clsOrCb, fld: fldOrCb, dir: dir, fn: fn});
+    }
+  });
 
   function copyArr(arr) {
     var ret = [];
@@ -663,11 +698,12 @@
 
   function _bindContent(appRoot, viewRoot, viewId, viewElem, prefix) {
     var typeSpec = {};
+    viewRoot._j = {};
     viewRoot._jiantSpec = typeSpec;
     each(viewRoot, function (componentId, elemTypeOrArr) {
       var componentTp = getComponentType(elemTypeOrArr);
       typeSpec[componentId] = elemTypeOrArr;
-      if (componentId in {appPrefix: 1, impl: 1, _jiantSpec: 1, _scan: 1}) {
+      if (componentId in {appPrefix: 1, impl: 1, _jiantSpec: 1, _scan: 1, jInit: 1, _j: 1}) {
         //skip
       } else if (componentTp === jiant.lookup) {
         jiant.logInfo("    loookup element, no checks/bindings: " + componentId);
@@ -691,6 +727,9 @@
             error("jiant.comp element refers to non-existing template name: " + tmName + ", view.elem: " + viewId + "." + componentId);
           }
         }
+        viewRoot[componentId]._j = {
+          parent: viewRoot
+        };
       }
     });
   }
@@ -991,17 +1030,7 @@
     return words.indexOf(key) >= 0;
   }
 
-  function ElemsProxy(args) {
-
-  }
-
-  function assignExtraFunctions(viewId, spec, viewOrTm) {
-    // viewOrTm.elems = function() {
-    //   return new ElemsProxy(arguments);
-    // }
-  }
-
-  function assignPropagationFunction(viewId, spec, viewOrTm) {
+  function makePropagationFunction(viewId, spec, viewOrTm) {
     var map = {};
     each(spec, function (key, elem) {
       map[key] = elem;
@@ -1017,8 +1046,6 @@
       each(map, function (key, elem) {
         var actualKey = (mapping && mapping[key]) ? mapping[key] : key,
           val = $.isFunction(actualKey) ? actualKey.apply(data) : data[actualKey],
-          oldData,
-          handler,
           elemType = viewOrTm._jiantSpec[key];
         if ((spec[key] && spec[key].customRenderer) || customElementRenderers[elemType] || (spec.jMapping && spec.jMapping[key])
             || (data && val !== undefined && val !== null && !isServiceName(key) && !(val instanceof $))) {
@@ -1031,16 +1058,16 @@
                 compType = viewOrTm._jiantSpec[compKey],
                 fnKey = "_j" + compKey;
             getRenderer(spec[compKey], compType)(data, compElem, actualVal, false, viewOrTm, propSettings);
-            if (subscribe4updates && isFunction(data.on)&& (spec[compKey].customRenderer || isFunction(val))) { // 3rd ?
+            if (subscribe4updates && isFunction(data.on) && (spec[compKey].customRenderer || isFunction(val))) { // 3rd ?
               if (fn[fnKey]) {
-                oldData = fn[fnKey][0];
+                var oldData = fn[fnKey][0];
                 oldData && oldData.off(fn[fnKey][1]);
                 fn[fnKey][2] && compElem.off && compElem.off("change", fn[fnKey][2]);
               }
               if (!isFunction(val)) { // ?
                 actualKey = null;
               }
-              handler = data.on(actualKey, function(obj, newVal) {
+              var handler = data.on(actualKey, function(obj, newVal) {
                 if (arguments.length === 2 && newVal === "remove") {
                   return;
                 }
@@ -1091,6 +1118,45 @@
           });
         }
       });
+      var that = this;
+      updateShowHideCls(this, data);
+      if (subscribe4updates && isFunction(data.on)) {
+        var fnKey = "_jShowHideCls";
+        if (fn[fnKey]) {
+          var oldData = fn[fnKey][0];
+          oldData && oldData.off(fn[fnKey][1]);
+        }
+        var handler = data.on(function(obj, newVal) {
+          if (arguments.length === 2 && newVal === "remove") {
+            return;
+          }
+          updateShowHideCls(that, data);
+        });
+        fn[fnKey] = [data, handler];
+      }
+
+      function updateShowHideCls(view, data) {
+        view._j.showing && each(view._j.showing, function(i, item) {
+          var on;
+          if (item.fn) {
+            on = item.fld.call(data, data);
+          } else {
+            on = isFunction(data[item.fld]) ? data[item.fld]() : data[item.fld];
+          }
+          on = item.dir ? on : !on;
+          item.el[on ? "show" : "hide"]();
+        });
+        view._j.switchClass && each(view._j.switchClass, function(i, item) {
+          var on;
+          if (item.fn) {
+            on = item.fld.call(data, data);
+          } else {
+            on = isFunction(data[item.fld]) ? data[item.fld]() : data[item.fld];
+          }
+          on = item.dir ? on : !on;
+          item.el[on ? "addClass" : "removeClass"](item.cls);
+        });
+      }
       if (spec.customRenderer && isFunction(spec.customRenderer)) {
         spec.customRenderer(data, viewOrTm);
       }
@@ -1227,9 +1293,11 @@
       viewOk = ensureExists(prefix, appRoot.dirtyList, view, prefix + viewId);
     viewOk && _bindContent(appRoot, viewContent, viewId, view, prefix);
     ensureSafeExtend(viewContent, view);
-    assignPropagationFunction(viewId, viewContent, viewContent);
-    assignExtraFunctions(viewId, viewContent, viewContent);
+    makePropagationFunction(viewId, viewContent, viewContent);
     $.extend(viewContent, view);
+    if (viewContent.jInit && isFunction(viewContent.jInit)) {
+      viewContent.jInit.call(viewContent, appRoot);
+    }
     each(listeners, function(i, l) {l.boundView && l.boundView(appRoot, appRoot.views, viewId, prefix, viewContent)});
   }
 
@@ -1295,7 +1363,7 @@
       }
       each(tmContent, function (componentId, elemTypeOrArr) {
         var elemType = getComponentType(elemTypeOrArr);
-        if (!(componentId in {appPrefix: 1, impl: 1, _jiantSpec: 1, _jiantType: 1, _scan: 1})) {
+        if (!(componentId in {appPrefix: 1, impl: 1, _jiantSpec: 1, _jiantType: 1, _scan: 1, jInit: 1, _j: 1})) {
           root[tmId]._jiantSpec[componentId] = elemType;
           if (elemType === jiant.lookup) {
             jiant.logInfo("    loookup element, no checks/bindings: " + componentId);
@@ -1327,27 +1395,33 @@
       root[tmId].parseTemplate = function(data, subscribeForUpdates, reverseBind, mapping) {
         var retVal = $("<!-- -->" + parseTemplate(tm, data, tmId, mapping)); // add comment to force jQuery to read it as HTML fragment
         retVal._jiantSpec = root[tmId]._jiantSpec;
+        retVal._j = {};
         var classMapping = {};
         fillClassMapping(retVal, classMapping);
-        each(tmContent, function (compId, elemTypeOrArr) {
-          if (isServiceName(compId)) {
+        each(tmContent, function (componentId, elemTypeOrArr) {
+          if (isServiceName(componentId)) {
             return;
           }
           var elemType = getComponentType(elemTypeOrArr);
           if (elemType === jiant.lookup) {
-            info("    loookup element, no checks/bindings: " + compId);
-            setupLookup(retVal, compId, retVal, prefix);
+            info("    loookup element, no checks/bindings: " + componentId);
+            setupLookup(retVal, componentId, retVal, prefix);
           } else if (elemType === jiant.meta) {
           } else if (elemType.jiant_data) {
-            setupDataFunction(retVal, root[tmId], compId, getAt(elemTypeOrArr.jiant_data_spec, 1), getAt(elemTypeOrArr.jiant_data_spec, 2));
-          } else if (! (compId in {parseTemplate: 1, parseTemplate2Text: 1, templateSource: 1, appPrefix: 1, impl: 1, _jiantSpec: 1, _scan: 1})) {
-            retVal[compId] = $(classMapping[prefix + compId]);
-            setupExtras(appRoot, retVal[compId], root[tmId]._jiantSpec[compId], tmId, compId, retVal, prefix);
+            setupDataFunction(retVal, root[tmId], componentId, getAt(elemTypeOrArr.jiant_data_spec, 1), getAt(elemTypeOrArr.jiant_data_spec, 2));
+          } else if (! (componentId in {parseTemplate: 1, parseTemplate2Text: 1, templateSource: 1, appPrefix: 1, impl: 1, _jiantSpec: 1, _scan: 1, _j: 1})) {
+            retVal[componentId] = $(classMapping[prefix + componentId]);
+            setupExtras(appRoot, retVal[componentId], root[tmId]._jiantSpec[componentId], tmId, componentId, retVal, prefix);
+            retVal[componentId]._j = {
+              parent: retVal
+            };
           }
         });
         retVal.splice(0, 1); // remove first comment
-        assignPropagationFunction(tmId, tmContent, retVal);
-        assignExtraFunctions(tmId, tmContent, retVal);
+        makePropagationFunction(tmId, tmContent, retVal);
+        if (root[tmId].jInit && isFunction(root[tmId].jInit)) {
+          root[tmId].jInit.call(retVal, appRoot);
+        }
         data && retVal.propagate(data, !!subscribeForUpdates, !!reverseBind, mapping);
         each(listeners, function(i, l) {l.parsedTemplate && l.parsedTemplate(appRoot, root, tmId, root[tmId], data, retVal)});
         retVal.addClass("jianttm_" + tmId);
@@ -2718,7 +2792,7 @@
     }
     if (!callSpec.url.startsWith("http://") && !callSpec.url.startsWith("https://")) {
       callSpec.url = pfx + ((callSpec.url.startsWith("/") || pfx.endsWith("/") || pfx.length === 0
-                            || (!callSpec.url.startsWith("/") && !pfx.endsWith("/"))) ? "" : "/") + callSpec.url;
+          || (!callSpec.url.startsWith("/") && !pfx.endsWith("/"))) ? "" : "/") + callSpec.url;
     }
     subsInUrl = extractSubsInUrl(callSpec.url);
     if (! ("paramMapping" in callSpec)) {
@@ -3797,7 +3871,7 @@
   }
 
   function version() {
-    return 293;
+    return 294;
   }
 
   function Jiant() {}
