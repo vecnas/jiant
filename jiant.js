@@ -39,6 +39,7 @@
  2.93.1: endsWith polyfill, fixed ajax urls construction
  2.93.2: ajax urls concatenation fix
  2.94: view component methods showOn(cbOrFld), hideOn(cbOrFld), switchClassOn(cbOrCls, cbOrFld); view/template methods jInit() - init
+ 2.94.1: showOn, hideOn, switchClsOn one more optional arg - exact value to perform action on
  */
 "use strict";
 (function(factory) {
@@ -166,7 +167,7 @@
   }
 
   $.fn.extend({
-    showOn: function(fldOrCb) {
+    showOn: function(fldOrCb, exactVal) {
       var p = this._j.parent._j,
           fn = isFunction(fldOrCb),
           dir = true;
@@ -175,19 +176,23 @@
         fldOrCb = fldOrCb.substr(1);
         dir = false;
       }
-      p.showing.push({el: this, fld: fldOrCb, dir: dir, fn: fn});
+      var data = {el: this, fld: fldOrCb, dir: dir, fn: fn};
+      if (arguments.length > 1) {
+        data.exactVal = exactVal;
+      }
+      p.showing.push(data);
     },
-    hideOn: function(fldOrCb) {
+    hideOn: function(fldOrCb, exactVal) {
       if (isFunction(fldOrCb)) {
         this.showOn(function() {
           return !fldOrCb.apply(this, arguments);
         });
       } else {
         fldOrCb = (fldOrCb.startsWith("!")) ? fldOrCb.substr(1) : ("!" + fldOrCb);
-        this.showOn(fldOrCb);
+        arguments.length > 1 ? this.showOn(fldOrCb, exactVal) : this.showOn(fldOrCb);
       }
     },
-    switchClassOn: function(clsOrCb, fldOrCb) {
+    switchClassOn: function(clsOrCb, fldOrCb, exactVal) {
       var p = this._j.parent._j,
           fn = isFunction(fldOrCb),
           dir = true;
@@ -196,7 +201,11 @@
         fldOrCb = fldOrCb.substr(1);
         dir = false;
       }
-      p.switchClass.push({el: this, cls: clsOrCb, fld: fldOrCb, dir: dir, fn: fn});
+      var data = {el: this, cls: clsOrCb, fld: fldOrCb, dir: dir, fn: fn};
+      if (arguments.length > 1) {
+        data.exactVal = exactVal;
+      }
+      p.switchClass.push(data);
     }
   });
 
@@ -1143,6 +1152,9 @@
           } else {
             on = isFunction(data[item.fld]) ? data[item.fld]() : data[item.fld];
           }
+          if ("exactVal" in item) {
+            on = on === item.exactVal;
+          }
           on = item.dir ? on : !on;
           item.el[on ? "show" : "hide"]();
         });
@@ -1152,6 +1164,9 @@
             on = item.fld.call(data, data);
           } else {
             on = isFunction(data[item.fld]) ? data[item.fld]() : data[item.fld];
+          }
+          if ("exactVal" in item) {
+            on = on === item.exactVal;
           }
           on = item.dir ? on : !on;
           item.el[on ? "addClass" : "removeClass"](item.cls);
