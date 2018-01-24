@@ -22,7 +22,7 @@
  2.86: comp(onent) supports functions as root subobject, like obj.pet() mapped to pet: jiant.comp("petTm")
  2.87: propagate mapping now supports functions with this pointing to object, to enable {tp: function() {return translate(this.tp)}}
  2.88: jiant.comp accepts params: jiant.comp(tmName, params), passed to customRenderer as part of source object for better customization,
- jiant.comp doesn't call template for null data, just sets element html to empty value
+      jiant.comp doesn't call template for null data, just sets element html to empty value
  2.88.1: fixed jiant.comp for templates
  2.88.2: view customRenderer called after components, for back compatibility
  2.88.3: model once fixes for model itself and collection functions
@@ -41,6 +41,8 @@
  2.94: view component methods showOn(cbOrFld), hideOn(cbOrFld), switchClassOn(cbOrCls, cbOrFld); view/template methods jInit() - init
  2.94.1: showOn, hideOn, switchClsOn one more optional arg - exact value to perform action on
  2.94.2: jiant.comp supports arrays of data objects
+ 2.95: bindByTag parameter added for app, to bind elements by tags, values: 'after-class' (try by tag if class not found), 'before-class',
+      any other value to bind by tag only or omit to use only class binding. Tag binding ignores appPrefix.
  */
 "use strict";
 (function(factory) {
@@ -55,20 +57,39 @@
 
     DefaultUiFactory = function() {
 
-      function view(prefix, viewId, viewContent) {
-        return viewContent.impl ? $(viewContent.impl) : $("#" + prefix + viewId);
+      function view(prefix, viewId, viewContent, byTags) {
+        var id = "#" + prefix + viewId;
+        if (viewContent.impl) {
+          return $(viewContent.impl);
+        } else if (byTags === "after-class") {
+          var byCls = $(id);
+          return byCls[0] ? byCls : $(viewId);
+        } else if (byTags === "before-class") {
+          var byTag = $(viewId);
+          return byTag[0] ? byTag : $(id);
+        } else if (!!byTags) {
+          return $(viewId);
+        } else {
+          return $(id);
+        }
       }
 
-      function viewComponent(viewElem, viewId, prefix, componentId, componentContent) {
-        return viewElem.find("." + prefix + componentId);
-      }
-
-      function template(prefix, tmId, tmContent) {
-        return tmContent.impl ? $(tmContent.impl) : $("#" + prefix + tmId);
+      function viewComponent(viewElem, viewId, prefix, componentId, componentContent, byTags) {
+        var path = "." + prefix + componentId;
+        if (byTags === "after-class") {
+          var byCls = viewElem.find(path);
+          return byCls[0] ? byCls : viewElem.find(componentId);
+        } else if (byTags === "before-class") {
+          var byTag = viewElem.find(componentId);
+          return byTag[0] ? byTag : viewElem.find(path);
+        } else if (!!byTags) {
+          return viewElem.find(componentId);
+        } else {
+          return viewElem.find(path);
+        }
       }
 
       return {
-        template: template,
         viewComponent: viewComponent,
         view: view
       }
@@ -726,7 +747,7 @@
       } else if (componentTp === jiant.cssMarker || componentTp === jiant.cssFlag) {
         setupCssFlagsMarkers(viewRoot, componentId, componentTp, getAt(elemTypeOrArr, 1), getAt(elemTypeOrArr, 2));
       } else {
-        var uiElem = uiFactory.viewComponent(viewElem, viewId, prefix, componentId, componentTp);
+        var uiElem = uiFactory.viewComponent(viewElem, viewId, prefix, componentId, componentTp, appRoot.bindByTag);
         ensureExists(prefix, appRoot.dirtyList, uiElem, prefix + viewId, prefix + componentId, isFlagPresent(elemTypeOrArr, jiant.optional));
         viewRoot[componentId] = uiElem;
         setupExtras(appRoot, uiElem, componentTp, viewId, componentId, viewRoot, prefix);
@@ -1288,7 +1309,7 @@
   function _bindViews(appRoot, root, appUiFactory) {
     each(root, function(viewId, viewContent) {
       var prefix = ("appPrefix" in viewContent) ? viewContent.appPrefix : appRoot.appPrefix,
-        view = appUiFactory.view(prefix, viewId, viewContent);
+        view = appUiFactory.view(prefix, viewId, viewContent, appRoot.bindByTag);
       if ("_scan" in viewContent) {
         scanForSpec(prefix, viewContent, view);
       }
@@ -1373,7 +1394,7 @@
   function _bindTemplates(appRoot, root, appUiFactory) {
     each(root, function(tmId, tmContent) {
       var prefix = ("appPrefix" in tmContent) ? tmContent.appPrefix : appRoot.appPrefix,
-        tm = appUiFactory.template(prefix, tmId, tmContent);
+        tm = appUiFactory.view(prefix, tmId, tmContent, appRoot.bindByTag);
       root[tmId]._jiantSpec = {};
       root[tmId]._jiantType = jTypeTemplate;
       if ("_scan" in tmContent) {
@@ -1395,7 +1416,7 @@
           } else if (elemType === jiant.cssMarker || elemType === jiant.cssFlag) {
             setupCssFlagsMarkers(tmContent, componentId, elemType, getAt(elemTypeOrArr, 1), getAt(elemTypeOrArr, 2));
           } else {
-            var comp = appUiFactory.viewComponent(tm, tmId, prefix, componentId, elemType);
+            var comp = appUiFactory.viewComponent(tm, tmId, prefix, componentId, elemType, appRoot.bindByTag);
             ensureExists(prefix, appRoot.dirtyList, comp, prefix + tmId, prefix + componentId, isFlagPresent(elemTypeOrArr, jiant.optional));
             tmContent[componentId] = {};
             if (elemType === jiant.comp) {
@@ -3889,7 +3910,7 @@
   }
 
   function version() {
-    return 294;
+    return 295;
   }
 
   function Jiant() {}
