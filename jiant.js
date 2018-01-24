@@ -12,7 +12,7 @@
  2.82.1: .comp in views fix
  2.82.2: appRoot.formatGroupsDelim could be set for numLabel formatting
  2.83: ajax method from now may return object {url: "", method: "[post|get|smth else]", paramMapping: {name: "paramName"}},
-       /person/:id/save substitution supported by param names
+ /person/:id/save substitution supported by param names
  2.84: ports in url fixed, non-absolute ajax urls prefixed by ajaxPrefix
  2.84.1: labelNum gets class "nowrap", which could by defined in .css as white-space: nowrap
  2.85: ajax method returnable object may contain section headers: {paramName: headerName} for param to headers mapping
@@ -22,7 +22,7 @@
  2.86: comp(onent) supports functions as root subobject, like obj.pet() mapped to pet: jiant.comp("petTm")
  2.87: propagate mapping now supports functions with this pointing to object, to enable {tp: function() {return translate(this.tp)}}
  2.88: jiant.comp accepts params: jiant.comp(tmName, params), passed to customRenderer as part of source object for better customization,
-       jiant.comp doesn't call template for null data, just sets element html to empty value
+ jiant.comp doesn't call template for null data, just sets element html to empty value
  2.88.1: fixed jiant.comp for templates
  2.88.2: view customRenderer called after components, for back compatibility
  2.88.3: model once fixes for model itself and collection functions
@@ -40,6 +40,7 @@
  2.93.2: ajax urls concatenation fix
  2.94: view component methods showOn(cbOrFld), hideOn(cbOrFld), switchClassOn(cbOrCls, cbOrFld); view/template methods jInit() - init
  2.94.1: showOn, hideOn, switchClsOn one more optional arg - exact value to perform action on
+ 2.94.2: jiant.comp supports arrays of data objects
  */
 "use strict";
 (function(factory) {
@@ -162,15 +163,15 @@
 
   if (!String.prototype.endsWith) {
     String.prototype.endsWith = function(suffix) {
-        return this.indexOf(suffix, this.length - suffix.length) !== -1;
+      return this.indexOf(suffix, this.length - suffix.length) !== -1;
     };
   }
 
   $.fn.extend({
     showOn: function(fldOrCb, exactVal) {
       var p = this._j.parent._j,
-          fn = isFunction(fldOrCb),
-          dir = true;
+        fn = isFunction(fldOrCb),
+        dir = true;
       (!p.showing) && (p.showing = []);
       if (!fn && fldOrCb.startsWith("!")) {
         fldOrCb = fldOrCb.substr(1);
@@ -194,8 +195,8 @@
     },
     switchClassOn: function(clsOrCb, fldOrCb, exactVal) {
       var p = this._j.parent._j,
-          fn = isFunction(fldOrCb),
-          dir = true;
+        fn = isFunction(fldOrCb),
+        dir = true;
       (!p.switchClass) && (p.switchClass = []);
       if (!fn && fldOrCb.startsWith("!")) {
         fldOrCb = fldOrCb.substr(1);
@@ -782,24 +783,26 @@
   function getCompRenderer(appRoot, tmId, componentId, componentContentOrArr) {
     return function(obj, elem, val, isUpdate, viewOrTemplate, settings) {
       var mapping = settings.mapping || {},
-          actualObj = componentId in mapping ? obj[mapping[componentId]] : componentId in obj ? obj[componentId] : obj,
-          el, params;
+        actualObj = componentId in mapping ? obj[mapping[componentId]] : componentId in obj ? obj[componentId] : obj,
+        el, params;
       if ($.isFunction(actualObj)) {
         actualObj = actualObj.apply(obj);
       }
-      if (actualObj) {
-        var param = getAt(componentContentOrArr, 2);
-        if (param) {
-          actualObj = $.extend({}, actualObj, param);
+      var dataArr = $.isArray(actualObj) ? actualObj : [actualObj];
+      elem.html("");
+      each(dataArr, function(i, actualObj) {
+        if (actualObj) {
+          var param = getAt(componentContentOrArr, 2);
+          if (param) {
+            actualObj = $.extend({}, actualObj, param);
+          }
+          el = appRoot.templates[tmId].parseTemplate(actualObj, settings.subscribeForUpdates, settings.reverseBind, mapping[componentId]);
+          $.each(appRoot.templates[tmId]._jiantSpec, function(cId, cElem) {
+            viewOrTemplate[componentId][cId] = el[cId];
+          });
+          elem.append(el);
         }
-        el = appRoot.templates[tmId].parseTemplate(actualObj, settings.subscribeForUpdates, settings.reverseBind, mapping[componentId]);
-        $.each(appRoot.templates[tmId]._jiantSpec, function(cId, cElem) {
-          viewOrTemplate[componentId][cId] = el[cId];
-        });
-        elem.html(el);
-      } else {
-        elem.html("");
-      }
+      });
     };
   }
 
@@ -1057,15 +1060,15 @@
           val = $.isFunction(actualKey) ? actualKey.apply(data) : data[actualKey],
           elemType = viewOrTm._jiantSpec[key];
         if ((spec[key] && spec[key].customRenderer) || customElementRenderers[elemType] || (spec.jMapping && spec.jMapping[key])
-            || (data && val !== undefined && val !== null && !isServiceName(key) && !(val instanceof $))) {
+          || (data && val !== undefined && val !== null && !isServiceName(key) && !(val instanceof $))) {
           var actualVal = isFunction(val) ? val.apply(data) : val;
           $.each([key].concat(spec.jMapping && spec.jMapping[key]? spec.jMapping[key] : []), function(i, compKey) {
             if (compKey === key && spec.jMapped && spec.jMapped[compKey]) {
               return;
             }
             var compElem = viewOrTm[compKey],
-                compType = viewOrTm._jiantSpec[compKey],
-                fnKey = "_j" + compKey;
+              compType = viewOrTm._jiantSpec[compKey],
+              fnKey = "_j" + compKey;
             getRenderer(spec[compKey], compType)(data, compElem, actualVal, false, viewOrTm, propSettings);
             if (subscribe4updates && isFunction(data.on) && (spec[compKey].customRenderer || isFunction(val))) { // 3rd ?
               if (fn[fnKey]) {
@@ -1357,7 +1360,7 @@
 
   function fillClassMapping(elem, classMapping) {
     var childs = elem.find("*"),
-        selfs = elem.filter("*");
+      selfs = elem.filter("*");
     $.each($.merge(selfs, childs), function(i, item) {
       var clss = item.className.split(" ");
       $.each(clss, function(i, cls) {
@@ -1784,10 +1787,10 @@
           field = overrideField;
         }
         var that = this,
-            handler = that.on(field, function() {
-              that.off(handler);
-              cb && cb.apply(that, arguments);
-            });
+          handler = that.on(field, function() {
+            that.off(handler);
+            cb && cb.apply(that, arguments);
+          });
       };
       obj.off = function(handlerOrArr) {
         var bus = this[objectBus];
@@ -2797,17 +2800,17 @@
 
   function makeAjaxPerformer(appRoot, ajaxPrefix, ajaxSuffix, uri, params, specRetVal, crossDomain) {
     var pfx = (ajaxPrefix || ajaxPrefix === "") ? ajaxPrefix : jiant.AJAX_PREFIX,
-        sfx = (ajaxSuffix || ajaxSuffix === "") ? ajaxSuffix : jiant.AJAX_SUFFIX,
-        callSpec = (specRetVal && (typeof specRetVal !== "string")) ? specRetVal : {},
-        subsInUrl,
-        headers = {};
+      sfx = (ajaxSuffix || ajaxSuffix === "") ? ajaxSuffix : jiant.AJAX_SUFFIX,
+      callSpec = (specRetVal && (typeof specRetVal !== "string")) ? specRetVal : {},
+      subsInUrl,
+      headers = {};
     callSpec.url = callSpec.url || (typeof specRetVal === "string" ? specRetVal : (uri + sfx));
     if (pfx.endsWith("/") && callSpec.url.startsWith("/")) {
       callSpec.url = callSpec.url.substring(1);
     }
     if (!callSpec.url.startsWith("http://") && !callSpec.url.startsWith("https://")) {
       callSpec.url = pfx + ((callSpec.url.startsWith("/") || pfx.endsWith("/") || pfx.length === 0
-          || (!callSpec.url.startsWith("/") && !pfx.endsWith("/"))) ? "" : "/") + callSpec.url;
+        || (!callSpec.url.startsWith("/") && !pfx.endsWith("/"))) ? "" : "/") + callSpec.url;
     }
     subsInUrl = extractSubsInUrl(callSpec.url);
     if (! ("paramMapping" in callSpec)) {
@@ -2818,11 +2821,11 @@
     }
     return function() {
       var callData = {},
-          callback,
-          errHandler,
-          outerArgs = arguments,
-          url = callSpec.url,
-          time = new Date().getTime();
+        callback,
+        errHandler,
+        outerArgs = arguments,
+        url = callSpec.url,
+        time = new Date().getTime();
       if (isFunction(outerArgs[outerArgs.length - 2])) {
         callback = outerArgs[outerArgs.length - 2];
         errHandler = outerArgs[outerArgs.length - 1];
@@ -2832,7 +2835,7 @@
       each(params, function(idx, param) {
         if (idx < outerArgs.length && !isFunction(outerArgs[idx]) && outerArgs[idx] !== undefined && outerArgs[idx] !== null) {
           var actual = outerArgs[idx],
-              paramName = callSpec.paramMapping[param] || param;
+            paramName = callSpec.paramMapping[param] || param;
           if (!(param in callSpec.headers)) {
             parseForAjaxCall(callData, paramName, actual);
           } else {
