@@ -42,7 +42,8 @@
  2.94.1: showOn, hideOn, switchClsOn one more optional arg - exact value to perform action on
  2.94.2: jiant.comp supports arrays of data objects
  2.95: bindByTag parameter added for app, to bind elements by tags, values: 'after-class' (try by tag if class not found), 'before-class',
-      any other value to bind by tag only or omit to use only class binding. Tag binding ignores appPrefix.
+      any other value to bind by tag only or omit to use only class binding. Tag binding ignores appPrefix
+ 2.95.1: minor optimization    
  */
 "use strict";
 (function(factory) {
@@ -1733,8 +1734,8 @@
         function maybeSet() {
           var current = that[field]();
           if (current === null || current === undefined) {
-            that[field](val);
             hndlr && hndlr.off();
+            that[field](val);
             return true;
           }
           return false;
