@@ -43,7 +43,8 @@
  2.94.2: jiant.comp supports arrays of data objects
  2.95: bindByTag parameter added for app, to bind elements by tags, values: 'after-class' (try by tag if class not found), 'before-class',
       any other value to bind by tag only or omit to use only class binding. Tag binding ignores appPrefix
- 2.95.1: minor optimization    
+ 2.95.1: minor optimization
+ 2.95.2: svg prevention
  */
 "use strict";
 (function(factory) {
@@ -1384,11 +1385,13 @@
     var childs = elem.find("*"),
       selfs = elem.filter("*");
     $.each($.merge(selfs, childs), function(i, item) {
-      var clss = item.className.split(" ");
-      $.each(clss, function(i, cls) {
-        classMapping[cls] = classMapping[cls] || [];
-        classMapping[cls].push(item);
-      });
+      if ($.isFunction(item.className.split)) {
+        var clss = item.className.split(" ");
+        $.each(clss, function(i, cls) {
+          classMapping[cls] = classMapping[cls] || [];
+          classMapping[cls].push(item);
+        });
+      }
     });
   }
 
