@@ -45,6 +45,7 @@
       any other value to bind by tag only or omit to use only class binding. Tag binding ignores appPrefix
  2.95.1: minor optimization
  2.95.2: svg prevention
+ 2.95.3: showOn, hideOn, switchClsOn - exact val now may be array of exact values
  */
 "use strict";
 (function(factory) {
@@ -1179,7 +1180,7 @@
             on = isFunction(data[item.fld]) ? data[item.fld]() : data[item.fld];
           }
           if ("exactVal" in item) {
-            on = on === item.exactVal;
+            on = $.isArray(item.exactVal) ? $.inArray(on, item.exactVal) >= 0 : on === item.exactVal;
           }
           on = item.dir ? on : !on;
           item.el[on ? "show" : "hide"]();
@@ -1192,7 +1193,7 @@
             on = isFunction(data[item.fld]) ? data[item.fld]() : data[item.fld];
           }
           if ("exactVal" in item) {
-            on = on === item.exactVal;
+            on = $.isArray(item.exactVal) ? $.inArray(on, item.exactVal) >= 0 : on === item.exactVal;
           }
           on = item.dir ? on : !on;
           item.el[on ? "addClass" : "removeClass"](item.cls);
