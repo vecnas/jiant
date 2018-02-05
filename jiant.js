@@ -46,6 +46,7 @@
  2.95.1: minor optimization
  2.95.2: svg prevention
  2.95.3: showOn, hideOn, switchClsOn - exact val now may be array of exact values
+ 2.96: model auto-method listByXXXIn(arraysOfVals), listByXInAndYIn(xArr, yArr) also supported
  */
 "use strict";
 (function(factory) {
@@ -1529,6 +1530,10 @@
         if (! repoRoot[listBy]) {
           repoRoot[listBy] = funcSpec;
         }
+        if (! repoRoot[listBy + "In"]) {
+          repoRoot[listBy] = funcSpec;
+          repoRoot[listBy + "In"] = funcSpec;
+        }
       }
     });
     if (repoMode) {
@@ -1919,27 +1924,60 @@
           return repoRoot["listBy" + fname.substring(6)].apply(repoRoot, arguments)[0];
         }
       } else if (fname.indexOf("listBy") === 0 && fname.length > 6 && isUpperCaseChar(fname, 6) && !objMode && isEmptyFunction(funcSpec)) {
-        var arr = fname.substring(6).split("And");
-        each(arr, function(idx, name) {
-          arr[idx] = name.substring(0, 1).toLowerCase() + name.substring(1);
-          if (! spec[arr[idx]]) {
-            errorp("Non existing field used by model method !!, field name: !!, model name: !!, app id: !!", fname, arr[idx], modelName, appId);
+        var arrNames = fname.substring(6).split("And");
+        var inMap = {};
+        var usesIns = false;
+        each(arrNames, function(idx, name) {
+          if (name.endsWith("In")) {
+            name = name.substring(0, name.length - 2);
+            inMap[name.substring(0, 1).toLowerCase() + name.substring(1)] = true;
+            usesIns = true;
+          }
+          arrNames[idx] = name.substring(0, 1).toLowerCase() + name.substring(1);
+          if (! spec[arrNames[idx]]) {
+            errorp("Non existing field used by model method !!, field name: !!, model name: !!, app id: !!", fname, arrNames[idx], modelName, appId);
           }
         });
-        if (!indexPresent(arr)) {
-          indexesSpec.push(arr);
+        if (!indexPresent(arrNames)) {
+          indexesSpec.push(arrNames);
         }
         repoRoot[fname] = function() {
           var node = indexes,
             args = arguments;
-          each(arr, function(i, name) {
-            var key = name + "=" + args[i];
-            node = node[key];
-            if (node === undefined) {
-              return false;
-            }
-          });
-          return new Collection(node === undefined ? [] : node.content);
+          if (! usesIns) {
+            each(arrNames, function(i, name) {
+              var key = name + "=" + args[i];
+              node = node[key];
+              if (node === undefined) {
+                return false;
+              }
+            });
+            return new Collection(node === undefined ? [] : node.content);
+          } else {
+            var nodes = [indexes];
+            each(arrNames, function(i, name) {
+              var newNodes = [];
+              args[i] = (inMap[name] && isArray(args[i])) ? args[i] : [args[i]];
+              each(args[i], function(j, arg) {
+                var key = name + "=" + arg;
+                each(nodes, function(k, node) {
+                  if (node[key] !== undefined) {
+                    newNodes.push(node[key]);
+                  }
+                });
+              });
+              nodes = newNodes;
+            });
+            var ret = [];
+            each(nodes, function(i, node) {
+              each(node.content, function(j, item) {
+                if ($.inArray(ret, item) < 0) {
+                  ret.push(item);
+                }
+              });
+            });
+            return new Collection(ret);
+          }
         }
       } else if (fname.indexOf("set") == 0 && fname.length > 3 && isUpperCaseChar(fname, 3)) {
         collectionFunctions.push(fname);
@@ -3915,7 +3953,7 @@
   }
 
   function version() {
-    return 295;
+    return 296;
   }
 
   function Jiant() {}
