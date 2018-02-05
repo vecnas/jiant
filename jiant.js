@@ -47,6 +47,7 @@
  2.95.2: svg prevention
  2.95.3: showOn, hideOn, switchClsOn - exact val now may be array of exact values
  2.96: model auto-method listByXXXIn(arraysOfVals), listByXInAndYIn(xArr, yArr) also supported
+ 2.96.1: nlabel(null) properly works now
  */
 "use strict";
 (function(factory) {
@@ -2991,8 +2992,8 @@
     }
     var prev = elem[fname];
     elem[fname] = function(val) {
-      if (val == undefined) {
-        return prev.call(elem);
+      if (val === undefined || val === null) {
+        return prev.call(elem, val);
       } else {
         if (loadedLogics[appRoot.id] && loadedLogics[appRoot.id].intl) {
           prev.call(elem, translate(appRoot, val));
