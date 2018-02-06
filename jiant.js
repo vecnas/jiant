@@ -48,6 +48,7 @@
  2.95.3: showOn, hideOn, switchClsOn - exact val now may be array of exact values
  2.96: model auto-method listByXXXIn(arraysOfVals), listByXInAndYIn(xArr, yArr) also supported
  2.96.1: nlabel(null) properly works now
+ 2.96.2: jiant.parseTemplate handles non-strict source html string
  */
 "use strict";
 (function(factory) {
@@ -388,7 +389,8 @@
     try {
       var func = tmId ? _tmplCache[tmId] : null;
       if (!func) {
-        var str = $(that).html().trim();
+        logInfo(that);
+        var str = (typeof that === "string" ? $("<i></i>").html(that) : $(that)).html().trim();
         if (!jiant.isMSIE) {
           str = str.replace(/!!/g, "!! ");
         } else {
