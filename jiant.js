@@ -389,7 +389,6 @@
     try {
       var func = tmId ? _tmplCache[tmId] : null;
       if (!func) {
-        logInfo(that);
         var str = (typeof that === "string" ? $("<i></i>").html(that) : $(that)).html().trim();
         if (!jiant.isMSIE) {
           str = str.replace(/!!/g, "!! ");
