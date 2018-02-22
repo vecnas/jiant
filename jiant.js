@@ -50,6 +50,7 @@
  2.96.1: nlabel(null) properly works now
  2.96.2: jiant.parseTemplate handles non-strict source html string
  2.97: bindByTag works for templates
+ 2.97.1: added propagate function to jiant.comp 
  */
 "use strict";
 (function(factory) {
@@ -828,6 +829,7 @@
           $.each(appRoot.templates[tmId]._jiantSpec, function(cId, cElem) {
             viewOrTemplate[componentId][cId] = el[cId];
           });
+          viewOrTemplate[componentId].propagate = function() {el.propagate.apply(el, arguments)};
           elem.append(el);
         }
       });
