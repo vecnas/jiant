@@ -1489,7 +1489,6 @@
               impl: 1, _jiantSpec: 1, _scan: 1, _j: 1, _jiantType: 1, jInit: 1})) {
             retVal[componentId] = getUsingBindBy(componentId);
             setupExtras(appRoot, retVal[componentId], root[tmId]._jiantSpec[componentId], tmId, componentId, retVal, prefix);
-            jiant.logInfo(componentId, elemTypes[componentId]);
             retVal[componentId]._j = {
               parent: retVal
             };
