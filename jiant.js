@@ -1419,8 +1419,10 @@
       if ("_scan" in tmContent) {
         scanForSpec(prefix, tmContent, tm);
       }
+      var elemTypes = {};
       each(tmContent, function (componentId, elemTypeOrArr) {
         var elemType = getComponentType(elemTypeOrArr);
+        elemTypes[componentId] = elemType;
         if (!(componentId in {appPrefix: 1, impl: 1, _jiantSpec: 1, _jiantType: 1, _scan: 1, jInit: 1, _j: 1})) {
           root[tmId]._jiantSpec[componentId] = elemType;
           if (elemType === jiant.lookup) {
@@ -1455,7 +1457,7 @@
         retVal._jiantSpec = root[tmId]._jiantSpec;
         retVal._j = {};
         var classMappings = {},
-            tagMappings = {};
+          tagMappings = {};
         if (!appRoot.bindByTag || appRoot.bindByTag === "after-class" || appRoot.bindByTag === "before-class") {
           fillClassMappings(retVal, classMappings);
         }
@@ -1464,12 +1466,12 @@
         }
         function getUsingBindBy(componentId) {
           var byCls = (prefix + componentId) in classMappings ?  $(classMappings[prefix + componentId]) : null,
-              byTag = componentId in tagMappings ? $(tagMappings[componentId.toLowerCase()]) : null,
-              bindBy = appRoot.bindByTag;
+            byTag = componentId in tagMappings ? $(tagMappings[componentId.toLowerCase()]) : null,
+            bindBy = appRoot.bindByTag;
           return !bindBy ? byCls
             : bindBy === 'after-class' ? (byCls || byTag)
-            : bindBy === 'before-class' ? (byTag || byCls)
-            : byTag;
+              : bindBy === 'before-class' ? (byTag || byCls)
+                : byTag;
         }
         each(tmContent, function (componentId, elemTypeOrArr) {
           if (isServiceName(componentId)) {
@@ -1482,9 +1484,12 @@
           } else if (elemType === jiant.meta) {
           } else if (elemType.jiant_data) {
             setupDataFunction(retVal, root[tmId], componentId, getAt(elemTypeOrArr.jiant_data_spec, 1), getAt(elemTypeOrArr.jiant_data_spec, 2));
-          } else if (! (componentId in {parseTemplate: 1, parseTemplate2Text: 1, templateSource: 1, appPrefix: 1, impl: 1, _jiantSpec: 1, _scan: 1, _j: 1, _jiantType: 1})) {
+          } else if (elemTypes[componentId] === jiant.cssMarker || elemTypes[componentId] === jiant.cssFlag) {
+          } else if (! (componentId in {parseTemplate: 1, parseTemplate2Text: 1, templateSource: 1, appPrefix: 1,
+              impl: 1, _jiantSpec: 1, _scan: 1, _j: 1, _jiantType: 1, jInit: 1})) {
             retVal[componentId] = getUsingBindBy(componentId);
             setupExtras(appRoot, retVal[componentId], root[tmId]._jiantSpec[componentId], tmId, componentId, retVal, prefix);
+            jiant.logInfo(componentId, elemTypes[componentId]);
             retVal[componentId]._j = {
               parent: retVal
             };
