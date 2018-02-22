@@ -22,7 +22,7 @@
  2.86: comp(onent) supports functions as root subobject, like obj.pet() mapped to pet: jiant.comp("petTm")
  2.87: propagate mapping now supports functions with this pointing to object, to enable {tp: function() {return translate(this.tp)}}
  2.88: jiant.comp accepts params: jiant.comp(tmName, params), passed to customRenderer as part of source object for better customization,
-      jiant.comp doesn't call template for null data, just sets element html to empty value
+ jiant.comp doesn't call template for null data, just sets element html to empty value
  2.88.1: fixed jiant.comp for templates
  2.88.2: view customRenderer called after components, for back compatibility
  2.88.3: model once fixes for model itself and collection functions
@@ -42,13 +42,14 @@
  2.94.1: showOn, hideOn, switchClsOn one more optional arg - exact value to perform action on
  2.94.2: jiant.comp supports arrays of data objects
  2.95: bindByTag parameter added for app, to bind elements by tags, values: 'after-class' (try by tag if class not found), 'before-class',
-      any other value to bind by tag only or omit to use only class binding. Tag binding ignores appPrefix
+ any other value to bind by tag only or omit to use only class binding. Tag binding ignores appPrefix
  2.95.1: minor optimization
  2.95.2: svg prevention
  2.95.3: showOn, hideOn, switchClsOn - exact val now may be array of exact values
  2.96: model auto-method listByXXXIn(arraysOfVals), listByXInAndYIn(xArr, yArr) also supported
  2.96.1: nlabel(null) properly works now
  2.96.2: jiant.parseTemplate handles non-strict source html string
+ 2.97: bindByTag works for templates
  */
 "use strict";
 (function(factory) {
@@ -1385,17 +1386,27 @@
     return parseTemplate(tm, data, cacheKey);
   }
 
-  function fillClassMapping(elem, classMapping) {
+  function fillClassMappings(elem, classMapping) {
     var childs = elem.find("*"),
       selfs = elem.filter("*");
     $.each($.merge(selfs, childs), function(i, item) {
-      if ($.isFunction(item.className.split)) {
+      if ($.isFunction(item.className.split) && item.className.length > 0) {
         var clss = item.className.split(" ");
         $.each(clss, function(i, cls) {
           classMapping[cls] = classMapping[cls] || [];
           classMapping[cls].push(item);
         });
       }
+    });
+  }
+
+  function fillTagMappings(elem, tagMapping) {
+    var childs = elem.find("*"),
+      selfs = elem.filter("*");
+    $.each($.merge(selfs, childs), function(i, item) {
+      var tag = item.tagName.toLowerCase();
+      tagMapping[tag] = tagMapping[tag] || [];
+      tagMapping[tag].push(item);
     });
   }
 
@@ -1443,8 +1454,23 @@
         var retVal = $("<!-- -->" + parseTemplate(tm, data, tmId, mapping)); // add comment to force jQuery to read it as HTML fragment
         retVal._jiantSpec = root[tmId]._jiantSpec;
         retVal._j = {};
-        var classMapping = {};
-        fillClassMapping(retVal, classMapping);
+        var classMappings = {},
+            tagMappings = {};
+        if (!appRoot.bindByTag || appRoot.bindByTag === "after-class" || appRoot.bindByTag === "before-class") {
+          fillClassMappings(retVal, classMappings);
+        }
+        if (!!appRoot.bindByTag) {
+          fillTagMappings(retVal, tagMappings);
+        }
+        function getUsingBindBy(componentId) {
+          var byCls = (prefix + componentId) in classMappings ?  $(classMappings[prefix + componentId]) : null,
+              byTag = componentId in tagMappings ? $(tagMappings[componentId.toLowerCase()]) : null,
+              bindBy = appRoot.bindByTag;
+          return !bindBy ? byCls
+            : bindBy === 'after-class' ? (byCls || byTag)
+            : bindBy === 'before-class' ? (byTag || byCls)
+            : byTag;
+        }
         each(tmContent, function (componentId, elemTypeOrArr) {
           if (isServiceName(componentId)) {
             return;
@@ -1456,8 +1482,8 @@
           } else if (elemType === jiant.meta) {
           } else if (elemType.jiant_data) {
             setupDataFunction(retVal, root[tmId], componentId, getAt(elemTypeOrArr.jiant_data_spec, 1), getAt(elemTypeOrArr.jiant_data_spec, 2));
-          } else if (! (componentId in {parseTemplate: 1, parseTemplate2Text: 1, templateSource: 1, appPrefix: 1, impl: 1, _jiantSpec: 1, _scan: 1, _j: 1})) {
-            retVal[componentId] = $(classMapping[prefix + componentId]);
+          } else if (! (componentId in {parseTemplate: 1, parseTemplate2Text: 1, templateSource: 1, appPrefix: 1, impl: 1, _jiantSpec: 1, _scan: 1, _j: 1, _jiantType: 1})) {
+            retVal[componentId] = getUsingBindBy(componentId);
             setupExtras(appRoot, retVal[componentId], root[tmId]._jiantSpec[componentId], tmId, componentId, retVal, prefix);
             retVal[componentId]._j = {
               parent: retVal
@@ -3955,7 +3981,7 @@
   }
 
   function version() {
-    return 296;
+    return 297;
   }
 
   function Jiant() {}
