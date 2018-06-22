@@ -50,7 +50,8 @@
  2.96.1: nlabel(null) properly works now
  2.96.2: jiant.parseTemplate handles non-strict source html string
  2.97: bindByTag works for templates
- 2.97.1: added propagate function to jiant.comp 
+ 2.97.1: added propagate function to jiant.comp
+ 2.98: view/template, used as comp, may use one more setting, compCbSet: {start: () => {}, end: () => {}, perItem: (obj, elem) => {}}
  */
 "use strict";
 (function(factory) {
@@ -742,7 +743,7 @@
     each(viewRoot, function (componentId, elemTypeOrArr) {
       var componentTp = getComponentType(elemTypeOrArr);
       typeSpec[componentId] = elemTypeOrArr;
-      if (componentId in {appPrefix: 1, impl: 1, _jiantSpec: 1, _scan: 1, jInit: 1, _j: 1}) {
+      if (componentId in {appPrefix: 1, impl: 1, compCbSet: 1, _jiantSpec: 1, _scan: 1, jInit: 1, _j: 1}) {
         //skip
       } else if (componentTp === jiant.lookup) {
         jiant.logInfo("    loookup element, no checks/bindings: " + componentId);
@@ -819,6 +820,8 @@
       }
       var dataArr = $.isArray(actualObj) ? actualObj : [actualObj];
       elem.html("");
+      var compCbSet = appRoot.templates[tmId].compCbSet;
+      compCbSet && compCbSet.start && isFunction(compCbSet.start) && compCbSet.start.apply();
       each(dataArr, function(i, actualObj) {
         if (actualObj) {
           var param = getAt(componentContentOrArr, 2);
@@ -831,8 +834,10 @@
           });
           viewOrTemplate[componentId].propagate = function() {el.propagate.apply(el, arguments)};
           elem.append(el);
+          compCbSet && compCbSet.perItem && isFunction(compCbSet.perItem) && compCbSet.perItem.apply(actualObj, el);
         }
       });
+      compCbSet && compCbSet.end && isFunction(compCbSet.end) && compCbSet.end.apply();
     };
   }
 
@@ -1425,7 +1430,7 @@
       each(tmContent, function (componentId, elemTypeOrArr) {
         var elemType = getComponentType(elemTypeOrArr);
         elemTypes[componentId] = elemType;
-        if (!(componentId in {appPrefix: 1, impl: 1, _jiantSpec: 1, _jiantType: 1, _scan: 1, jInit: 1, _j: 1})) {
+        if (!(componentId in {appPrefix: 1, impl: 1, compCbSet: 1, _jiantSpec: 1, _jiantType: 1, _scan: 1, jInit: 1, _j: 1})) {
           root[tmId]._jiantSpec[componentId] = elemType;
           if (elemType === jiant.lookup) {
             jiant.logInfo("    loookup element, no checks/bindings: " + componentId);
@@ -1488,7 +1493,7 @@
             setupDataFunction(retVal, root[tmId], componentId, getAt(elemTypeOrArr.jiant_data_spec, 1), getAt(elemTypeOrArr.jiant_data_spec, 2));
           } else if (elemTypes[componentId] === jiant.cssMarker || elemTypes[componentId] === jiant.cssFlag) {
           } else if (! (componentId in {parseTemplate: 1, parseTemplate2Text: 1, templateSource: 1, appPrefix: 1,
-              impl: 1, _jiantSpec: 1, _scan: 1, _j: 1, _jiantType: 1, jInit: 1})) {
+              impl: 1, compCbSet: 1, _jiantSpec: 1, _scan: 1, _j: 1, _jiantType: 1, jInit: 1})) {
             retVal[componentId] = getUsingBindBy(componentId);
             setupExtras(appRoot, retVal[componentId], root[tmId]._jiantSpec[componentId], tmId, componentId, retVal, prefix);
             retVal[componentId]._j = {
@@ -3987,7 +3992,7 @@
   }
 
   function version() {
-    return 297;
+    return 298;
   }
 
   function Jiant() {}
