@@ -52,6 +52,7 @@
  2.97: bindByTag works for templates
  2.97.1: added propagate function to jiant.comp
  2.98: view/template, used as comp, may use one more setting, compCbSet: {start: () => {}, end: () => {}, perItem: (obj, elem) => {}}
+ 2.99: optional(comp("...")) - could be used for optional component lists to render nothing, if bound value is not present
  */
 "use strict";
 (function(factory) {
@@ -815,6 +816,9 @@
       var mapping = settings.mapping || {},
         actualObj = componentId in mapping ? obj[mapping[componentId]] : componentId in obj ? obj[componentId] : obj,
         el, params;
+      if (obj === actualObj && isFlagPresent(componentContentOrArr, jiant.optional)) {
+        return;
+      }
       if ($.isFunction(actualObj)) {
         actualObj = actualObj.apply(obj);
       }
@@ -3992,7 +3996,7 @@
   }
 
   function version() {
-    return 298;
+    return 299;
   }
 
   function Jiant() {}
