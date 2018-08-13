@@ -65,6 +65,7 @@
  xl.0.59: jiant.refs removed, j 2.41 compatible
  xl.0.60: pageableFilterableSortable one more parameter: mapping
  xl.0.60.1: .sortFn(fn) added to bindList ret val
+ xl.0.61: proper sorting in bindList
  */
 
 (function() {
@@ -74,7 +75,7 @@
   var tmpJiantXl = {
 
     version: function() {
-      return 60;
+      return 61;
     },
 
     ctl2state: function(ctl, state, selectedCssClass, goProxy) {
@@ -143,7 +144,7 @@
     },
 
     bindList: function(model, container, template, viewFieldSetterName, sortFn, subscribeForUpdates, reversePropagate, elemFactory, mapping) {
-      var addHnd, remHnd;
+      var addHnd, remHnd, sorted = [];
       function renderObj(obj) {
         var tm = $.isFunction(template) ? template(obj) : template,
             cont = $.isFunction(container) ? container(obj) : container,
@@ -168,10 +169,11 @@
           view = tm.parseTemplate(obj, subscribeForUpdates, reversePropagate, mapping);
         }
         if (sortFn && $.isFunction(sortFn) && jiant.getRepo(model).all) {
-          $.each(jiant.getRepo(model).all(), function(i, item) {
+          $.each(sorted, function(i, item) {
             var order = sortFn(obj, item);
             if (item[viewFieldSetterName] && item[viewFieldSetterName]() && order < 0) {
               useTm && view.insertBefore(item[viewFieldSetterName]()[0]);
+              sorted.splice(i, 0, obj);
               appended = true;
               return false;
             }
@@ -179,6 +181,7 @@
         }
         if (!appended) {
           useTm && cont.append(view);
+          sorted.push(obj);
         }
         $.isFunction(obj[viewFieldSetterName]) && view && obj[viewFieldSetterName](view);
       }
@@ -192,6 +195,7 @@
                 });
             remHnd = m.remove && m.remove.on(function (obj) {
                   obj[viewFieldSetterName] && (elemFactory ? elemFactory.remove(obj[viewFieldSetterName]()) : obj[viewFieldSetterName]().remove());
+                  sorted = $.grep(sorted, function(elem, i) {return elem != obj});
                 });
             $.each(jiant.getRepo(model).all(), function(i, obj) {
               renderObj(obj);
@@ -206,7 +210,7 @@
       };
       ret.sortFn = function(fn) {
         sortFn = fn;
-      }
+      };
       return ret;
     },
 
