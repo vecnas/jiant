@@ -53,6 +53,7 @@
  2.97.1: added propagate function to jiant.comp
  2.98: view/template, used as comp, may use one more setting, compCbSet: {start: () => {}, end: () => {}, perItem: (obj, elem) => {}}
  2.99: optional(comp("...")) - could be used for optional component lists to render nothing, if bound value is not present
+ 2.99.1: fixed index update on removed object
  */
 "use strict";
 (function(factory) {
@@ -1681,6 +1682,10 @@
     }
 
     function addIndexes(obj) {
+      var presentIdx = storage.indexOf(obj);
+      if (presentIdx < 0) { // already removed object
+        return;
+      }
       each(indexesSpec, function(i, index) {
         var node = indexes;
         each(index, function(j, name) {
