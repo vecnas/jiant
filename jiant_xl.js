@@ -64,6 +64,7 @@
  xl.0.58: bindList.off unsubscribes from model updates, default app state uses state.replace
  xl.0.59: jiant.refs removed, j 2.41 compatible
  xl.0.60: pageableFilterableSortable one more parameter: mapping
+ xl.0.60.1: .sortFn(fn) added to bindList ret val
  */
 
 (function() {
@@ -203,6 +204,9 @@
           $.isFunction(obj[viewFieldSetterName]) && obj[viewFieldSetterName]() && $.isFunction(obj[viewFieldSetterName]().off) && obj[viewFieldSetterName]().off();
         });
       };
+      ret.sortFn = function(fn) {
+        sortFn = fn;
+      }
       return ret;
     },
 
