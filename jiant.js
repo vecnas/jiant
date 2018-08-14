@@ -54,6 +54,7 @@
  2.98: view/template, used as comp, may use one more setting, compCbSet: {start: () => {}, end: () => {}, perItem: (obj, elem) => {}}
  2.99: optional(comp("...")) - could be used for optional component lists to render nothing, if bound value is not present
  2.99.1: fixed index update on removed object
+ 2.99.2: proper handling of *In fields names in models by findBy*In
  */
 "use strict";
 (function(factory) {
@@ -1976,13 +1977,13 @@
         var inMap = {};
         var usesIns = false;
         each(arrNames, function(idx, name) {
-          if (name.endsWith("In")) {
+          if (name.endsWith("In") && !spec[lowerFirst(name)]) {
             name = name.substring(0, name.length - 2);
-            inMap[name.substring(0, 1).toLowerCase() + name.substring(1)] = true;
+            inMap[lowerFirst(name)] = true;
             usesIns = true;
           }
-          arrNames[idx] = name.substring(0, 1).toLowerCase() + name.substring(1);
-          if (! spec[arrNames[idx]]) {
+          arrNames[idx] = lowerFirst(name);
+          if (!spec[arrNames[idx]]) {
             errorp("Non existing field used by model method !!, field name: !!, model name: !!, app id: !!", fname, arrNames[idx], modelName, appId);
           }
         });
@@ -2148,6 +2149,10 @@
         }
       }
     }
+  }
+
+  function lowerFirst(s) {
+    return s.substring(0, 1).toLowerCase() + s.substring(1);
   }
 
   function isEventHandlerName(fname) {
