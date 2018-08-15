@@ -55,6 +55,7 @@
  2.99: optional(comp("...")) - could be used for optional component lists to render nothing, if bound value is not present
  2.99.1: fixed index update on removed object
  2.99.2: proper handling of *In fields names in models by findBy*In
+ 2.99.3: fixes around reverse binding and tm optimization
  */
 "use strict";
 (function(factory) {
@@ -1128,7 +1129,7 @@
               });
               fn[fnKey] = [data, handler];
             }
-            if (reverseBinding) {
+            if (reverseBinding && compElem && compElem.change) {
               var backHandler = function(event) {
                 var tagName = compElem[0].tagName.toLowerCase(),
                   tp = compElem.attr("type"),
@@ -1165,7 +1166,8 @@
                   }
                 }
               };
-              compElem.change && compElem.change(backHandler);
+              // jiant.logInfo(viewOrTm, compKey, compElem);
+              compElem.change(backHandler);
               fn[fnKey] && fn[fnKey].push(backHandler);
             }
           });
@@ -1501,10 +1503,12 @@
           } else if (! (componentId in {parseTemplate: 1, parseTemplate2Text: 1, templateSource: 1, appPrefix: 1,
               impl: 1, compCbSet: 1, _jiantSpec: 1, _scan: 1, _j: 1, _jiantType: 1, jInit: 1})) {
             retVal[componentId] = getUsingBindBy(componentId);
-            setupExtras(appRoot, retVal[componentId], root[tmId]._jiantSpec[componentId], tmId, componentId, retVal, prefix);
-            retVal[componentId]._j = {
-              parent: retVal
-            };
+            if (retVal[componentId]) {
+              setupExtras(appRoot, retVal[componentId], root[tmId]._jiantSpec[componentId], tmId, componentId, retVal, prefix);
+              retVal[componentId]._j = {
+                parent: retVal
+              };
+            }
           }
         });
         retVal.splice(0, 1); // remove first comment
