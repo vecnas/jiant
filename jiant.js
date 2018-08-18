@@ -56,6 +56,7 @@
  2.99.1: fixed index update on removed object
  2.99.2: proper handling of *In fields names in models by findBy*In
  2.99.3: fixes around reverse binding and tm optimization
+ 2.99.4: customRenderer could be declared in json file like jInit
  */
 "use strict";
 (function(factory) {
@@ -747,7 +748,7 @@
     each(viewRoot, function (componentId, elemTypeOrArr) {
       var componentTp = getComponentType(elemTypeOrArr);
       typeSpec[componentId] = elemTypeOrArr;
-      if (componentId in {appPrefix: 1, impl: 1, compCbSet: 1, _jiantSpec: 1, _scan: 1, jInit: 1, _j: 1}) {
+      if (componentId in {appPrefix: 1, impl: 1, compCbSet: 1, _jiantSpec: 1, _scan: 1, jInit: 1, _j: 1, customRenderer: 1}) {
         //skip
       } else if (componentTp === jiant.lookup) {
         jiant.logInfo("    loookup element, no checks/bindings: " + componentId);
@@ -1438,7 +1439,7 @@
       each(tmContent, function (componentId, elemTypeOrArr) {
         var elemType = getComponentType(elemTypeOrArr);
         elemTypes[componentId] = elemType;
-        if (!(componentId in {appPrefix: 1, impl: 1, compCbSet: 1, _jiantSpec: 1, _jiantType: 1, _scan: 1, jInit: 1, _j: 1})) {
+        if (!(componentId in {appPrefix: 1, impl: 1, compCbSet: 1, _jiantSpec: 1, _jiantType: 1, _scan: 1, jInit: 1, _j: 1, customRenderer: 1})) {
           root[tmId]._jiantSpec[componentId] = elemType;
           if (elemType === jiant.lookup) {
             jiant.logInfo("    loookup element, no checks/bindings: " + componentId);
@@ -1501,7 +1502,7 @@
             setupDataFunction(retVal, root[tmId], componentId, getAt(elemTypeOrArr.jiant_data_spec, 1), getAt(elemTypeOrArr.jiant_data_spec, 2));
           } else if (elemTypes[componentId] === jiant.cssMarker || elemTypes[componentId] === jiant.cssFlag) {
           } else if (! (componentId in {parseTemplate: 1, parseTemplate2Text: 1, templateSource: 1, appPrefix: 1,
-              impl: 1, compCbSet: 1, _jiantSpec: 1, _scan: 1, _j: 1, _jiantType: 1, jInit: 1})) {
+              impl: 1, compCbSet: 1, _jiantSpec: 1, _scan: 1, _j: 1, _jiantType: 1, jInit: 1, customRenderer: 1})) {
             retVal[componentId] = getUsingBindBy(componentId);
             if (retVal[componentId]) {
               setupExtras(appRoot, retVal[componentId], root[tmId]._jiantSpec[componentId], tmId, componentId, retVal, prefix);
