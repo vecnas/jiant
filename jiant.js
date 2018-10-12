@@ -1,62 +1,5 @@
 /*
- 2.76.3: fix of wrong condition in models fill
- 2.77: changing model in on .add handler now properly reflected in indexes
- 2.77.1: intl attaches app.modulesSuffix to intl url
- 2.78: .propagate skips jquery objects in models, to avoid re-attaching stored views
- 2.79: jiant.registerCustomRenderer(name, function(obj, elem, val, isUpdate, viewOrTemplate) { added, to provide ability attach named custom renderers to elems
- 2.80: jiant.comp[onent] added to declare templates/views hierarchy, example: templates.itemSlotTm = {item: jiant.comp("itemTm"}, should refer to template name
- 2.80.1: .comp fields access: tmOut.fieldOut.fieldIn
- 2.80.2: minor fix for views comp
- 2.81 link to embedded template changed, tm.templateSource() method added to templates, returns source code of template
- 2.82: loadModules minor fix, semaphore re-release enabled, proper subpath pass to comp subelements
- 2.82.1: .comp in views fix
- 2.82.2: appRoot.formatGroupsDelim could be set for numLabel formatting
- 2.83: ajax method from now may return object {url: "", method: "[post|get|smth else]", paramMapping: {name: "paramName"}},
- /person/:id/save substitution supported by param names
- 2.84: ports in url fixed, non-absolute ajax urls prefixed by ajaxPrefix
- 2.84.1: labelNum gets class "nowrap", which could by defined in .css as white-space: nowrap
- 2.85: ajax method returnable object may contain section headers: {paramName: headerName} for param to headers mapping
- 2.85.1: added check for empty function in jRepo model spec, to allow non-empty custom implementation
- 2.85.2: custom models findBy supported
- 2.85.3: anti cache parameter added only if ajax method not specified or set to GET
- 2.86: comp(onent) supports functions as root subobject, like obj.pet() mapped to pet: jiant.comp("petTm")
- 2.87: propagate mapping now supports functions with this pointing to object, to enable {tp: function() {return translate(this.tp)}}
- 2.88: jiant.comp accepts params: jiant.comp(tmName, params), passed to customRenderer as part of source object for better customization,
- jiant.comp doesn't call template for null data, just sets element html to empty value
- 2.88.1: fixed jiant.comp for templates
- 2.88.2: view customRenderer called after components, for back compatibility
- 2.88.3: model once fixes for model itself and collection functions
- 2.89: alt_shift_click in dev mode prints bound model and binding stack trace to console
- 2.90: some refactoring, jiant.data, cssFlag and cssMarker now accept field name mapping, like a: cssFlag("amount", "cls") produces "a" class mapped to amount field as "cls" class name
- 2.90.1: same as previous, with templates support
- 2.90.2: fixed pure old cssMarker
- 2.90.3: jiant.meta accepts arguments, which could be retrieved during runtime, for any purposes
- 2.90.4: fixed cssFlag/cssMarker/data mapping to field, having no own declaration
- 2.91: fixed error when loading module which includes already loaded styles, but not yet loaded js
- 2.92: model field .enqueue organizes queue of values on field, sets next when value reset to null/undefined; m.user.cmd.enqueue
- 2.92.1: IE 11 startsWith polyfill
- 2.93: improved templates rendering, removed devHook to improve performance on large templates amounts
- 2.93.1: endsWith polyfill, fixed ajax urls construction
- 2.93.2: ajax urls concatenation fix
- 2.94: view component methods showOn(cbOrFld), hideOn(cbOrFld), switchClassOn(cbOrCls, cbOrFld); view/template methods jInit() - init
- 2.94.1: showOn, hideOn, switchClsOn one more optional arg - exact value to perform action on
- 2.94.2: jiant.comp supports arrays of data objects
- 2.95: bindByTag parameter added for app, to bind elements by tags, values: 'after-class' (try by tag if class not found), 'before-class',
- any other value to bind by tag only or omit to use only class binding. Tag binding ignores appPrefix
- 2.95.1: minor optimization
- 2.95.2: svg prevention
- 2.95.3: showOn, hideOn, switchClsOn - exact val now may be array of exact values
- 2.96: model auto-method listByXXXIn(arraysOfVals), listByXInAndYIn(xArr, yArr) also supported
- 2.96.1: nlabel(null) properly works now
- 2.96.2: jiant.parseTemplate handles non-strict source html string
- 2.97: bindByTag works for templates
- 2.97.1: added propagate function to jiant.comp
- 2.98: view/template, used as comp, may use one more setting, compCbSet: {start: () => {}, end: () => {}, perItem: (obj, elem) => {}}
- 2.99: optional(comp("...")) - could be used for optional component lists to render nothing, if bound value is not present
- 2.99.1: fixed index update on removed object
- 2.99.2: proper handling of *In fields names in models by findBy*In
- 2.99.3: fixes around reverse binding and tm optimization
- 2.99.4: customRenderer could be declared in json file like jInit
+ 2.99.5: injectTo back to loadModule, as extra parameter
  */
 "use strict";
 (function(factory) {
@@ -3228,15 +3171,15 @@
   // loadModule before .app puts module into list of app modules, cb ignored
   // loadModule during .app executes module immediately
   // loadModule after .app executes module immediately
-  function loadModule(app, modules, cb, replace) {
+  function loadModule(app, modules, cb, replace, injectTo) {
     var appId = extractApplicationId(app);
     if (! isArray(modules)) {
       modules = [modules];
     }
     if (boundApps[appId]) { // after
-      _loadModules(boundApps[appId], modules, appId, false, cb, replace);
+      _loadModules(boundApps[appId], modules, appId, false, cb, replace, injectTo);
     } else if (bindingCurrently[appId]) { // during
-      _loadModules(bindingCurrently[appId], modules, appId, false, cb, replace);
+      _loadModules(bindingCurrently[appId], modules, appId, false, cb, replace, injectTo);
     } else { // before
       if (cb) {
         logError("loadModule called before .app with callback, callback will be ignored. loadModule arguments: ", arguments);
@@ -3249,9 +3192,8 @@
     }
   }
 
-  function _loadModules(appRoot, root, appId, initial, cb, replace) {
-    var modules2load = [],
-      replaceProvided = arguments.length >= 6;
+  function _loadModules(appRoot, root, appId, initial, cb, replace, injectTo) {
+    var modules2load = [];
     cb = cb || function() {};
     if ($.isPlainObject(root)) {
       modules2load = parseObjectModules(root, appId);
@@ -3261,11 +3203,10 @@
       logError("Unrecognized modules type", root);
     }
     if (modules2load.length) {
-      if (replaceProvided) {
-        each(modules2load, function(i, m) {
-          m.replace = replace;
-        });
-      }
+      each(modules2load, function(i, m) {
+        m.replace = replace;
+        m.injectTo = injectTo;
+      });
       loadModules(appRoot, appId, modules2load, initial, cb);
     } else {
       cb();
@@ -3290,7 +3231,7 @@
       addedLibs[url] = 1;
       if (module.htmlLoaded[url]) {
         var html = "<!-- sourceUrl = " + url + " -->" + module.htmlLoaded[url] + "<!-- end of source from " + url + " -->";
-        var inj = $("body");
+        var inj = arr[idx].injectTo ? $(arr[idx].injectTo) : $("body");
         if (arr[idx].replace) {
           inj.html(html);
         } else {
