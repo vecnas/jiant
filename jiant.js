@@ -1,5 +1,6 @@
 /*
  2.99.5: injectTo back to loadModule, as extra parameter
+ 2.99.6: filter by _jiantSpec vs double call
  */
 "use strict";
 (function(factory) {
@@ -1055,7 +1056,9 @@
             var compElem = viewOrTm[compKey],
               compType = viewOrTm._jiantSpec[compKey],
               fnKey = "_j" + compKey;
-            getRenderer(spec[compKey], compType)(data, compElem, actualVal, false, viewOrTm, propSettings);
+            if (compKey !== "_jiantSpec") {
+              getRenderer(spec[compKey], compType)(data, compElem, actualVal, false, viewOrTm, propSettings);
+            }
             if (subscribe4updates && isFunction(data.on) && (spec[compKey].customRenderer || isFunction(val))) { // 3rd ?
               if (fn[fnKey]) {
                 var oldData = fn[fnKey][0];
