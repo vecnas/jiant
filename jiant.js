@@ -1,6 +1,7 @@
 /*
  2.99.5: injectTo back to loadModule, as extra parameter
  2.99.6: filter by _jiantSpec vs double call
+ 3.00: module.exactUrl to specify exact module url
  */
 "use strict";
 (function(factory) {
@@ -3387,9 +3388,12 @@
     if (!loading[moduleName]) {
       if (!modules[moduleName]) {
         loading[moduleName] = 1;
-        var url = isCouldBePrefixed(moduleSpec.path) ? ((appRoot.modulesPrefix || "") + moduleSpec.path) : moduleSpec.path;
-        url = url + ".js?" + (appRoot.modulesSuffix || "");
-        infop("           url: " + url);
+        var useExact = "exactUrl" in moduleSpec;
+        var url = useExact ? moduleSpec.exactUrl : isCouldBePrefixed(moduleSpec.path) ? ((appRoot.modulesPrefix || "") + moduleSpec.path) : moduleSpec.path;
+        if (!useExact && appRoot.modulesSuffix) {
+          url = url + ".js?" + (appRoot.modulesSuffix || "");
+        }
+        infop("           module url: " + url);
         $.ajax({
           url: url,
           method: "GET",
@@ -3955,7 +3959,7 @@
   }
 
   function version() {
-    return 299;
+    return 300;
   }
 
   function Jiant() {}
