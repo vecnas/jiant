@@ -2,6 +2,7 @@
  2.99.5: injectTo back to loadModule, as extra parameter
  2.99.6: filter by _jiantSpec vs double call
  3.00: module.exactUrl to specify exact module url
+ 3.00.1: module suffix .js back
  */
 "use strict";
 (function(factory) {
@@ -3390,8 +3391,8 @@
         loading[moduleName] = 1;
         var useExact = "exactUrl" in moduleSpec;
         var url = useExact ? moduleSpec.exactUrl : isCouldBePrefixed(moduleSpec.path) ? ((appRoot.modulesPrefix || "") + moduleSpec.path) : moduleSpec.path;
-        if (!useExact && appRoot.modulesSuffix) {
-          url = url + ".js?" + (appRoot.modulesSuffix || "");
+        if (!useExact) {
+          url = url + ".js" + (appRoot.modulesSuffix || "");
         }
         infop("           module url: " + url);
         $.ajax({
