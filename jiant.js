@@ -3,6 +3,7 @@
  2.99.6: filter by _jiantSpec vs double call
  3.00: module.exactUrl to specify exact module url
  3.00.1: module suffix .js back
+ 3.00.2: comp/mapping interaction fixed for objects in mapping
  */
 "use strict";
 (function(factory) {
@@ -782,7 +783,7 @@
           if (param) {
             actualObj = $.extend({}, actualObj, param);
           }
-          el = appRoot.templates[tmId].parseTemplate(actualObj, settings.subscribeForUpdates, settings.reverseBind, mapping[componentId]);
+          el = appRoot.templates[tmId].parseTemplate(actualObj, settings.subscribeForUpdates, settings.reverseBind, $.isPlainObject(mapping[componentId]) ? mapping[componentId] : mapping);
           $.each(appRoot.templates[tmId]._jiantSpec, function(cId, cElem) {
             viewOrTemplate[componentId][cId] = el[cId];
           });
