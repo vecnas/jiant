@@ -4,6 +4,7 @@
  3.00: module.exactUrl to specify exact module url
  3.00.1: module suffix .js back
  3.00.2: comp/mapping interaction fixed for objects in mapping
+ 3.00.3: index added to component data array, if not provided
  */
 "use strict";
 (function(factory) {
@@ -782,6 +783,9 @@
           var param = getAt(componentContentOrArr, 2);
           if (param) {
             actualObj = $.extend({}, actualObj, param);
+          }
+          if (! ("index" in actualObj)) {
+            actualObj.index = i;
           }
           el = appRoot.templates[tmId].parseTemplate(actualObj, settings.subscribeForUpdates, settings.reverseBind, $.isPlainObject(mapping[componentId]) ? mapping[componentId] : mapping);
           $.each(appRoot.templates[tmId]._jiantSpec, function(cId, cElem) {
