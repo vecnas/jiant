@@ -5,6 +5,7 @@
  3.00.1: module suffix .js back
  3.00.2: comp/mapping interaction fixed for objects in mapping
  3.00.3: index added to component data array, if not provided
+ 3.01: tags for template names are optional, could be disabled by jiant.ADD_TM_TAGS;
  */
 "use strict";
 (function(factory) {
@@ -1472,7 +1473,9 @@
         }
         data && retVal.propagate(data, !!subscribeForUpdates, !!reverseBind, mapping);
         each(listeners, function(i, l) {l.parsedTemplate && l.parsedTemplate(appRoot, root, tmId, root[tmId], data, retVal)});
-        retVal.addClass("jianttm_" + tmId);
+        if ((!("ADD_TM_TAGS" in jiant)) || jiant.ADD_TM_TAGS) {
+          retVal.addClass("jianttm_" + tmId);
+        }
         return retVal;
       };
       root[tmId].parseTemplate2Text = function(data, mapping) {
@@ -3965,7 +3968,7 @@
   }
 
   function version() {
-    return 300;
+    return 301;
   }
 
   function Jiant() {}
@@ -3974,6 +3977,7 @@
     AJAX_PREFIX: "",
     AJAX_SUFFIX: "",
     DEV_MODE: false,
+    ADD_TM_TAGS: true,
     PAGER_RADIUS: 6,
     LIB_LOAD_TIMEOUT: 15000,
     isMSIE: eval("/*@cc_on!@*/!1"),
