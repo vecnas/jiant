@@ -6,6 +6,7 @@
  3.00.2: comp/mapping interaction fixed for objects in mapping
  3.00.3: index added to component data array, if not provided
  3.01: tags for template names are optional, could be disabled by jiant.ADD_TM_TAGS;
+ 3.01.1: index fix for some situations
  */
 "use strict";
 (function(factory) {
@@ -785,7 +786,7 @@
           if (param) {
             actualObj = $.extend({}, actualObj, param);
           }
-          if (! ("index" in actualObj)) {
+          if ((typeof actualObj == "object") && !("index" in actualObj)) {
             actualObj.index = i;
           }
           el = appRoot.templates[tmId].parseTemplate(actualObj, settings.subscribeForUpdates, settings.reverseBind, $.isPlainObject(mapping[componentId]) ? mapping[componentId] : mapping);
@@ -938,6 +939,10 @@
       document.execCommand("copy");
       document.body.removeChild(input);
     }
+  }
+
+  function isWebComponentName(name) {
+    return name.includes("-")
   }
 
   function ensureExists(appPrefix, dirtyList, obj, idName, className, optional) {
@@ -1456,7 +1461,7 @@
             setupDataFunction(retVal, root[tmId], componentId, getAt(elemTypeOrArr.jiant_data_spec, 1), getAt(elemTypeOrArr.jiant_data_spec, 2));
           } else if (elemTypes[componentId] === jiant.cssMarker || elemTypes[componentId] === jiant.cssFlag) {
           } else if (! (componentId in {parseTemplate: 1, parseTemplate2Text: 1, templateSource: 1, appPrefix: 1,
-              impl: 1, compCbSet: 1, _jiantSpec: 1, _scan: 1, _j: 1, _jiantType: 1, jInit: 1})) {
+            impl: 1, compCbSet: 1, _jiantSpec: 1, _scan: 1, _j: 1, _jiantType: 1, jInit: 1})) {
             retVal[componentId] = getUsingBindBy(componentId);
             if (retVal[componentId]) {
               setupExtras(appRoot, retVal[componentId], root[tmId]._jiantSpec[componentId], tmId, componentId, retVal, prefix);
@@ -2650,7 +2655,7 @@
   function isSameStatesGroup(appId, state0, state1) {
     var statesRoot = boundApps[appId].states;
     return (statesRoot[state0] && statesRoot[state1] && statesRoot[state0].statesGroup !== undefined
-    && statesRoot[state0].statesGroup === statesRoot[state1].statesGroup);
+      && statesRoot[state0].statesGroup === statesRoot[state1].statesGroup);
   }
 
   function goRoot(appOrId) {
@@ -2935,28 +2940,28 @@
       });
       url = replaceSubsInUrl(url, subs);
       var settings = {data: callData, traditional: true, method: callSpec.method, headers: headers, success: function(data) {
-        each(listeners, function(i, l) {l.ajaxCallCompleted && l.ajaxCallCompleted(appRoot, uri, url, callData, new Date().getTime() - time)});
-        if (callback) {
-          try {
-            data = $.parseJSON(data);
-          } catch (ex) {
+          each(listeners, function(i, l) {l.ajaxCallCompleted && l.ajaxCallCompleted(appRoot, uri, url, callData, new Date().getTime() - time)});
+          if (callback) {
+            try {
+              data = $.parseJSON(data);
+            } catch (ex) {
+            }
+            each(listeners, function(i, l) {l.ajaxCallResults && l.ajaxCallResults(appRoot, uri, url, callData, data)});
+            callback(data);
           }
-          each(listeners, function(i, l) {l.ajaxCallResults && l.ajaxCallResults(appRoot, uri, url, callData, data)});
-          callback(data);
-        }
-      }, error: function (jqXHR, textStatus, errorText) {
-        if (0 === jqXHR.status && ('abort' === jqXHR.statusText || 'error' === jqXHR.statusText)) {
-          return;
-        }
-        if (errHandler) {
-          errHandler(jqXHR.responseText);
-        } else if (appRoot.handleErrorFn) {
-          appRoot.handleErrorFn(jqXHR.responseText);
-        } else {
-          jiant.handleErrorFn(jqXHR.responseText);
-        }
-        each(listeners, function(i, l) {l.ajaxCallError && l.ajaxCallError(appRoot, uri, url, callData, new Date().getTime() - time, jqXHR.responseText, jqXHR)});
-      }};
+        }, error: function (jqXHR, textStatus, errorText) {
+          if (0 === jqXHR.status && ('abort' === jqXHR.statusText || 'error' === jqXHR.statusText)) {
+            return;
+          }
+          if (errHandler) {
+            errHandler(jqXHR.responseText);
+          } else if (appRoot.handleErrorFn) {
+            appRoot.handleErrorFn(jqXHR.responseText);
+          } else {
+            jiant.handleErrorFn(jqXHR.responseText);
+          }
+          each(listeners, function(i, l) {l.ajaxCallError && l.ajaxCallError(appRoot, uri, url, callData, new Date().getTime() - time, jqXHR.responseText, jqXHR)});
+        }};
       if (crossDomain) {
         settings.contentType = "application/json";
         settings.dataType = 'jsonp';
@@ -3077,9 +3082,9 @@
             };
           } else {
             option.interpolation = option.interpolation || {
-                prefix: intlRoot.prefix || '__',
-                suffix: intlRoot.suffix || '__'
-              };
+              prefix: intlRoot.prefix || '__',
+              suffix: intlRoot.suffix || '__'
+            };
           }
           i18next.use({
             type: 'backend',
