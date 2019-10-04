@@ -4107,6 +4107,6 @@
 
   };
 
-  return window.jiant || (window.jiant = new Jiant());
+  return window.jiant1 || (window.jiant = new Jiant());
 
 }));
