@@ -7,6 +7,7 @@
  3.00.3: index added to component data array, if not provided
  3.01: tags for template names are optional, could be disabled by jiant.ADD_TM_TAGS;
  3.01.1: index fix for some situations
+ 3.01.2: img bg surrounding, cross domain GET enforce
  */
 "use strict";
 (function(factory) {
@@ -19,122 +20,122 @@
 
   var
 
-    DefaultUiFactory = function() {
+      DefaultUiFactory = function() {
 
-      function view(prefix, viewId, viewContent, byTags) {
-        var id = "#" + prefix + viewId;
-        if (viewContent.impl) {
-          return $(viewContent.impl);
-        } else if (byTags === "after-class") {
-          var byCls = $(id);
-          return byCls[0] ? byCls : $(viewId);
-        } else if (byTags === "before-class") {
-          var byTag = $(viewId);
-          return byTag[0] ? byTag : $(id);
-        } else if (!!byTags) {
-          return $(viewId);
-        } else {
-          return $(id);
+        function view(prefix, viewId, viewContent, byTags) {
+          var id = "#" + prefix + viewId;
+          if (viewContent.impl) {
+            return $(viewContent.impl);
+          } else if (byTags === "after-class") {
+            var byCls = $(id);
+            return byCls[0] ? byCls : $(viewId);
+          } else if (byTags === "before-class") {
+            var byTag = $(viewId);
+            return byTag[0] ? byTag : $(id);
+          } else if (!!byTags) {
+            return $(viewId);
+          } else {
+            return $(id);
+          }
         }
-      }
 
-      function viewComponent(viewElem, viewId, prefix, componentId, componentContent, byTags) {
-        var path = "." + prefix + componentId;
-        if (byTags === "after-class") {
-          var byCls = viewElem.find(path);
-          return byCls[0] ? byCls : viewElem.find(componentId);
-        } else if (byTags === "before-class") {
-          var byTag = viewElem.find(componentId);
-          return byTag[0] ? byTag : viewElem.find(path);
-        } else if (!!byTags) {
-          return viewElem.find(componentId);
-        } else {
-          return viewElem.find(path);
+        function viewComponent(viewElem, viewId, prefix, componentId, componentContent, byTags) {
+          var path = "." + prefix + componentId;
+          if (byTags === "after-class") {
+            var byCls = viewElem.find(path);
+            return byCls[0] ? byCls : viewElem.find(componentId);
+          } else if (byTags === "before-class") {
+            var byTag = viewElem.find(componentId);
+            return byTag[0] ? byTag : viewElem.find(path);
+          } else if (!!byTags) {
+            return viewElem.find(componentId);
+          } else {
+            return viewElem.find(path);
+          }
         }
-      }
 
-      return {
-        viewComponent: viewComponent,
-        view: view
-      }
-    },
+        return {
+          viewComponent: viewComponent,
+          view: view
+        }
+      },
 
-    listenerProto = {
-      bindStarted: function(app) {},
-      bindCompleted: function(app) {},
+      listenerProto = {
+        bindStarted: function(app) {},
+        bindCompleted: function(app) {},
 
-      boundAjax: function(app, ajaxRoot, uri, ajaxFn) {},
-      boundEvent: function(app, eventsRoot, name, eventImpl) {},
-      boundLogic: function(app, logicsRoot, name, spec) {},
-      boundModel: function(app, modelsRoot, name, modelImpl) {},
-      boundState: function(app, states, name, stateSpec) {},
-      boundTemplate: function(app, tmRoot, tmId, prefix, tm) {},
-      boundView: function(app, viewsRoot, viewId, prefix, view) {},
+        boundAjax: function(app, ajaxRoot, uri, ajaxFn) {},
+        boundEvent: function(app, eventsRoot, name, eventImpl) {},
+        boundLogic: function(app, logicsRoot, name, spec) {},
+        boundModel: function(app, modelsRoot, name, modelImpl) {},
+        boundState: function(app, states, name, stateSpec) {},
+        boundTemplate: function(app, tmRoot, tmId, prefix, tm) {},
+        boundView: function(app, viewsRoot, viewId, prefix, view) {},
 
-      ajaxCallStarted: function(app, uri, url, callData) {},
-      ajaxCallCompleted: function(app, uri, url, callData, timeMs) {},
-      ajaxCallResults: function(app, uri, url, callData, data) {},
-      ajaxCallError: function(app, uri, url, callData, timeMs, errorMessage, jqXHR) {},
+        ajaxCallStarted: function(app, uri, url, callData) {},
+        ajaxCallCompleted: function(app, uri, url, callData, timeMs) {},
+        ajaxCallResults: function(app, uri, url, callData, data) {},
+        ajaxCallError: function(app, uri, url, callData, timeMs, errorMessage, jqXHR) {},
 
-      stateEndCallHandler: function(app, name, stateSpec, trace) {},
-      stateEndRegisterHandler: function(app, name, stateSpec) {},
-      stateEndTrigger: function(app, name) {},
-      stateError: function(app, name, stateSpec, message) {},
-      stateStartCallHandler: function(app, name, stateSpec, trace, args) {},
-      stateStartRegisterHandler: function(app, name, stateSpec) {},
-      stateStartTrigger: function(app, name, params) {},
+        stateEndCallHandler: function(app, name, stateSpec, trace) {},
+        stateEndRegisterHandler: function(app, name, stateSpec) {},
+        stateEndTrigger: function(app, name) {},
+        stateError: function(app, name, stateSpec, message) {},
+        stateStartCallHandler: function(app, name, stateSpec, trace, args) {},
+        stateStartRegisterHandler: function(app, name, stateSpec) {},
+        stateStartTrigger: function(app, name, params) {},
 
-      parsedTemplate: function(app, tmRoot, tmId, tmSpec, data, tm) {},
-      submittingForm: function(app, viewName, formName, data) {},
+        parsedTemplate: function(app, tmRoot, tmId, tmSpec, data, tm) {},
+        submittingForm: function(app, viewName, formName, data) {},
 
-      logicImplemented: function(appId, name, unboundCount) {},
-      onUiBoundCalled: function(appIdArr, dependenciesList, cb) {}
-    },
+        logicImplemented: function(appId, name, unboundCount) {},
+        onUiBoundCalled: function(appIdArr, dependenciesList, cb) {}
+      },
 
-    customElementTypes = {},
-    customElementRenderers = {},
-    bindingsResult = true,
-    errString,
-    pickTime,
-    alwaysTrace = false,
-    lastStates = {},
-    lastEncodedStates = {},
-    loadedLogics = {},
-    addedLibs = {},
-    loadedLibs = {},
-    loadingLibs = {},
-    moduleLoads = [],
-    awaitingDepends = {},
-    externalDeclarations = {},
-    modules = {},
-    eventBus = $({}),
-    perAppBus = {},
-    preApping = {},
-    boundApps = {},
-    backupApps = {},
-    bindingCurrently = {},
-    pre = {},
-    uiFactory = new DefaultUiFactory(),
-    statesUsed = {},
-    listeners = [],
-    objectBus = "jModelObjectBus",
-    repoName = "jRepo",
-    jTypeTemplate = {},
-    _tmplCache = {},
-    replacementMap = {
-      ";" : ";;",
-      "," : ";1",
-      "=" : ";2",
-      "|" : ";3",
-      "{" : ";4",
-      "}" : ";5",
-      ":" : ";6",
-      "#" : ";7",
-      "'" : ";7"
-    }, reverseMap = {},
-    replacementRegex = /;|,|=|\||\{|\}|:|#/gi,
-    reverseRegex = /;;|;1|;2|;3|;4|;5|;6|;7/gi,
-    restRegexp = /:([^\/]+)(\/|$)/g;
+      customElementTypes = {},
+      customElementRenderers = {},
+      bindingsResult = true,
+      errString,
+      pickTime,
+      alwaysTrace = false,
+      lastStates = {},
+      lastEncodedStates = {},
+      loadedLogics = {},
+      addedLibs = {},
+      loadedLibs = {},
+      loadingLibs = {},
+      moduleLoads = [],
+      awaitingDepends = {},
+      externalDeclarations = {},
+      modules = {},
+      eventBus = $({}),
+      perAppBus = {},
+      preApping = {},
+      boundApps = {},
+      backupApps = {},
+      bindingCurrently = {},
+      pre = {},
+      uiFactory = new DefaultUiFactory(),
+      statesUsed = {},
+      listeners = [],
+      objectBus = "jModelObjectBus",
+      repoName = "jRepo",
+      jTypeTemplate = {},
+      _tmplCache = {},
+      replacementMap = {
+        ";" : ";;",
+        "," : ";1",
+        "=" : ";2",
+        "|" : ";3",
+        "{" : ";4",
+        "}" : ";5",
+        ":" : ";6",
+        "#" : ";7",
+        "'" : ";7"
+      }, reverseMap = {},
+      replacementRegex = /;|,|=|\||\{|\}|:|#/gi,
+      reverseRegex = /;;|;1|;2|;3|;4|;5|;6|;7/gi,
+      restRegexp = /:([^\/]+)(\/|$)/g;
   each(replacementMap, function(key, val) {
     reverseMap[val] = key;
   });
@@ -155,8 +156,8 @@
   $.fn.extend({
     showOn: function(fldOrCb, exactVal) {
       var p = this._j.parent._j,
-        fn = isFunction(fldOrCb),
-        dir = true;
+          fn = isFunction(fldOrCb),
+          dir = true;
       (!p.showing) && (p.showing = []);
       if (!fn && fldOrCb.startsWith("!")) {
         fldOrCb = fldOrCb.substr(1);
@@ -180,8 +181,8 @@
     },
     switchClassOn: function(clsOrCb, fldOrCb, exactVal) {
       var p = this._j.parent._j,
-        fn = isFunction(fldOrCb),
-        dir = true;
+          fn = isFunction(fldOrCb),
+          dir = true;
       (!p.switchClass) && (p.switchClass = []);
       if (!fn && fldOrCb.startsWith("!")) {
         fldOrCb = fldOrCb.substr(1);
@@ -301,7 +302,7 @@
 
   function pick(marker, threshold) {
     var now = new Date().getTime(),
-      ms = now - pickTime;
+        ms = now - pickTime;
     threshold = threshold || -1;
     if (pickTime && ms >= threshold) {
       info((marker ? marker : "jiant.pick:") + " " + ms + "ms");
@@ -354,16 +355,16 @@
           str = msieDom2Html($(that));
         }
         var strFunc =
-          "var p=[],print=function(){p.push.apply(p,arguments);};" +
-          "with(obj){p.push('" +
-          str.replace(/[\r\t\n]/g, " ")
-            .replace(/'(?=[^#]*#>)/g, "\t")
-            .split("'").join("\\'")
-            .split("\t").join("'")
-            .replace(/!! (.+?)!! /g, "', jiant.intro.isFunction($1) ? $1() : $1,'")
-            .split("!?").join("');")
-            .split("?!").join("p.push('")
-          + "');}return p.join('');";
+            "var p=[],print=function(){p.push.apply(p,arguments);};" +
+            "with(obj){p.push('" +
+            str.replace(/[\r\t\n]/g, " ")
+                .replace(/'(?=[^#]*#>)/g, "\t")
+                .split("'").join("\\'")
+                .split("\t").join("'")
+                .replace(/!! (.+?)!! /g, "', jiant.intro.isFunction($1) ? $1() : $1,'")
+                .split("!?").join("');")
+                .split("?!").join("p.push('")
+            + "');}return p.join('');";
 
         func = new Function("obj", strFunc);
         _tmplCache[tmId] = func;
@@ -395,8 +396,8 @@
       } else if ( event.keyCode == jiant.key.end || event.keyCode == jiant.key.home || event.keyCode == jiant.key.tab || event.keyCode == jiant.key.enter) {
         input.val(fit(input.valInt(), input.j_valMin, input.j_valMax));
       } else if (!event.ctrlKey && !event.shiftKey && (event.keyCode != jiant.key.backspace && event.keyCode != jiant.key.del
-        && event.keyCode != jiant.key.left && event.keyCode != jiant.key.right && event.keyCode < 48 || event.keyCode > 57)
-        && (event.keyCode < 96 || event.keyCode > 105 )) {
+          && event.keyCode != jiant.key.left && event.keyCode != jiant.key.right && event.keyCode < 48 || event.keyCode > 57)
+          && (event.keyCode < 96 || event.keyCode > 105 )) {
         event.preventDefault();
         return false;
       }
@@ -556,9 +557,9 @@
 
   function setupPager(uiElem) {
     var pagerBus = $({}),
-      roots = [],
-      lastPage = 0,
-      lastTotalCls;
+        roots = [],
+        lastPage = 0,
+        lastTotalCls;
     each(uiElem, function(i, elem) {
       var root = $("<ul></ul>");
       root.addClass("pagination");
@@ -586,7 +587,7 @@
         lastTotalCls = "totalPages_" + page.totalPages;
         root.addClass(lastTotalCls);
         var from = Math.max(0, page.number - Math.round(jiant.PAGER_RADIUS / 2)),
-          to = Math.min(page.number + Math.round(jiant.PAGER_RADIUS / 2), page.totalPages);
+            to = Math.min(page.number + Math.round(jiant.PAGER_RADIUS / 2), page.totalPages);
         if (from > 0) {
           addPageCtl(root, 1, "pager_first");
           addPageCtl(root, -1, "disabled emptyPlaceholder");
@@ -610,7 +611,7 @@
     };
     function addPageCtl(root, value, ctlClass) {
       var ctl = $(parseTemplate($("<b><li class='!!ctlClass!!' style='cursor: pointer;'><a>!!label!!</a></li></b>"),
-        {label: value != -1 ? value : "...", ctlClass: ctlClass}));
+          {label: value != -1 ? value : "...", ctlClass: ctlClass}));
       root.append(ctl);
       value != -1 && ctl.click(function() {
         lastPage = value;
@@ -622,10 +623,10 @@
 
   function setupContainerPaged(uiElem) {
     var prev = $("<div>&laquo;</div>"),
-      next = $("<div>&raquo;</div>"),
-      container = $("<div></div>"),
-      pageSize = 8,
-      offset = 0;
+        next = $("<div>&raquo;</div>"),
+        container = $("<div></div>"),
+        pageSize = 8,
+        offset = 0;
     prev.addClass("paged-prev");
     next.addClass("paged-next");
     container.addClass("paged-container");
@@ -768,8 +769,8 @@
   function getCompRenderer(appRoot, tmId, componentId, componentContentOrArr) {
     return function(obj, elem, val, isUpdate, viewOrTemplate, settings) {
       var mapping = settings.mapping || {},
-        actualObj = componentId in mapping ? obj[mapping[componentId]] : componentId in obj ? obj[componentId] : obj,
-        el, params;
+          actualObj = componentId in mapping ? obj[mapping[componentId]] : componentId in obj ? obj[componentId] : obj,
+          el, params;
       if (obj === actualObj && isFlagPresent(componentContentOrArr, jiant.optional)) {
         return;
       }
@@ -831,7 +832,7 @@
 
   function setupCssFlagsMarkers(viewRoot, componentId, componentTp, mappingId, className) {
     var flag = componentTp === jiant.cssFlag,
-      markerName = "j_prevMarkerClass_" + componentId;
+        markerName = "j_prevMarkerClass_" + componentId;
     className = className || componentId;
     linkComponent(viewRoot, componentId, mappingId);
     viewRoot[componentId] = {};
@@ -886,7 +887,7 @@
     } else {
       // array or object
       var json = [],
-        arr = (obj && obj.constructor == Array);
+          arr = (obj && obj.constructor == Array);
       each(obj, function (k, v) {
         t = typeof(v);
         if (t == "string") {
@@ -947,7 +948,7 @@
 
   function ensureExists(appPrefix, dirtyList, obj, idName, className, optional) {
     if (idName && dirtyList && (dirtyList.indexOf(idName) >= 0
-      || (appPrefix && dirtyList.indexOf(idName.substring(appPrefix.length)) >= 0))) {
+        || (appPrefix && dirtyList.indexOf(idName.substring(appPrefix.length)) >= 0))) {
       return true;
     }
     if (!obj || !obj.length) {
@@ -956,7 +957,7 @@
         return true;
       } else {
         className ? errorp("non existing object referred by class under object id #!!, check stack trace for details, expected obj class: .!!", idName, className)
-          : errorp("non existing object referred by id, check stack trace for details, expected obj id: #!!", idName);
+            : errorp("non existing object referred by id, check stack trace for details, expected obj id: #!!", idName);
         if (className) {
           errString += ",    #" + idName + " ." + className;
         } else {
@@ -1057,18 +1058,18 @@
       subscribe4updates = (subscribe4updates === undefined) ? true : subscribe4updates;
       each(map, function (key, elem) {
         var actualKey = (mapping && mapping[key]) ? mapping[key] : key,
-          val = $.isFunction(actualKey) ? actualKey.apply(data) : data[actualKey],
-          elemType = viewOrTm._jiantSpec[key];
+            val = $.isFunction(actualKey) ? actualKey.apply(data) : data[actualKey],
+            elemType = viewOrTm._jiantSpec[key];
         if ((spec[key] && spec[key].customRenderer) || customElementRenderers[elemType] || (spec.jMapping && spec.jMapping[key])
-          || (data && val !== undefined && val !== null && !isServiceName(key) && !(val instanceof $))) {
+            || (data && val !== undefined && val !== null && !isServiceName(key) && !(val instanceof $))) {
           var actualVal = isFunction(val) ? val.apply(data) : val;
           $.each([key].concat(spec.jMapping && spec.jMapping[key]? spec.jMapping[key] : []), function(i, compKey) {
             if (compKey === key && spec.jMapped && spec.jMapped[compKey]) {
               return;
             }
             var compElem = viewOrTm[compKey],
-              compType = viewOrTm._jiantSpec[compKey],
-              fnKey = "_j" + compKey;
+                compType = viewOrTm._jiantSpec[compKey],
+                fnKey = "_j" + compKey;
             if (compKey !== "_jiantSpec") {
               getRenderer(spec[compKey], compType)(data, compElem, actualVal, false, viewOrTm, propSettings);
             }
@@ -1092,8 +1093,8 @@
             if (reverseBinding && compElem && compElem.change) {
               var backHandler = function(event) {
                 var tagName = compElem[0].tagName.toLowerCase(),
-                  tp = compElem.attr("type"),
-                  etype = viewOrTm._jiantSpec[compKey];
+                    tp = compElem.attr("type"),
+                    etype = viewOrTm._jiantSpec[compKey];
                 function convert(val) {
                   return val === "undefined" ? undefined : val;
                 }
@@ -1239,7 +1240,7 @@
 
   function updateImgBg(obj, elem, val, isUpdate, viewOrTemplate) {
     if (!!val) {
-      elem.css("background-image", "url(" + val + ")");
+      elem.css("background-image", "url(\"" + val + "\")");
     } else {
       elem.css("background-image", "");
     }
@@ -1271,7 +1272,7 @@
     var tagName = elem[0].tagName.toLowerCase();
     if (tagName in {"input": 1, "textarea": 1, "select": 1}) {
       var el = $(elem[0]),
-        tp = el.attr("type");
+          tp = el.attr("type");
       if (tp === "checkbox") {
         elem.prop("checked", !!val);
       } else if (tp === "radio") {
@@ -1291,7 +1292,7 @@
   function _bindViews(appRoot, root, appUiFactory) {
     each(root, function(viewId, viewContent) {
       var prefix = ("appPrefix" in viewContent) ? viewContent.appPrefix : appRoot.appPrefix,
-        view = appUiFactory.view(prefix, viewId, viewContent, appRoot.bindByTag);
+          view = appUiFactory.view(prefix, viewId, viewContent, appRoot.bindByTag);
       if ("_scan" in viewContent) {
         scanForSpec(prefix, viewContent, view);
       }
@@ -1311,7 +1312,7 @@
       })
     }
     var prefix = ("appPrefix" in viewContent) ? viewContent.appPrefix : appRoot.appPrefix ? appRoot.appPrefix : "",
-      viewOk = ensureExists(prefix, appRoot.dirtyList, view, prefix + viewId);
+        viewOk = ensureExists(prefix, appRoot.dirtyList, view, prefix + viewId);
     viewOk && _bindContent(appRoot, viewContent, viewId, view, prefix);
     ensureSafeExtend(viewContent, view);
     makePropagationFunction(viewId, viewContent, viewContent);
@@ -1363,7 +1364,7 @@
 
   function fillClassMappings(elem, classMapping) {
     var childs = elem.find("*"),
-      selfs = elem.filter("*");
+        selfs = elem.filter("*");
     $.each($.merge(selfs, childs), function(i, item) {
       if ($.isFunction(item.className.split) && item.className.length > 0) {
         var clss = item.className.split(" ");
@@ -1377,7 +1378,7 @@
 
   function fillTagMappings(elem, tagMapping) {
     var childs = elem.find("*"),
-      selfs = elem.filter("*");
+        selfs = elem.filter("*");
     $.each($.merge(selfs, childs), function(i, item) {
       var tag = item.tagName.toLowerCase();
       tagMapping[tag] = tagMapping[tag] || [];
@@ -1388,7 +1389,7 @@
   function _bindTemplates(appRoot, root, appUiFactory) {
     each(root, function(tmId, tmContent) {
       var prefix = ("appPrefix" in tmContent) ? tmContent.appPrefix : appRoot.appPrefix,
-        tm = appUiFactory.view(prefix, tmId, tmContent, appRoot.bindByTag);
+          tm = appUiFactory.view(prefix, tmId, tmContent, appRoot.bindByTag);
       root[tmId]._jiantSpec = {};
       root[tmId]._jiantType = jTypeTemplate;
       if ("_scan" in tmContent) {
@@ -1432,7 +1433,7 @@
         retVal._jiantSpec = root[tmId]._jiantSpec;
         retVal._j = {};
         var classMappings = {},
-          tagMappings = {};
+            tagMappings = {};
         if (!appRoot.bindByTag || appRoot.bindByTag === "after-class" || appRoot.bindByTag === "before-class") {
           fillClassMappings(retVal, classMappings);
         }
@@ -1441,12 +1442,12 @@
         }
         function getUsingBindBy(componentId) {
           var byCls = (prefix + componentId) in classMappings ?  $(classMappings[prefix + componentId]) : null,
-            byTag = componentId in tagMappings ? $(tagMappings[componentId.toLowerCase()]) : null,
-            bindBy = appRoot.bindByTag;
+              byTag = componentId in tagMappings ? $(tagMappings[componentId.toLowerCase()]) : null,
+              bindBy = appRoot.bindByTag;
           return !bindBy ? byCls
-            : bindBy === 'after-class' ? (byCls || byTag)
-              : bindBy === 'before-class' ? (byTag || byCls)
-                : byTag;
+              : bindBy === 'after-class' ? (byCls || byTag)
+                  : bindBy === 'before-class' ? (byTag || byCls)
+                      : byTag;
         }
         each(tmContent, function (componentId, elemTypeOrArr) {
           if (isServiceName(componentId)) {
@@ -1498,29 +1499,29 @@
 
   function bindModel(modelName, spec, appId) {
     var storage = [],
-      collectionFunctions = [],
-      modelStorage = "jModelStorage",
-      reverseIndexes = "jReverseIndexes",
-      defaultsName = "jDefaults",
-      indexesSpec = [],
-      indexes = {},
-      repoMode = spec[repoName] && $.isPlainObject(spec[repoName]),
-      repoRoot = getRepo(spec),
-      Model = function() {
-        this[modelStorage] = {};
-        this[objectBus] = $({});
-        this[reverseIndexes] = [];
-      },
-      Collection = function(data) {
-        if (data) {
-          var that = this;
-          each(data, function(idx, obj) {that.push(obj)});
-        }
-      },
-      specBus = $({}),
-      singleton = new Model(),
-      objFunctions = ["on", "once", "off", "update", "reset", "remove", "asMap"],
-      repoFunctions = ["updateAll", "add", "all", "remove", "filter", "toCollection"];
+        collectionFunctions = [],
+        modelStorage = "jModelStorage",
+        reverseIndexes = "jReverseIndexes",
+        defaultsName = "jDefaults",
+        indexesSpec = [],
+        indexes = {},
+        repoMode = spec[repoName] && $.isPlainObject(spec[repoName]),
+        repoRoot = getRepo(spec),
+        Model = function() {
+          this[modelStorage] = {};
+          this[objectBus] = $({});
+          this[reverseIndexes] = [];
+        },
+        Collection = function(data) {
+          if (data) {
+            var that = this;
+            each(data, function(idx, obj) {that.push(obj)});
+          }
+        },
+        specBus = $({}),
+        singleton = new Model(),
+        objFunctions = ["on", "once", "off", "update", "reset", "remove", "asMap"],
+        repoFunctions = ["updateAll", "add", "all", "remove", "filter", "toCollection"];
     Model.prototype.jModelName = modelName;
     if (jiant.DEV_MODE && !spec[repoName]) {
       infop("App !!, model !! uses deprecated model repository format, switch to new, with model.jRepo = {} section", appId, modelName);
@@ -1588,7 +1589,7 @@
         if (arr.length != 0) {
           each(arr, function(idx, item) {
             var newItem = $.extend({}, spec[defaultsName], item),
-              newObj = new Model();
+                newObj = new Model();
             storage.push(newObj);
             newArr.push(newObj);
             each(newItem, function(name, val) {
@@ -1781,12 +1782,12 @@
       };
       obj.asap = function(field, cb) {
         var bus = this[objectBus],
-          val = this[field]();
+            val = this[field]();
         if (val !== undefined) {
           cb && cb.apply(this, [this, val]);
         } else {
           var eventName = evt(field),
-            that = this;
+              that = this;
           bus[eventName] = (bus[eventName] || 0) + 1;
           bus.one(eventName, function () {
             bus[eventName]--;
@@ -1805,8 +1806,8 @@
           field = overrideField;
         }
         var that = this,
-          bus = this[objectBus],
-          eventName = evt(field);
+            bus = this[objectBus],
+            eventName = evt(field);
         var handler = function(evt) {
           var args = copyArr(arguments);
           args.splice(0, 1);
@@ -1833,10 +1834,10 @@
           field = overrideField;
         }
         var that = this,
-          handler = that.on(field, function() {
-            that.off(handler);
-            cb && cb.apply(that, arguments);
-          });
+            handler = that.on(field, function() {
+              that.off(handler);
+              cb && cb.apply(that, arguments);
+            });
       };
       obj.off = function(handlerOrArr) {
         var bus = this[objectBus];
@@ -1849,7 +1850,7 @@
       };
       obj.subscribers = function(field) {
         var bus = this[objectBus],
-          eventName = evt(field);
+            eventName = evt(field);
         return bus.handlers ? bus.handlers[eventName] : undefined;
       }
     }
@@ -1874,8 +1875,8 @@
         spec[fname] = proxy(fname);
         Model.prototype[fname] = function(objFrom, treatMissingAsUndefined) {
           var smthChanged = false,
-            toTrigger = {},
-            that = this;
+              toTrigger = {},
+              that = this;
           if (arguments.length === 0) {
             smthChanged = true;
           } else {
@@ -1958,7 +1959,7 @@
         }
         repoRoot[fname] = function() {
           var node = indexes,
-            args = arguments;
+              args = arguments;
           if (! usesIns) {
             each(arrNames, function(i, name) {
               var key = name + "=" + args[i];
@@ -2000,7 +2001,7 @@
         var arr = fname.substring(3).split("And");
         Model.prototype[fname] = function() {
           var outerArgs = arguments,
-            newVals = {};
+              newVals = {};
           each(arr, function(idx, name) {
             var fieldName = name.substring(0, 1).toLowerCase() + name.substring(1);
             newVals[fieldName] = outerArgs[idx];
@@ -2022,7 +2023,7 @@
         spec[fname] = proxy(fname);
         Model.prototype[fname] = function (mapping, deep) {
           var ret = {},
-            that = this;
+              that = this;
           function val2map(ret, val, actualKey) {
             if (isModel(val)) {
               ret[actualKey] = val.asMap(null, deep);
@@ -2041,7 +2042,7 @@
           }
           each(that, function(key) {
             var actualKey = (mapping && mapping[key]) ? mapping[key] : key,
-              fn = that[actualKey];
+                fn = that[actualKey];
             if (isModelAccessor(fn) || isModelSupplier(fn)) {
               var val = fn.apply(that);
               val2map(ret, val, actualKey, mapping);
@@ -2126,14 +2127,14 @@
       return fname.length > suffix.length && fname.indexOf(suffix) === fname.length - suffix.length;
     }
     return endsWith(fname, "_on") || endsWith(fname, "_once") || endsWith(fname, "_off")
-      || endsWith(fname, "_asap") || endsWith(fname, "_nowAndOn") || endsWith(fname, "_asapAndOn");
+        || endsWith(fname, "_asap") || endsWith(fname, "_nowAndOn") || endsWith(fname, "_asapAndOn");
   }
 
   function attachCollectionFunctions(arr, collectionFunctions) {
     each(collectionFunctions, function(idx, fn) {
       arr[fn] = function() {
         var ret = [],
-          args = arguments;
+            args = arguments;
         each(this, function(idx, obj) {
           ret.push(obj[fn].apply(obj, args));
         });
@@ -2197,7 +2198,7 @@
   function override(spec, implFn) {
     if (spec._jAppId) {
       var superImpl = $.extend(true, {}, spec),
-        newImpl = implFn($, boundApps[spec._jAppId], superImpl);
+          newImpl = implFn($, boundApps[spec._jAppId], superImpl);
       each(newImpl, function(fname, fbody) {
         spec[fname] = fbody;
       });
@@ -2240,7 +2241,7 @@
           });
           spec._jOverrides && spec._jOverrides.length && each(spec._jOverrides, function(i, implFn) {
             var superImpl = $.extend(true, {}, spec),
-              newImpl = implFn($, boundApps[spec._jAppId], superImpl);
+                newImpl = implFn($, boundApps[spec._jAppId], superImpl);
             each(newImpl, function(fname, fbody) {
               spec[fname] = fbody;
             });
@@ -2284,7 +2285,7 @@
 
   function declare(name, objOrUrlorFn) {
     var lib = typeof objOrUrlorFn === "string",
-      startedAt = new Date().getTime();
+        startedAt = new Date().getTime();
     function handle() {
       var ms = new Date().getTime() - startedAt;
       lib && jiant.infop("Loaded external library !! in !! ms", objOrUrlorFn, ms);
@@ -2308,7 +2309,7 @@
 
   function copyLogic(appId, name) {
     var obj = externalDeclarations[name],
-      app = boundApps[appId];
+        app = boundApps[appId];
     if (obj && awaitingDepends[appId] && awaitingDepends[appId][name] && app) {
       app.logic || (app.logic = {});
       app.logic[name] || (app.logic[name] = {});
@@ -2342,15 +2343,15 @@
 
   function loadCss(arr, cb) {
     var all_loaded = $.Deferred(),
-      loadedCss = [],
-      link,
-      style,
-      interval,
-      timeout = 60000, // 1 minute seems like a good timeout
-      counter = 0, // Used to compare try time against timeout
-      step = 30, // Amount of wait time on each load check
-      docStyles = document.styleSheets, // local reference
-      ssCount = docStyles.length; // Initial stylesheet count
+        loadedCss = [],
+        link,
+        style,
+        interval,
+        timeout = 60000, // 1 minute seems like a good timeout
+        counter = 0, // Used to compare try time against timeout
+        step = 30, // Amount of wait time on each load check
+        docStyles = document.styleSheets, // local reference
+        ssCount = docStyles.length; // Initial stylesheet count
 
     if (!isArray(arr)) {
       arr = [arr];
@@ -2406,8 +2407,8 @@
               throw (url + ' not loaded yet');
             } else {
               var loaded = false,
-                href,
-                n;
+                  href,
+                  n;
               // If there are multiple files being loaded at once, we need to make sure that
               // the new file is this file
               for (n = docStyles.length - 1; n >= 0; n--) {
@@ -2495,7 +2496,7 @@
       events[name].off = function (handler) {
         if (jiant.DEV_MODE && (arguments.length == 0 || !handler)) {
           jiant.logInfo("Event.off called without handler, unsubscribing all event handlers, check code if it is unintentionally",
-            jiant.getStackTrace());
+              jiant.getStackTrace());
         }
         events[name].listenersCount--;
         return perAppBus[appId].off(name + ".event", handler);
@@ -2569,10 +2570,10 @@
         return;
       }
       var state = location.hash.substring(1),
-        parsed = parseState(appId),
-        stateId = parsed.now[0],
-        params = parsed.now,
-        smthChanged = enforce || (lastEncodedStates[appId] != getAppState(appId));
+          parsed = parseState(appId),
+          stateId = parsed.now[0],
+          params = parsed.now,
+          smthChanged = enforce || (lastEncodedStates[appId] != getAppState(appId));
       if (!smthChanged) {
         return;
       }
@@ -2600,7 +2601,7 @@
     var defaults = stateSpec.jDefaults;
     return function() {
       var parsed = parseState(appId),
-        prevState = parsed.now;
+          prevState = parsed.now;
       parsed.now = [stateId];
       each(arguments, function(idx, arg) {
         if (arg !== undefined) {
@@ -2655,7 +2656,7 @@
   function isSameStatesGroup(appId, state0, state1) {
     var statesRoot = boundApps[appId].states;
     return (statesRoot[state0] && statesRoot[state1] && statesRoot[state0].statesGroup !== undefined
-      && statesRoot[state0].statesGroup === statesRoot[state1].statesGroup);
+        && statesRoot[state0].statesGroup === statesRoot[state1].statesGroup);
   }
 
   function goRoot(appOrId) {
@@ -2680,7 +2681,7 @@
 
   function setState(parsed, stateExternalBase, appId, assignMode) {
     var states = getStates(),
-      result = "";
+        result = "";
     var s = parsed.now + "|" + parsed.root;
     each(states, function(stateAppId, state) {
       if (appId == stateAppId) {
@@ -2703,8 +2704,8 @@
 
   function getStates() {
     var state = location.hash.substring(1),
-      data = state.split("="),
-      retVal = {};
+        data = state.split("="),
+        retVal = {};
 //          jiant.logInfo("parsing state: " + state);
     each(data, function(idx, elem) {
       (idx % 2 == 0) && elem && data[idx + 1] != undefined && (retVal[elem] = data[idx + 1]);
@@ -2729,8 +2730,8 @@
 
   function parseState(appId) {
     var state = getAppState(appId),
-      arr = state.split("|"),
-      parsed = {now: [], root: []};
+        arr = state.split("|"),
+        parsed = {now: [], root: []};
     each(arr, function(idx, item) {
       var args = item.split(",");
       each(args, function(idxInner, arg) {
@@ -2835,8 +2836,8 @@
           return;
         }
         var subpath = actual[jiant.flags.ajaxSubmitAsMap]
-          ? (traverse ? (path + "[") : "") + key + (traverse ? "]" : "")
-          : (traverse ? (path + ".") : "") + key;
+            ? (traverse ? (path + "[") : "") + key + (traverse ? "]" : "")
+            : (traverse ? (path + ".") : "") + key;
         if (isModel(actual)) { // model
           (isModelAccessor(value) || isModelSupplier(value)) && !isTransient(value) && parseForAjaxCall(root, subpath, value.apply(actual), true);
         } else {
@@ -2883,17 +2884,17 @@
 
   function makeAjaxPerformer(appRoot, ajaxPrefix, ajaxSuffix, uri, params, specRetVal, crossDomain) {
     var pfx = (ajaxPrefix || ajaxPrefix === "") ? ajaxPrefix : jiant.AJAX_PREFIX,
-      sfx = (ajaxSuffix || ajaxSuffix === "") ? ajaxSuffix : jiant.AJAX_SUFFIX,
-      callSpec = (specRetVal && (typeof specRetVal !== "string")) ? specRetVal : {},
-      subsInUrl,
-      headers = {};
+        sfx = (ajaxSuffix || ajaxSuffix === "") ? ajaxSuffix : jiant.AJAX_SUFFIX,
+        callSpec = (specRetVal && (typeof specRetVal !== "string")) ? specRetVal : {},
+        subsInUrl,
+        headers = {};
     callSpec.url = callSpec.url || (typeof specRetVal === "string" ? specRetVal : (uri + sfx));
     if (pfx.endsWith("/") && callSpec.url.startsWith("/")) {
       callSpec.url = callSpec.url.substring(1);
     }
     if (!callSpec.url.startsWith("http://") && !callSpec.url.startsWith("https://")) {
       callSpec.url = pfx + ((callSpec.url.startsWith("/") || pfx.endsWith("/") || pfx.length === 0
-        || (!callSpec.url.startsWith("/") && !pfx.endsWith("/"))) ? "" : "/") + callSpec.url;
+          || (!callSpec.url.startsWith("/") && !pfx.endsWith("/"))) ? "" : "/") + callSpec.url;
     }
     subsInUrl = extractSubsInUrl(callSpec.url);
     if (! ("paramMapping" in callSpec)) {
@@ -2904,11 +2905,11 @@
     }
     return function() {
       var callData = {},
-        callback,
-        errHandler,
-        outerArgs = arguments,
-        url = callSpec.url,
-        time = new Date().getTime();
+          callback,
+          errHandler,
+          outerArgs = arguments,
+          url = callSpec.url,
+          time = new Date().getTime();
       if (isFunction(outerArgs[outerArgs.length - 2])) {
         callback = outerArgs[outerArgs.length - 2];
         errHandler = outerArgs[outerArgs.length - 1];
@@ -2918,7 +2919,7 @@
       each(params, function(idx, param) {
         if (idx < outerArgs.length && !isFunction(outerArgs[idx]) && outerArgs[idx] !== undefined && outerArgs[idx] !== null) {
           var actual = outerArgs[idx],
-            paramName = callSpec.paramMapping[param] || param;
+              paramName = callSpec.paramMapping[param] || param;
           if (!(param in callSpec.headers)) {
             parseForAjaxCall(callData, paramName, actual);
           } else {
@@ -3113,7 +3114,7 @@
           $("*[data-nlabel]").each(function(i, elem) {
             elem = $(elem);
             var key = elem.attr("data-nlabel"),
-              translation = intlRoot.t(key);
+                translation = intlRoot.t(key);
             elem.html(translation);
           });
         }
@@ -3276,8 +3277,8 @@
       return;
     }
     var moduleSpec = arr[idx],
-      mname = moduleSpec.name,
-      module = modules[mname];
+        mname = moduleSpec.name,
+        module = modules[mname];
     if (isFunction(module)) {
       var args = [$, appRoot, jiant, moduleSpec];
       module.parsedDeps && each(module.parsedDeps, function(i, name) {
@@ -3289,9 +3290,9 @@
       executeExternal(appRoot, cb, arr, idx, module);
     } else {
       errorp("Application !!. Not loaded module !!. " +
-        "Possible error - wrong modules section, wrong path or module name in js file doesn't match declared " +
-        "in app.modules section. Load initiated by !!",
-        appRoot.id, mname, (moduleSpec.j_initiatedBy ? moduleSpec.j_initiatedBy : "appication"));
+          "Possible error - wrong modules section, wrong path or module name in js file doesn't match declared " +
+          "in app.modules section. Load initiated by !!",
+          appRoot.id, mname, (moduleSpec.j_initiatedBy ? moduleSpec.j_initiatedBy : "appication"));
       executeModule(appRoot, cb, arr, idx + 1);
     }
   }
@@ -3312,7 +3313,7 @@
     }
     for (var i in modules2load) {
       var mName = modules2load[i].name,
-        m = modules[mName];
+          m = modules[mName];
       if (!m || m.cssCount || m.jsCount || m.htmlCount) {
         return false;
       }
@@ -3348,11 +3349,11 @@
   function _loadModule(appRoot, appId, modules2load, initial, cb, moduleSpec, loading) {
     function loadDep(relpath, dep, moduleSpec) {
       var url = moduleSpec.path,
-        pos = url.lastIndexOf("/") + 1,
-        relurl = url.substring(0, pos) + relpath;
+          pos = url.lastIndexOf("/") + 1,
+          relurl = url.substring(0, pos) + relpath;
       (relurl.lastIndexOf("/") == relurl.length - 1) || (relurl+="/");
       var depObj = typeof dep === "string" ? {name: dep, path: relurl + dep} : dep,
-        depModule = parseObjModule(depObj.name, depObj, appId, modules2load.length);
+          depModule = parseObjModule(depObj.name, depObj, appId, modules2load.length);
       moduleSpec.j_after[depModule.name] = 1;
       depModule.order = Math.min(depModule.order, moduleSpec.order - 0.5);
       depModule.j_initiatedBy = moduleSpec.name;
@@ -3366,7 +3367,7 @@
         modules[moduleName].deps = [modules[moduleName].deps];
       }
       var deps = modules[moduleName].deps,
-        darr = modules[moduleName].parsedDeps = [];
+          darr = modules[moduleName].parsedDeps = [];
       deps && each(deps, function(i, dep) {
         if (typeof dep === "string") {
           darr.push(loadDep("", dep, moduleSpec))
@@ -3709,7 +3710,7 @@
       } else {
         injectionPoint = $("body");
       }
-      injectionPoint.load(viewsUrl, {}, function () {
+      injectionPoint.load(viewsUrl, null, function () {
         _bindUi(root, appUiFactory);
       });
     } else {
@@ -3744,7 +3745,7 @@
       each(dependenciesList, function(idx, arr) {
         if (!isArray(arr)) {
           jiant.error("Used multiple applications onApp and supplied wrong dependency list, use multi-array, " +
-            "like [[app1DepList], [app2DepList]]");
+              "like [[app1DepList], [app2DepList]]");
         }
       })
     } else if (appIdArr.length == 1 && dependenciesList && dependenciesList.length) {
@@ -3830,7 +3831,7 @@
 
   function forget(appOrId, deep) {
     var appId = extractApplicationId(appOrId),
-      app = boundApps[appId];
+        app = boundApps[appId];
     if (app && deep) {
       each(app.models, function(i, m) {
         m.reset(undefined);
