@@ -8,6 +8,7 @@
  3.01: tags for template names are optional, could be disabled by jiant.ADD_TM_TAGS;
  3.01.1: index fix for some situations
  3.01.2: img bg surrounding, cross domain GET enforce
+ 3.01.3: formatMoney from negative value fixed
  */
 "use strict";
 (function(factory) {
@@ -255,9 +256,9 @@
     }
     if (num[1]) {
       num[1] = Math.round((num[1])).toString().substring(0, decimals);
-      ret = "" + Math.abs(num[0]);
+      ret = "" + num[0];
     } else {
-      ret = "" + Math.abs(num);
+      ret = "" + num;
     }
     for (var idx = ret.length; idx > 0; idx -= 3) {
       ret = ret.substring(0, idx) + (idx < ret.length ? "." : "") + ret.substring(idx);
