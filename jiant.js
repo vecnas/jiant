@@ -9,6 +9,7 @@
  3.01.1: index fix for some situations
  3.01.2: img bg surrounding, cross domain GET enforce
  3.01.3: formatMoney from negative value fixed
+ 3.02: jiant.fn added, for elements api, for example: onChange: jiant.fn(function(cb) {this._cb = cb}),
  */
 "use strict";
 (function(factory) {
@@ -712,6 +713,8 @@
         viewRoot[componentId].customRenderer = function(obj, elem, val, isUpdate, viewOrTemplate) {viewRoot[componentId](val)}
       } else if (componentTp === jiant.cssMarker || componentTp === jiant.cssFlag) {
         setupCssFlagsMarkers(viewRoot, componentId, componentTp, getAt(elemTypeOrArr, 1), getAt(elemTypeOrArr, 2));
+      } else if (componentTp === jiant.fn) {
+        viewRoot[componentId] = elemTypeOrArr[1];
       } else {
         var uiElem = uiFactory.viewComponent(viewElem, viewId, prefix, componentId, componentTp, appRoot.bindByTag);
         ensureExists(prefix, appRoot.dirtyList, uiElem, prefix + viewId, prefix + componentId, isFlagPresent(elemTypeOrArr, jiant.optional));
@@ -720,6 +723,10 @@
         if (componentTp === jiant.comp) {
           var tmName = getAt(elemTypeOrArr, 1);
           viewRoot[componentId].customRenderer = getCompRenderer(appRoot, tmName, componentId, elemTypeOrArr);
+          // no need for such init for templates because template always propagated on creation
+          if (!isFlagPresent(elemTypeOrArr, jiant.optional)) {
+            onApp(appRoot, () => viewRoot[componentId].customRenderer({}, viewRoot[componentId], undefined, false, viewRoot, {}));
+          }
           if (! (tmName in appRoot.templates)) {
             error("jiant.comp element refers to non-existing template name: " + tmName + ", view.elem: " + viewId + "." + componentId);
           }
@@ -771,15 +778,17 @@
     return function(obj, elem, val, isUpdate, viewOrTemplate, settings) {
       var mapping = settings.mapping || {},
           actualObj = componentId in mapping ? obj[mapping[componentId]] : componentId in obj ? obj[componentId] : obj,
-          el, params;
-      if (obj === actualObj && isFlagPresent(componentContentOrArr, jiant.optional)) {
+          el, params, singleMode = !isFlagPresent(componentContentOrArr, jiant.optional);
+      if (obj === actualObj && !singleMode) {
         return;
       }
       if ($.isFunction(actualObj)) {
         actualObj = actualObj.apply(obj);
       }
       var dataArr = $.isArray(actualObj) ? actualObj : [actualObj];
-      elem.html("");
+      if (! singleMode) {
+        elem.empty();
+      }
       var compCbSet = appRoot.templates[tmId].compCbSet;
       compCbSet && compCbSet.start && isFunction(compCbSet.start) && compCbSet.start.apply();
       each(dataArr, function(i, actualObj) {
@@ -791,12 +800,21 @@
           if ((typeof actualObj == "object") && !("index" in actualObj)) {
             actualObj.index = i;
           }
-          el = appRoot.templates[tmId].parseTemplate(actualObj, settings.subscribeForUpdates, settings.reverseBind, $.isPlainObject(mapping[componentId]) ? mapping[componentId] : mapping);
-          $.each(appRoot.templates[tmId]._jiantSpec, function(cId, cElem) {
-            viewOrTemplate[componentId][cId] = el[cId];
-          });
-          viewOrTemplate[componentId].propagate = function() {el.propagate.apply(el, arguments)};
-          elem.append(el);
+          var mp = $.isPlainObject(mapping[componentId]) ? mapping[componentId] : mapping;
+          if (singleMode && ("propagate" in viewOrTemplate[componentId])) {
+            viewOrTemplate[componentId].propagate(actualObj, settings.subscribeForUpdates, settings.reverseBind, mp);
+          } else {
+            el = appRoot.templates[tmId].parseTemplate(actualObj, settings.subscribeForUpdates, settings.reverseBind, mp);
+            $.each(appRoot.templates[tmId]._jiantSpec, function(cId, cElem) {
+              if (isFunction(el[cId])) {
+                viewOrTemplate[componentId][cId] = el[cId].bind(el);
+              } else {
+                viewOrTemplate[componentId][cId] = el[cId];
+              }
+            });
+            viewOrTemplate[componentId].propagate = function() {el.propagate.apply(el, arguments)};
+            elem.append(el);
+          }
           compCbSet && compCbSet.perItem && isFunction(compCbSet.perItem) && compCbSet.perItem.apply(actualObj, el);
         }
       });
@@ -1413,6 +1431,7 @@
             };
           } else if (elemType === jiant.cssMarker || elemType === jiant.cssFlag) {
             setupCssFlagsMarkers(tmContent, componentId, elemType, getAt(elemTypeOrArr, 1), getAt(elemTypeOrArr, 2));
+          } else if (elemType === jiant.fn) {
           } else {
             var comp = appUiFactory.viewComponent(tm, tmId, prefix, componentId, elemType, appRoot.bindByTag);
             ensureExists(prefix, appRoot.dirtyList, comp, prefix + tmId, prefix + componentId, isFlagPresent(elemTypeOrArr, jiant.optional));
@@ -1462,6 +1481,8 @@
           } else if (elemType.jiant_data) {
             setupDataFunction(retVal, root[tmId], componentId, getAt(elemTypeOrArr.jiant_data_spec, 1), getAt(elemTypeOrArr.jiant_data_spec, 2));
           } else if (elemTypes[componentId] === jiant.cssMarker || elemTypes[componentId] === jiant.cssFlag) {
+          } else if (elemType === jiant.fn) {
+            retVal[componentId] = elemTypeOrArr[1];
           } else if (! (componentId in {parseTemplate: 1, parseTemplate2Text: 1, templateSource: 1, appPrefix: 1,
             impl: 1, compCbSet: 1, _jiantSpec: 1, _scan: 1, _j: 1, _jiantType: 1, jInit: 1})) {
             retVal[componentId] = getUsingBindBy(componentId);
@@ -3952,6 +3973,10 @@
     return arr;
   }
 
+  function fn(f) {
+    return [fn, f];
+  }
+
   function comp(tp, params) {
     return [comp, tp, params];
   }
@@ -4083,7 +4108,7 @@
     pager: "jiant.pager",
     slider: "jiant.slider",
     tabs: "jiant.tabs",
-    fn: function (param) {},
+    fn: fn,
     data: data,
     lookup: function (selector) {},
     transientFn: function(val) {},
