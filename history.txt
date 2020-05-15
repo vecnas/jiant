@@ -429,3 +429,14 @@ unsubscribes from previous model when bound to new, inputInt() change value by u
  2.99.2: proper handling of *In fields names in models by findBy*In
  2.99.3: fixes around reverse binding and tm optimization
  2.99.4: customRenderer could be declared in json file like jInit
+ 2.99.5: injectTo back to loadModule, as extra parameter
+ 2.99.6: filter by _jiantSpec vs double call
+ 3.00: module.exactUrl to specify exact module url
+ 3.00.1: module suffix .js back
+ 3.00.2: comp/mapping interaction fixed for objects in mapping
+ 3.00.3: index added to component data array, if not provided
+ 3.01: tags for template names are optional, could be disabled by jiant.ADD_TM_TAGS;
+ 3.01.1: index fix for some situations
+ 3.01.2: img bg surrounding, cross domain GET enforce
+ 3.01.3: formatMoney from negative value fixed
+ 3.02: jiant.fn added, for elements api, for example: onChange: jiant.fn(function(cb) {this._cb = cb}),
