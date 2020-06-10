@@ -66,6 +66,7 @@
  xl.0.60: pageableFilterableSortable one more parameter: mapping
  xl.0.60.1: .sortFn(fn) added to bindList ret val
  xl.0.61: proper sorting in bindList
+ xl.0.62: viewByAjaxOnState(view, ajax, state) added
  */
 
 (function() {
@@ -75,7 +76,7 @@
   var tmpJiantXl = {
 
     version: function() {
-      return 61;
+      return 62;
     },
 
     ctl2state: function(ctl, state, selectedCssClass, goProxy) {
@@ -479,6 +480,14 @@
         impl.add($(elem), arrVals && arrVals.length > idx ? arrVals[idx] : null, cb, selectedIdx === idx);
       });
       return impl;
+    },
+
+    viewByAjaxOnState: function(view, ajax, state) {
+      state.start(function() {
+        ajax(function(data) {
+          view.propagate(data);
+        })
+      });
     },
 
     elementVisibilityByEvent: function(elem, eventsList) {},
