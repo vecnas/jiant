@@ -2,7 +2,7 @@ jiant.module("jiant-ajax", function() {
 
   this.singleton();
 
-  var restRegexp = /:([^\/]+)(\/|$)/g;
+  const restRegexp = /:([^\/]+)(\/|$)/g;
 
   function getDeclaredName(obj) {
     return !!obj ? obj._jiantSpecName : undefined;
@@ -10,7 +10,7 @@ jiant.module("jiant-ajax", function() {
 
   function _bindAjax(appRoot, root, ajaxPrefix, ajaxSuffix, crossDomain) {
     $.each(root, function(uri, funcSpec) {
-      var params = jiant.getParamNames(funcSpec);
+      let params = jiant.getParamNames(funcSpec);
       params && params.length > 0 ? params.splice(params.length - 1, 1) : params = [];
       root[uri] = makeAjaxPerformer(appRoot, ajaxPrefix, ajaxSuffix, uri, params,
           typeof root[uri] === "function" ? root[uri]() : undefined, crossDomain);
@@ -25,12 +25,12 @@ jiant.module("jiant-ajax", function() {
       return;
     }
     if ($.isArray(actual) || (actual && actual.jCollection)) {
-      var compound = false;
-      $.each(actual, function(i, obj) {
+      let compound = false;
+      actual.forEach(function(obj) {
         compound = compound || $.isPlainObject(obj) || (obj && obj.jModelName);
-        return !compound;
+        return compound;
       });
-      $.each(actual, function(i, obj) {
+      actual.forEach(function(obj, i) {
         parseForAjaxCall(root, path + (compound ? ("[" + i + "]") : ""), obj, true);
       });
     } else if ($.isPlainObject(actual) || (actual && actual.jModelName)) {
@@ -38,10 +38,10 @@ jiant.module("jiant-ajax", function() {
         if (key === jiant.flags.ajaxSubmitAsMap) {
           return;
         }
-        var subpath = actual[jiant.flags.ajaxSubmitAsMap]
+        const subpath = actual[jiant.flags.ajaxSubmitAsMap]
             ? (traverse ? (path + "[") : "") + key + (traverse ? "]" : "")
             : (traverse ? (path + ".") : "") + key;
-        if (jiant.isModel(actual)) { // model
+        if (("isModel" in jiant) && jiant.isModel(actual)) { // model
           (jiant.isModelAccessor(value) || jiant.isModelSupplier(value)) && !jiant.isTransient(value) && parseForAjaxCall(root, subpath, value.apply(actual), true);
         } else {
           parseForAjaxCall(root, subpath, value, true);
@@ -68,15 +68,15 @@ jiant.module("jiant-ajax", function() {
 
   function replaceSubsInUrl(url, subs) {
     return url.replace(restRegexp, function(key) {
-      var lenBefore = key.length;
+      const lenBefore = key.length;
       key = subslash(key);
       return (key in subs ? subs[key] : (":" + key)) + ((lenBefore - key.length >= 2) ? "/" : "");
     });
   }
 
   function extractSubsInUrl(url) {
-    var arr = url.match(restRegexp) || [];
-    $.each(arr, function(i, obj) {
+    let arr = url.match(restRegexp) || [];
+    arr.forEach(function(obj, i) {
       arr[i] = subslash(obj);
     });
     if (jiant.isNumberString(arr[0])) {
@@ -86,7 +86,7 @@ jiant.module("jiant-ajax", function() {
   }
 
   function makeAjaxPerformer(appRoot, ajaxPrefix, ajaxSuffix, uri, params, specRetVal, crossDomain) {
-    var pfx = (ajaxPrefix || ajaxPrefix === "") ? ajaxPrefix : jiant.AJAX_PREFIX,
+    let pfx = (ajaxPrefix || ajaxPrefix === "") ? ajaxPrefix : jiant.AJAX_PREFIX,
         sfx = (ajaxSuffix || ajaxSuffix === "") ? ajaxSuffix : jiant.AJAX_SUFFIX,
         callSpec = (specRetVal && (typeof specRetVal !== "string")) ? specRetVal : {},
         subsInUrl,
@@ -107,7 +107,7 @@ jiant.module("jiant-ajax", function() {
       callSpec.headers = {};
     }
     return function() {
-      var callData = {},
+      let callData = {},
           callback,
           errHandler,
           outerArgs = arguments,
@@ -119,9 +119,9 @@ jiant.module("jiant-ajax", function() {
       } else if (typeof outerArgs[outerArgs.length - 1] === "function") {
         callback = outerArgs[outerArgs.length - 1];
       }
-      $.each(params, function(idx, param) {
+      params.forEach(function(param, idx) {
         if (idx < outerArgs.length && typeof outerArgs[idx] !== "function" && outerArgs[idx] !== undefined && outerArgs[idx] !== null) {
-          var actual = outerArgs[idx],
+          const actual = outerArgs[idx],
               paramName = callSpec.paramMapping[param] || param;
           if (!(param in callSpec.headers)) {
             parseForAjaxCall(callData, paramName, actual);
@@ -134,16 +134,17 @@ jiant.module("jiant-ajax", function() {
         callData["antiCache3721"] = new Date().getTime();
       }
       // each(listeners, function(i, l) {l.ajaxCallStarted && l.ajaxCallStarted(appRoot, uri, url, callData)});
-      var subs = {};
-      $.each(subsInUrl, function(i, sub) {
-        var subMapped = callSpec.paramMapping[sub] || sub;
+      const subs = {};
+      subsInUrl.forEach(function(sub) {
+        const subMapped = callSpec.paramMapping[sub] || sub;
         if (subMapped in callData) {
           subs[subMapped] = callData[subMapped];
           delete callData[subMapped];
         }
       });
       url = replaceSubsInUrl(url, subs);
-      var settings = {data: callData, traditional: true, method: callSpec.method, headers: headers, success: function(data) {
+      const settings = {
+        data: callData, traditional: true, method: callSpec.method, headers: headers, success: function (data) {
           // each(listeners, function(i, l) {l.ajaxCallCompleted && l.ajaxCallCompleted(appRoot, uri, url, callData, new Date().getTime() - time)});
           if (callback) {
             try {
@@ -165,7 +166,8 @@ jiant.module("jiant-ajax", function() {
             jiant.handleErrorFn(jqXHR.responseText);
           }
           // each(listeners, function(i, l) {l.ajaxCallError && l.ajaxCallError(appRoot, uri, url, callData, new Date().getTime() - time, jqXHR.responseText, jqXHR)});
-        }};
+        }
+      };
       if (crossDomain) {
         settings.contentType = "application/json";
         settings.dataType = 'jsonp';
