@@ -191,5 +191,4 @@ jiant.module("jiant-ajax", function() {
       _bindAjax(appRoot, appRoot.ajax, appRoot.ajaxPrefix, appRoot.ajaxSuffix, appRoot.crossDomain);
     }
   };
-
 });
