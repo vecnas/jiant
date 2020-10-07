@@ -1,4 +1,4 @@
-jiant.module("jiant-util", function() {
+jiant.module("jiant-util", ["jiant-log"], function() {
 
   this.singleton();
 
@@ -141,7 +141,7 @@ jiant.module("jiant-util", function() {
                 .replace(/'(?=[^#]*#>)/g, "\t")
                 .split("'").join("\\'")
                 .split("\t").join("'")
-                .replace(/!! (.+?)!! /g, "', typeof  $1 === 'function' ? $1() : $1,'")
+                .replace(/!! (.+?)!! /g, "', typeof $1 === 'undefined' ? '' : typeof $1 === 'function' ? $1() : $1,'")
                 .split("!?").join("');")
                 .split("?!").join("p.push('")
             + "');}return p.join('');";
@@ -151,7 +151,7 @@ jiant.module("jiant-util", function() {
       return func(data).trim();
     } catch (e) {
       err = e.message;
-      jiant.logError("Error parse template: ", e);
+      jiant.logError("Error parse template: " + tmId, mapping, e);
     }
     return "!!! ERROR: " + err.toString() + " !!!";
   }
@@ -172,7 +172,7 @@ jiant.module("jiant-util", function() {
 
   function asObjArray(arr, name, idxName) {
     const ret = [];
-    $.each(arr, function(i, val) {
+    arr.forEach(function(val, i) {
       const obj = {};
       obj[name] = val;
       idxName && (obj[idxName] = i);
@@ -183,7 +183,7 @@ jiant.module("jiant-util", function() {
 
   function check(bool, err) {
     if (! bool) {
-      var args = [...arguments];
+      const args = [...arguments];
       args.splice(0, 1);
       jiant.logError(args);
       jiant.DEV_MODE && alert(err);
