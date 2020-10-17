@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8"/>
+  <title>Filter example</title>
+  <style>
+    .filterItem {
+      display: inline;
+      min-width: 64px;
+    }
+    .filterItem:hover ._options {
+      display: block;
+    }
+    ._options {
+      display: none;
+      background-color: white;
+      position: absolute;
+      margin-top: -5px;
+    }
+  </style>
+</head>
+<body>
+
+<div id="_filterView">
+  <ul class="_filters" id="_filter2modelView"></ul>
+</div>
+
+<div id="_contentView">
+  Content here, check class in console
+</div>
+
+<div style="display: none">
+
+  <ul id="_filterTm">
+    <li class="filterItem">
+      <span class="_label"></span>
+      <ul class="_options"></ul>
+    </li>
+  </ul>
+
+  <ul id="_optionTm">
+    <li class="optionItem">
+      <label><input type="checkbox" class="_optionBox" id="!!id!!" value="!!id!!"/><span class="_label"></span></label>
+    </li>
+  </ul>
+
+</div>
+
+
+<script src="//code.jquery.com/jquery-3.5.1.js"></script>
+<script src="../../jiant.js"></script>
+<script src="appFilter.js"></script>
+
+<script>
+  jiant.DEV_MODE = true;
+</script>
+
+</body>
+</html>
