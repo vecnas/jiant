@@ -44,7 +44,7 @@ jiant.module("jiant-models", ["jiant-util"], function($, app, jiant, params, Uti
         repoFunctions = ["updateAll", "add", "all", "remove", "filter", "toCollection"];
     Model.prototype.jModelName = modelName;
     if (jiant.DEV_MODE && !spec[repoName]) {
-      infop("App !!, model !! uses deprecated model repository format, switch to new, with model.jRepo = {} section", appId, modelName);
+      jiant.infop("App !!, model !! uses deprecated model repository format, switch to new, with model.jRepo = {} section", appId, modelName);
     }
     spec[defaultsName] = spec[defaultsName] || {};
     $.each(repoFunctions, function(i, fn) {
@@ -474,7 +474,7 @@ jiant.module("jiant-models", ["jiant-util"], function($, app, jiant, params, Uti
           }
           arrNames[idx] = lowerFirst(name);
           if (!spec[arrNames[idx]]) {
-            errorp("Non existing field used by model method !!, field name: !!, model name: !!, app id: !!", fname, arrNames[idx], modelName, appId);
+            jiant.errorp("Non existing field used by model method !!, field name: !!, model name: !!, app id: !!", fname, arrNames[idx], modelName, appId);
           }
         });
         if (!indexPresent(arrNames)) {

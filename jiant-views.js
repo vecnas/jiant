@@ -1,7 +1,7 @@
 jiant.module("jiant-views", ["jiant-uifactory", "jiant-ui", "jiant-comp", "jiant-fields"],
     function($, app, jiant, params, UiFactory, Ui, Comp, Fields) {
 
-      this.singleton();
+  this.singleton();
 
   let uiFactory, errString;
 
@@ -99,7 +99,6 @@ jiant.module("jiant-views", ["jiant-uifactory", "jiant-ui", "jiant-comp", "jiant
       viewContent.jInit.call(viewContent, appRoot);
     }
     return result;
-    // $.each(listeners, function(i, l) {l.boundView && l.boundView(appRoot, appRoot.views, viewId, prefix, viewContent)});
   }
 
   jiant.bindView = bindView;

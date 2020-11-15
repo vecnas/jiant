@@ -352,7 +352,7 @@ jiant.module("jiant-fields", [], function($, app, jiant, params) {
     const prev = uiElem.html;
     uiElem.html = function(val) {
       const num = parseInt(val);
-      if (isNaN(num) || val !== num + "") {
+      if (isNaN(num) || val + "" !== num + "") {
         prev.call(uiElem, val);
       } else {
         prev.call(uiElem, jiant.formatMoney(num, appRoot.formatGroupsDelim || undefined ));

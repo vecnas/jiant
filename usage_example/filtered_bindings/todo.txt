@@ -1,0 +1,31 @@
+Идея на размышление.
+
+Filtered bindings, фильтрованные связки.
+
+1) Настроить-сконфигурить динамическую фильтрованную связь
+2) Использовать как источник для другой модели
+3) Использовать как поток данных для неких манипуляций-преобразований
+
+Что-то типа:
+Пример 1. Конфигурирование
+models: {
+  practices: {
+    name: ..,
+    id: ..,
+    streams: {
+      all: {},
+      byName: (val) {},
+      byNameIncludes: (val) {},
+      byCustomFilter: (filterCb) {}
+
+
+Пример 2. Источник для модели
+models: {
+  totalData: {
+    practices: jiant.dataStream(app.models.practices.streams.all()),
+    includingA: jiant.dataStream(app.models.practices.streams.byNameIncludes("A")),
+    totalSelectedCost: jiant.dataStream(app.models.practices.stream.bySelected(true)).sumCost();
+
+
+Пример 3. Манипуляции
+app.models.practices.streams.byNameIncludes("A").byNameIncludes("B")

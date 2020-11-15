@@ -31,13 +31,13 @@
       return pos === 0 ? tpOrArr : null;
     }
     let ret;
-    $.each(tpOrArr, function(i, item) {
+    tpOrArr.some(function(item, i) {
       if (item === jiant.optional) {
         pos++;
       }
       if (i === pos) {
         ret = item;
-        return false;
+        return true;
       }
     });
     return ret;
@@ -45,10 +45,6 @@
 
   function setupLookup(viewRoot, componentId, viewElem, prefix) {
     viewRoot[componentId] = function() {return viewElem.find("." + prefix + componentId);};
-  }
-
-  function a(app) {
-    return jiant.getApps()[extractApplicationId(app)];
   }
 
   // loadModule before .app puts module into list of app modules, cb ignored
@@ -65,10 +61,11 @@
       _loadModules(bindingCurrently[appId], modules, appId, false, cb, replace, injectTo);
     } else { // before
       if (cb) {
-        jiant.logError("loadModule called before .app with callback, callback will be ignored. loadModule arguments: ", arguments);
+        console.error("loadModule called before .app with callback, callback will be ignored. loadModule arguments: ");
+        console.error(arguments);
       }
       preApp(appId, function($, app) {
-        $.each(modules, function(i, m) {
+        modules.forEach(function(m) {
           app.modules.push(m);
         });
       });
@@ -86,7 +83,7 @@
       jiant.logError("Unrecognized modules type", root);
     }
     if (modules2load.length) {
-      $.each(modules2load, function(i, m) {
+      modules2load.forEach(function(m) {
         m.replace = replace;
         m.injectTo = injectTo;
       });
@@ -97,9 +94,9 @@
   }
 
   function executeExternal(appRoot, cb, arr, idx, module) {
-    module.css && $.each(module.css, function(i, url) {
+    module.css && module.css.some(function(url) {
       if (addedLibs[url]) {
-        return;
+        return true;
       }
       addedLibs[url] = 1;
       if (module.cssLoaded[url]) {
@@ -107,7 +104,7 @@
         $("<style>").html(css).appendTo("head");
       }
     });
-    module.html && $.each(module.html, function(i, url) {
+    module.html && module.html.forEach(function(url) {
       // if (addedLibs[url]) {
       //   return;
       // }
@@ -122,9 +119,9 @@
         }
       }
     });
-    module.js && $.each(module.js, function(i, url) {
+    module.js && module.js.some(function(url) {
       if (addedLibs[url]) {
-        return;
+        return true;
       }
       addedLibs[url] = 1;
       if (module.jsLoaded[url]) {
@@ -145,7 +142,7 @@
         module = modules[mname];
     if (typeof module === "function") {
       const args = [$, appRoot, jiant, moduleSpec];
-      module.parsedDeps && $.each(module.parsedDeps, function(i, name) {
+      module.parsedDeps && module.parsedDeps.forEach(function(name) {
         args.push(appRoot.modules[name]);
       });
       if (!module.singleton) {
@@ -197,7 +194,7 @@
       appRoot.modules = {};
     }
     const arr = [];
-    $.each(modules2load, function(i, moduleSpec) {
+    modules2load.forEach(function(moduleSpec) {
       arr.push(moduleSpec);
     });
     arr.sort(function(a, b) {
@@ -223,11 +220,11 @@
 
   function addIfNeed(modules2load, depModule) {
     let found = false;
-    $.each(modules2load, function(i, moduleSpec) {
+    modules2load.some(function(moduleSpec) {
       if (moduleSpec.name === depModule.name) {
         found = true;
         moduleSpec.order = Math.min(moduleSpec.order, depModule.order);
-        return false;
+        return true;
       }
     });
     !found && modules2load.push(depModule);
@@ -257,7 +254,7 @@
       }
       const deps = modules[moduleName].deps,
           darr = modules[moduleName].parsedDeps = [];
-      deps && $.each(deps, function(i, dep) {
+      deps && deps.forEach(function(dep) {
         if (typeof dep === "string") {
           darr.push(loadDep("", dep, moduleSpec))
         } else {
@@ -265,7 +262,7 @@
             if (! Array.isArray(arr)) {
               arr = [arr];
             }
-            $.each(arr, function(i, val) {
+            arr.forEach(function(val) {
               darr.push(loadDep(path, val, moduleSpec));
             });
           });
@@ -287,8 +284,8 @@
     const moduleName = moduleSpec.name;
     if (!modules[moduleName]) {
       console.info(appId + ". Loading module " + moduleSpec.name + ", initiated by " + (moduleSpec.j_initiatedBy ? moduleSpec.j_initiatedBy : "application "));
-      // } else {
-      //   console.info(appId + ". Using module " + moduleSpec.name + ", requested by " + (moduleSpec.j_initiatedBy ? moduleSpec.j_initiatedBy : "application"));
+    // } else {
+    //   console.info(appId + ". Using module " + moduleSpec.name + ", requested by " + (moduleSpec.j_initiatedBy ? moduleSpec.j_initiatedBy : "application"));
     }
     if (typeof moduleName != "string") {
       console.error("Wrong module declaration, possibly used array instead of object, moduleSpec:");
@@ -334,7 +331,7 @@
     moduleLoads.push({
       appRoot: appRoot, modules2load: modules2load, initial: initial, cb: cb, loading: loading
     });
-    $.each(modules2load, function(i, moduleSpec) {
+    modules2load.forEach(function(moduleSpec) {
       _loadModule(appRoot, appId, modules2load, initial, cb, moduleSpec, loading);
     });
     cbIf0();
@@ -342,7 +339,7 @@
 
   function parseArrayModules(root, appId) {
     let ret = [], j = 0;
-    $.each(root, function(i, module) {
+    root.forEach(function(module) {
       if (typeof module === "string") {
         ret.push(parseObjModule(module, {path: module}, appId, j));
       } else {
@@ -350,7 +347,7 @@
           if (typeof val === "string") {
             ret.push(parseObjModule(val, {path: key + "/" + val}, appId, j));
           } else if (Array.isArray(val)) {
-            $.each(val, function(i, subval) {
+            val.forEach(function(subval) {
               if (typeof subval === "string") {
                 ret.push(parseObjModule(subval, {path: key + "/" + subval}, appId, j));
               } else {
@@ -407,7 +404,7 @@
 
   function loadPath(module, path) {
     if (module[path]) {
-      $.each(module[path], function(i, url) {
+      module[path].forEach(function(url) {
         if (loadedLibs[url]) {
           module[path + "Loaded"][url] = loadedLibs[url];
           module[path + "Count"]--;
@@ -436,7 +433,7 @@
             loadedLibs[url] = data;
             const waiters = loadingLibs[url];
             delete loadingLibs[url];
-            $.each(waiters, function(i, w) {
+            waiters.forEach(function(w) {
               w();
             });
           }).always(function() {
@@ -498,7 +495,7 @@
     if (!String.prototype.startsWith || !String.prototype.endsWith) {
       appLoader.modules.push("jiant-poly");
     }
-    $.each(["intl", "views", "templates", "ajax", "events", "semaphores", "states", "models", "logic"], function(i, moduleName) {
+    ["intl", "views", "templates", "ajax", "events", "semaphores", "states", "models", "logic"].forEach(function(moduleName) {
       if (moduleName in root || (moduleName === "intl" && "logic" in app && moduleName in app.logic)) {
         appLoader.modules.push("jiant-" + moduleName);
       }
@@ -531,13 +528,13 @@
     root.modules = root.modules || [];
     preApping[appId] = root;
     if (pre[appId]) {
-      $.each(pre[appId], function(i, cb) {
+      pre[appId].forEach(function(cb) {
         cb($, root, jiant);
       });
       delete pre[appId];
     }
     if (appId !== "*" && pre["*"]) {
-      $.each(pre["*"], function(i, cb) {
+      pre["*"].forEach(function(cb) {
         cb($, root, jiant);
       });
     }
@@ -620,7 +617,7 @@
   // onApp(appId, cb);
   // onApp(appId, depList, cb)
   function onApp(appIdArr, dependenciesList, cb) {
-    if (! cb && ! dependenciesList) {
+    if (!cb && !dependenciesList) {
       jiant.error("!!! Registering anonymous logic without application id. Not recommended since 0.20");
       cb = appIdArr;
       appIdArr = ["no_app_id"];
@@ -628,11 +625,11 @@
       cb = dependenciesList;
       dependenciesList = [];
     }
-    if (! Array.isArray(appIdArr)) {
+    if (!Array.isArray(appIdArr)) {
       appIdArr = [appIdArr];
     }
     if (appIdArr.length > 1 && Array.isArray(dependenciesList) && dependenciesList.length > 0) {
-      $.each(dependenciesList, function(idx, arr) {
+      dependenciesList.forEach(function(arr) {
         if (!Array.isArray(arr)) {
           jiant.error("Used multiple applications onApp and supplied wrong dependency list, use multi-array, " +
               "like [[app1DepList], [app2DepList]]");
@@ -643,7 +640,7 @@
     } else if (! dependenciesList) {
       dependenciesList = [];
     }
-    $.each(appIdArr, function(idx, appId) {
+    appIdArr.forEach(function(appId, idx) {
       if (appId === undefined || appId === null) {
         jiant.logError("Called onApp with undefined application, apps array is ", appIdArr);
       } else if ($.isPlainObject(appId)) {
@@ -677,18 +674,18 @@
 
   function handleBoundArr(appIdArr, cb) {
     let allBound = true;
-    $.each(appIdArr, function(idx, appId) {
+    appIdArr.some(function(appId) {
       if (! boundApps[appId]) {
         eventBus.one(appBoundEventName(appId), function() {
           handleBoundArr(appIdArr, cb);
         });
         allBound = false;
-        return false;
+        return true;
       }
     });
     if (allBound) {
       let allDependsResolved = true, params = [$];
-      $.each(appIdArr, function(idx, appId) {
+      appIdArr.some(function(appId) {
         if ("jiant-logic" in singletones) {
           allDependsResolved = singletones["jiant-logic"].isDependResolved(appId, {
             depCb: cb,
@@ -698,7 +695,7 @@
           });
         }
         if (!allDependsResolved) {
-          return false;
+          return true;
         }
         params.push(boundApps[appId]);
       });
@@ -711,13 +708,7 @@
   }
 
   function optional(tp) {
-    const arr = [optional];
-    if (Array.isArray(tp)) {
-      $.each(tp, function(i, elem) {arr.push(elem)});
-    } else {
-      arr.push(tp);
-    }
-    return arr;
+    return Array.isArray(tp) ? [optional, ...tp] : [optional, tp];
   }
 
   function fn(f) {
@@ -741,8 +732,7 @@
   }
 
   function meta() {
-    const arr = [meta];
-    $.each(arguments, function(i, arg) {arr.push(arg)});
+    const arr = [meta, ...arguments];
     return arguments.length === 0 ? meta : arr;
   }
 

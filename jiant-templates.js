@@ -12,7 +12,7 @@ jiant.module("jiant-templates", ["jiant-uifactory", "jiant-ui", "jiant-comp", "j
     $.each($.merge(selfs, childs), function(i, item) {
       if (typeof item.className.split === "function" && item.className.length > 0) {
         const clss = item.className.split(" ");
-        $.each(clss, function(i, cls) {
+        clss.forEach(function(cls) {
           classMapping[cls] = classMapping[cls] || [];
           classMapping[cls].push(item);
         });

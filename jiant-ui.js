@@ -68,11 +68,11 @@ jiant.module("jiant-ui", ["jiant-fields"],function($, app, jiant, params, Fields
     if (!elem || !elem[0]) {
       return;
     }
-    $.each(elem, function(idx, item) {
+    elem.forEach(function(item) {
       item = $(item);
       let check = item.val() === val + "";
       if (!check && Array.isArray(val)) {
-        $.each(val, function(i, subval) {
+        val.forEach(function(subval) {
           if (subval + "" === item.val() + "") {
             check = true;
             return false;
@@ -98,7 +98,7 @@ jiant.module("jiant-ui", ["jiant-fields"],function($, app, jiant, params, Fields
       if (tp === "checkbox") {
         elem.prop("checked", !!val);
       } else if (tp === "radio") {
-        $.each(elem, function(idx, subelem) {
+        elem.forEach(function(subelem) {
           $(subelem).prop("checked", subelem.value === (val + ""));
         });
       } else {
@@ -138,7 +138,7 @@ jiant.module("jiant-ui", ["jiant-fields"],function($, app, jiant, params, Fields
       map[key] = elem;
     });
     spec.jMapped && $.each(spec.jMapped, function(key, arr) {
-      $.each(arr, function(i, elem) {
+      arr.forEach(function(elem) {
         map[elem] = map[elem] || 1;
       });
     });
@@ -152,9 +152,9 @@ jiant.module("jiant-ui", ["jiant-fields"],function($, app, jiant, params, Fields
         if ((spec[key] && spec[key].customRenderer) || customElementRenderers[elemType] || (spec.jMapping && spec.jMapping[key])
             || (data && val !== undefined && val !== null && !isServiceName(key) && !(val instanceof $))) {
           const actualVal = typeof val === "function" ? val.apply(data) : val;
-          $.each([key].concat(spec.jMapping && spec.jMapping[key]? spec.jMapping[key] : []), function(i, compKey) {
+          [key].concat(spec.jMapping && spec.jMapping[key]? spec.jMapping[key] : []).some(function(compKey) {
             if (compKey === key && spec.jMapped && spec.jMapped[compKey]) {
-              return;
+              return true;
             }
             const compElem = viewOrTm[compKey],
                 compType = viewOrTm._jiantSpec[compKey],
@@ -189,7 +189,7 @@ jiant.module("jiant-ui", ["jiant-fields"],function($, app, jiant, params, Fields
                 }
                 function elem2arr(elem) {
                   const arr = [];
-                  $.each(elem, function (idx, item) {!!$(item).prop("checked") && arr.push(convert($(item).val()));});
+                  elem.forEach(function (item) {!!$(item).prop("checked") && arr.push(convert($(item).val()));});
                   return arr;
                 }
                 function joinOrUndef(arr) {
@@ -241,7 +241,7 @@ jiant.module("jiant-ui", ["jiant-fields"],function($, app, jiant, params, Fields
       }
 
       function updateShowHideCls(view, data) {
-        view._j.showing && $.each(view._j.showing, function(i, item) {
+        view._j.showing && view._j.showing.forEach(function(item) {
           let on;
           if (item.fn) {
             on = item.fld.call(data, data);
@@ -254,7 +254,7 @@ jiant.module("jiant-ui", ["jiant-fields"],function($, app, jiant, params, Fields
           on = item.dir ? on : !on;
           item.el[on ? "show" : "hide"]();
         });
-        view._j.switchClass && $.each(view._j.switchClass, function(i, item) {
+        view._j.switchClass && view._j.switchClass.forEach(function(item) {
           let on;
           if (item.fn) {
             on = item.fld.call(data, data);
@@ -302,11 +302,11 @@ jiant.module("jiant-ui", ["jiant-fields"],function($, app, jiant, params, Fields
     if (! Array.isArray(tpOrArr)) {
       return false;
     }
-    var b = false;
-    $.each(tpOrArr, function(i, item) {
+    let b = false;
+    tpOrArr.some(function(item) {
       if (item === flag) {
         b = true;
-        return false;
+        return true;
       }
     });
     return b;

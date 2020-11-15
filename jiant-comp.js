@@ -19,7 +19,7 @@ jiant.module("jiant-comp", ["jiant-ui"], function($, app, jiant, params, Ui) {
       }
       const compCbSet = appRoot.templates[tmId].compCbSet;
       compCbSet && compCbSet.start && typeof compCbSet.start === "function" && compCbSet.start.apply();
-      $.each(dataArr, function(i, actualObj) {
+      dataArr.forEach(function(actualObj, i) {
         if (actualObj) {
           const param = jiant.getAt(componentContentOrArr, 2);
           if (param) {
