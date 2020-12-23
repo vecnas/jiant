@@ -68,7 +68,7 @@ jiant.module("jiant-ui", ["jiant-fields"],function($, app, jiant, params, Fields
     if (!elem || !elem[0]) {
       return;
     }
-    elem.forEach(function(item) {
+    $.each(elem, function(i, item) {
       item = $(item);
       let check = item.val() === val + "";
       if (!check && Array.isArray(val)) {
