@@ -189,7 +189,7 @@ jiant.module("jiant-ui", ["jiant-fields"],function($, app, jiant, params, Fields
                 }
                 function elem2arr(elem) {
                   const arr = [];
-                  elem.forEach(function (item) {!!$(item).prop("checked") && arr.push(convert($(item).val()));});
+                  $.each(elem, function (i, item) {!!$(item).prop("checked") && arr.push(convert($(item).val()));});
                   return arr;
                 }
                 function joinOrUndef(arr) {
