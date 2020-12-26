@@ -16,4 +16,6 @@ Documentation website on Jiant: http://sites.google.com/site/jiantscript/
 
 Website updated to Jiant version 1.00
 
+Latest todomvc version: https://github.com/vecnas/todomvc-jiant-2020
+
 Документация на русском языке: http://vecnas.github.io
