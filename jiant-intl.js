@@ -191,8 +191,8 @@ jiant.module("jiant-intl", ["jiant-logic"], function($, app, jiant, params, Logi
   jiant.intlProxy = intlProxy;
 
   return {
-    apply: function(appRoot) {
-      _bindIntl(appRoot, appRoot.intl, appRoot.id);
+    apply: function(appRoot, tree) {
+      _bindIntl(appRoot, tree.intl, appRoot.id);
     }
   }
 

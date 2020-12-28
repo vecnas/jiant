@@ -2,36 +2,38 @@ jiant.module("jiant-semaphores", function() {
 
   this.singleton();
 
-  var eventBus = $({});
-
-  function _bindSemaphores(appRoot, semaphores, appId) {
+  function _bindSemaphores(appRoot, semaphores) {
     $.each(semaphores, function(name, spec) {
-      semaphores[name].release = function() {
-        // if (semaphores[name].released) {
-        //   logError("re-releasing semaphore already released, ignoring: " + appId + ".semaphores." + name);
-        //   return;
-        // }
-        semaphores[name].released = true;
-        semaphores[name].releasedArgs = arguments;
-        eventBus.trigger(appId + "." + name + ".semaphore", arguments);
-      };
-      semaphores[name].on = function(cb) {
-        if (semaphores[name].released) {
-          cb && cb.apply(cb, semaphores[name].releasedArgs);
-        } else {
-          eventBus.on(appId + "." + name + ".semaphore", function() {
-            var args = [...arguments];
-            args.splice(0, 1);
-            cb && cb.apply(cb, args);
-          });
-        }
-      };
+      bindSemaphore(spec);
     });
   }
 
+  function bindSemaphore(spec) {
+    const eventBus = $({});
+    spec.release = function() {
+      spec.released = true;
+      spec.releasedArgs = arguments;
+      eventBus.trigger("sem.semaphore", arguments);
+    };
+    spec.on = function(cb) {
+      if (spec.released) {
+        cb && cb.apply(cb, spec.releasedArgs);
+      } else {
+        eventBus.on("sem.semaphore", function() {
+          const args = [...arguments];
+          args.splice(0, 1);
+          cb && cb.apply(cb, args);
+        });
+      }
+    };
+    return spec;
+  }
+
+  jiant.bindSemaphore = bindSemaphore;
+
   return {
-    apply: function(appRoot) {
-      _bindSemaphores(appRoot, appRoot.semaphores, appRoot.id);
+    apply: function(appRoot, tree) {
+      _bindSemaphores(appRoot, tree.semaphores);
     }
   };
 

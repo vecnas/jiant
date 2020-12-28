@@ -208,8 +208,8 @@ jiant.module("jiant-logic", ["jiant-util"], function($, app, jiant, params, Util
   jiant.implement = implement;
 
   return {
-    apply: function(appRoot) {
-      _bindLogic(appRoot, appRoot.logic, appRoot.id);
+    apply: function(appRoot, tree) {
+      _bindLogic(appRoot, tree.logic, appRoot.id);
     },
     beforeBind: beforeBind,
     isDependResolved: isDependResolved,

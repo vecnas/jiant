@@ -1,5 +1,6 @@
 /*
   4.00 jiant broken on modules, loaded when used by application
+  4.01 bindXXX methods (see docs), bindTree initial version
  */
 "use strict";
 (function(factory) {
@@ -20,7 +21,6 @@
       modules = {},
       singletones = {},
       eventBus = $({}),
-      perAppBus = {},
       preApping = {},
       boundApps = {},
       bindingCurrently = {},
@@ -484,7 +484,12 @@
     return false;
   }
 
-  function _bindUi(root) {
+  function bindTree(app, tree) {
+    _bindUi(app, tree);
+    return tree;
+  }
+
+  function _bindUi(root, tree) {
     const appLoader = {id: root.id + "_JLoader", modules: ["jiant-log", "jiant-util"], modulesPrefix: jiantPath};
     //todo: xl to module
     //todo: logic extraction
@@ -496,69 +501,73 @@
       appLoader.modules.push("jiant-poly");
     }
     ["intl", "views", "templates", "ajax", "events", "semaphores", "states", "models", "logic"].forEach(function(moduleName) {
-      if (moduleName in root || (moduleName === "intl" && "logic" in app && moduleName in app.logic)) {
+      if (moduleName in tree || (moduleName === "intl" && "logic" in tree && moduleName in tree.logic)) {
         appLoader.modules.push("jiant-" + moduleName);
       }
     });
-    __bindUi(appLoader);
+    __bindUi(appLoader, appLoader);
     onApp(appLoader, function() {
-      __bindUi(root, appLoader);
+      __bindUi(root, tree, appLoader);
     });
   }
 
-  function __bindUi(root, appLoader) {
+  function __bindUi(root, tree, appLoader) {
     maybeSetDevModeFromQueryString();
     const appId = (root.id ? root.id : "no_app_id");
     if (! root.id) {
       jiant.logError("!!! Application id not specified. Not recommended since 0.20. Use 'id' property of application root to specify application id");
     }
-    if (boundApps[appId]) {
+    if (boundApps[appId] && root === tree) {
       jiant.logError("Application '" + appId + "' already loaded, skipping multiple bind call");
       return;
     }
-    maybeShort(root, "logic", "l");
-    const intlPresent = maybeShort(root, "intl", "i");
-    maybeShort(root, "views", "v");
-    maybeShort(root, "templates", "t");
-    maybeShort(root, "ajax", "a");
-    maybeShort(root, "events", "e");
-    maybeShort(root, "semaphores", "sem");
-    maybeShort(root, "states", "s");
-    maybeShort(root, "models", "m");
-    root.modules = root.modules || [];
-    preApping[appId] = root;
-    if (pre[appId]) {
-      pre[appId].forEach(function(cb) {
-        cb($, root, jiant);
-      });
-      delete pre[appId];
+    maybeShort(tree, "logic", "l");
+    maybeShort(tree, "intl", "i");
+    maybeShort(tree, "views", "v");
+    maybeShort(tree, "templates", "t");
+    maybeShort(tree, "ajax", "a");
+    maybeShort(tree, "events", "e");
+    maybeShort(tree, "semaphores", "sem");
+    maybeShort(tree, "states", "s");
+    maybeShort(tree, "models", "m");
+    tree.modules = tree.modules || [];
+    if (root === tree) {
+      preApping[appId] = root;
+      if (pre[appId]) {
+        pre[appId].forEach(function(cb) {
+          cb($, root, jiant);
+        });
+        delete pre[appId];
+      }
+      if (appId !== "*" && pre["*"]) {
+        pre["*"].forEach(function(cb) {
+          cb($, root, jiant);
+        });
+      }
+      delete preApping[appId];
+      bindingCurrently[appId] = root;
     }
-    if (appId !== "*" && pre["*"]) {
-      pre["*"].forEach(function(cb) {
-        cb($, root, jiant);
-      });
+    if (tree.modulesSpec) {
+      tree.modules = tree.modulesSpec;
     }
-    delete preApping[appId];
-    bindingCurrently[appId] = root;
-    if (root.modulesSpec) {
-      root.modules = root.modulesSpec;
-    }
-    _loadModules(root, root.modules, appId, true, function() {
+    _loadModules(root, tree.modules, appId, true, function() {
       // intlPresent && _bindIntl(root, root.intl, appId);
       // views after intl because of nlabel proxies
       appLoader && $.each(appLoader.modules, function(i, module) {
         if ("apply" in module) {
-          module.apply(root);
+          module.apply(root, tree);
         }
       });
-      perAppBus[appId] = $({});
-      boundApps[appId] = root;
-      console.info(appId + " bound");
-      if ("jiant-logic" in singletones) {
-        singletones["jiant-logic"].afterBind(appId);
+      if (root === tree) {
+        boundApps[appId] = root;
+        console.info(appId + " bound");
+        if ("jiant-logic" in singletones) {
+          singletones["jiant-logic"].afterBind(appId);
+        }
+        delete bindingCurrently[appId];
+        eventBus.trigger(appBoundEventName(appId));
       }
-      delete bindingCurrently[appId];
-      eventBus.trigger(appBoundEventName(appId));
+      appLoader && (delete boundApps[appLoader.id]);
     });
   }
 
@@ -599,10 +608,10 @@
         injectionPoint = $("body");
       }
       injectionPoint.load(viewsUrl, null, function () {
-        _bindUi(root);
+        _bindUi(root, root);
       });
     } else {
-      _bindUi(root);
+      _bindUi(root, root);
     }
   }
 
@@ -762,6 +771,7 @@
     onApp: onApp,
     preUiBound: preApp,
     preApp: preApp,
+    bindTree: bindTree,
 
     version: version,
     nvl: nvl,

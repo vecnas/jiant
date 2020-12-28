@@ -15,7 +15,7 @@ jiant.module("jiant-models", ["jiant-util"], function($, app, jiant, params, Uti
     return (spec[repoName] && $.isPlainObject(spec[repoName])) ? spec[repoName] : spec;
   }
 
-  function bindModel(modelName, spec, appId) {
+  function bindModel(modelName, spec) {
     let storage = [],
         collectionFunctions = [],
         modelStorage = "jModelStorage",
@@ -44,7 +44,7 @@ jiant.module("jiant-models", ["jiant-util"], function($, app, jiant, params, Uti
         repoFunctions = ["updateAll", "add", "all", "remove", "filter", "toCollection"];
     Model.prototype.jModelName = modelName;
     if (jiant.DEV_MODE && !spec[repoName]) {
-      jiant.infop("App !!, model !! uses deprecated model repository format, switch to new, with model.jRepo = {} section", appId, modelName);
+      jiant.infop("Model !! uses deprecated model repository format, switch to new, with model.jRepo = {} section", modelName);
     }
     spec[defaultsName] = spec[defaultsName] || {};
     $.each(repoFunctions, function(i, fn) {
@@ -474,7 +474,7 @@ jiant.module("jiant-models", ["jiant-util"], function($, app, jiant, params, Uti
           }
           arrNames[idx] = lowerFirst(name);
           if (!spec[arrNames[idx]]) {
-            jiant.errorp("Non existing field used by model method !!, field name: !!, model name: !!, app id: !!", fname, arrNames[idx], modelName, appId);
+            jiant.errorp("Non existing field used by model method !!, field name: !!, model name: !!", fname, arrNames[idx], modelName);
           }
         });
         if (!indexPresent(arrNames)) {
@@ -640,6 +640,7 @@ jiant.module("jiant-models", ["jiant-util"], function($, app, jiant, params, Uti
         }
       }
     }
+    return spec;
   }
 
   function lowerFirst(s) {
@@ -701,14 +702,14 @@ jiant.module("jiant-models", ["jiant-util"], function($, app, jiant, params, Uti
     return s.indexOf("function(){return") === 0;
   }
 
-  function _bindModels(appRoot, models, appId) {
+  function _bindModels(appRoot, models) {
     $.each(models, function(name, spec) {
-      bindModel(name, spec, appId);
-      // $.each(listeners, function(i, l) {l.boundModel && l.boundModel(appRoot, models, name, models[name])});
+      bindModel(name, spec);
     });
   }
 
   jiant.bindModel = bindModel;
+
   jiant.isModelSupplier = isModelSupplier;
   jiant.isModelAccessor = isModelAccessor;
   jiant.isModel = isModel;
@@ -716,8 +717,8 @@ jiant.module("jiant-models", ["jiant-util"], function($, app, jiant, params, Uti
   jiant.isTransient = isTransient;
 
   return {
-    apply: function(appRoot) {
-      _bindModels(appRoot, appRoot.models, appRoot.id);
+    apply: function(appRoot, tree) {
+      _bindModels(appRoot, tree.models);
     }
   };
 

@@ -8,15 +8,19 @@ jiant.module("jiant-ajax", function() {
     return !!obj ? obj._jiantSpecName : undefined;
   }
 
-  function _bindAjax(appRoot, root, ajaxPrefix, ajaxSuffix, crossDomain) {
-    $.each(root, function(uri, funcSpec) {
-      let params = jiant.getParamNames(funcSpec);
-      params && params.length > 0 ? params.splice(params.length - 1, 1) : params = [];
-      root[uri] = makeAjaxPerformer(appRoot, ajaxPrefix, ajaxSuffix, uri, params,
-          typeof root[uri] === "function" ? root[uri]() : undefined, crossDomain);
-      root[uri]._jiantSpec = funcSpec;
-      root[uri]._jiantSpecName = uri;
-      // each(listeners, function(i, l) {l.boundAjax && l.boundAjax(appRoot, root, uri, root[uri])});
+  function bindAjax(name, funcSpec, appRoot) {
+    let params = jiant.getParamNames(funcSpec);
+    params && params.length > 0 ? params.splice(params.length - 1, 1) : params = [];
+    const impl = makeAjaxPerformer(appRoot, appRoot.ajaxPrefix, appRoot.ajaxSuffix, name, params,
+        typeof funcSpec === "function" ? funcSpec() : undefined, appRoot.crossDomain);
+    impl._jiantSpec = funcSpec;
+    impl._jiantSpecName = name;
+    return impl;
+  }
+
+  function _bindAjax(appRoot, ajaxRoot) {
+    $.each(ajaxRoot, function(name, funcSpec) {
+      ajaxRoot[name] = bindAjax(name, funcSpec, appRoot);
     });
   }
 
@@ -182,13 +186,15 @@ jiant.module("jiant-ajax", function() {
     jiant.logError(errorDetails);
   }
 
+  jiant.bindAjax = bindAjax;
+
   jiant.handleErrorFn = defaultAjaxErrorsHandle;
   jiant.getDeclaredName = getDeclaredName;
   jiant.flags.ajaxSubmitAsMap = "_jiantFlagSubmitAsMap";
 
   return {
-    apply: function(appRoot) {
-      _bindAjax(appRoot, appRoot.ajax, appRoot.ajaxPrefix, appRoot.ajaxSuffix, appRoot.crossDomain);
+    apply: function(appRoot, tree) {
+      _bindAjax(appRoot, tree.ajax);
     }
   };
 });

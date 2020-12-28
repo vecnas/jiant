@@ -41,7 +41,7 @@ jiant.module("jiant-states", function() {
     $(window).hashchange && $(window).trigger("hashchange", [true, jiant.extractApplicationId(appId)]);
   }
 
-  function makeHashListener(appRoot, appId) {
+  function makeHashListener(appId) {
     return function (event, enforce, runtimeAppId) {
       if (runtimeAppId && runtimeAppId !== appId) {
         return;
@@ -181,10 +181,8 @@ jiant.module("jiant-states", function() {
     const state = location.hash.substring(1),
         data = state.split("="),
         retVal = {};
-//          jiant.logInfo("parsing state: " + state);
     data.forEach(function(elem, idx) {
       (idx % 2 === 0) && elem && data[idx + 1] !== undefined && (retVal[elem] = data[idx + 1]);
-//            (idx % 2 == 0) && elem && data[idx + 1] != undefined && jiant.logInfo("state parsed: " + elem + " === " + data[idx+1]);
     });
     return retVal;
   }
@@ -253,7 +251,7 @@ jiant.module("jiant-states", function() {
     }
   }
 
-  function _bindStates(appRoot, states, stateExternalBase, appId) {
+  function _bindStates(app, states) {
     if (! Object.keys(states).length) {
       return;
     }
@@ -269,45 +267,45 @@ jiant.module("jiant-states", function() {
       states[""] = {};
     }
     $.each(states, function(name, stateSpec) {
-      const params = stateSpec.go ? jiant.getParamNames(stateSpec.go) : [];
-      stateSpec.go = go(name, stateSpec.root, stateSpec, stateExternalBase, appId, true, params);
-      stateSpec.replace = go(name, stateSpec.root, stateSpec, stateExternalBase, appId, false, params);
-      stateSpec.start = function(cb) {
-        let trace;
-        // $.each(listeners, function(i, l) {l.stateStartRegisterHandler && l.stateStartRegisterHandler(appRoot, name, stateSpec)});
-        // statesUsed[appId + name] && $.each(listeners, function(i, l) {l.stateError && l.stateError(appRoot, name, stateSpec, "State start handler registered after state triggered")});
-        trace = jiant.getStackTrace();
-        eventBus.on(appId + "state_" + name + "_start", function() {
-          const args = [...arguments];
-          args.splice(0, 1);
-          // $.each(listeners, function(i, l) {l.stateStartCallHandler && l.stateStartCallHandler(appRoot, name, stateSpec, trace, args)});
-          cb && cb.apply(cb, args);
-        });
-        const current = parseState(appId);
-        if (jiant.getApps()[appId] && ((name === "" && current.now.length === 0) || (current.now[0] === name))) {
-          const params = current.now;
-          params.splice(0, 1);
-          cb && cb.apply(cb, params);
-        }
-      };
-      stateSpec.end = function(cb) {
-        let trace;
-        // $.each(listeners, function(i, l) {l.stateEndRegisterHandler && l.stateEndRegisterHandler(appRoot, name, stateSpec)});
-        // statesUsed[appId + name] && $.each(listeners, function(i, l) {l.stateError && l.stateError(appRoot, name, stateSpec, "State end handler registered after state triggered")});
-        trace = jiant.getStackTrace();
-        eventBus.on(appId + "state_" + name + "_end", function() {
-          // $.each(listeners, function(i, l) {l.stateEndCallHandler && l.stateEndCallHandler(appRoot, name, stateSpec, trace)});
-          const args = [...arguments];
-          args.splice(0, 1);
-          cb && cb.apply(cb, args);
-        });
-      };
-      // $.each(listeners, function(i, l) {l.boundState && l.boundState(appRoot, states, name, stateSpec)});
+      bindState(app, name, stateSpec);
     });
-    $(window).hashchange(makeHashListener(appRoot, appId));
-    lastStates[appId] = parseState(appId).now[0];
-    lastEncodedStates[appId] = getAppState(appId);
+    $(window).hashchange(makeHashListener(app.id));
+    lastStates[app.id] = parseState(app.id).now[0];
+    lastEncodedStates[app.id] = getAppState(app.id);
   }
+
+  function bindState(app, name, stateSpec) {
+    const params = stateSpec.go ? jiant.getParamNames(stateSpec.go) : [];
+    stateSpec.go = go(name, stateSpec.root, stateSpec, app.stateExternalBase, app.id, true, params);
+    stateSpec.replace = go(name, stateSpec.root, stateSpec, app.stateExternalBase, app.id, false, params);
+    stateSpec.start = function(cb) {
+      let trace;
+      trace = jiant.getStackTrace();
+      eventBus.on(app.id + "state_" + name + "_start", function() {
+        const args = [...arguments];
+        args.splice(0, 1);
+        cb && cb.apply(cb, args);
+      });
+      const current = parseState(app.id);
+      if (jiant.getApps()[app.id] && ((name === "" && current.now.length === 0) || (current.now[0] === name))) {
+        const params = current.now;
+        params.splice(0, 1);
+        cb && cb.apply(cb, params);
+      }
+    };
+    stateSpec.end = function(cb) {
+      let trace;
+      trace = jiant.getStackTrace();
+      eventBus.on(app.id + "state_" + name + "_end", function() {
+        const args = [...arguments];
+        args.splice(0, 1);
+        cb && cb.apply(cb, args);
+      });
+    };
+    return stateSpec;
+  }
+
+  jiant.bindState = bindState;
 
   jiant.refreshState = refreshState;
   jiant.getCurrentState = getCurrentState;
@@ -316,8 +314,8 @@ jiant.module("jiant-states", function() {
   jiant.goRoot = goRoot;
 
   return {
-    apply: function(appRoot) {
-      _bindStates(appRoot, appRoot.states, appRoot.stateExternalBase, appRoot.id);
+    apply: function(appRoot, tree) {
+      _bindStates(appRoot, tree.states);
     }
   };
 

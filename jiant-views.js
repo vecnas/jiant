@@ -66,46 +66,49 @@ jiant.module("jiant-views", ["jiant-uifactory", "jiant-ui", "jiant-comp", "jiant
     uiFactory = appUiFactory;
     errString = "";
     $.each(root, function(viewId, viewContent) {
-      const prefix = ("appPrefix" in viewContent) ? viewContent.appPrefix : appRoot.appPrefix,
-          view = appUiFactory.view(prefix, viewId, viewContent, appRoot.bindByTag);
-      if ("_scan" in viewContent) {
-        Ui.scanForSpec(prefix, viewContent, view);
-      }
-      errString += bindView(appRoot, viewId, viewContent, view);
+      bindView(appRoot, viewId, viewContent, null, [errString]);
     });
     jiant.DEV_MODE && errString.length > 0 && alert("Some views not bound to HTML properly, check console " + errString);
   }
 
-  function bindView(appRoot, viewId, viewContent, view) {
+  function bindView(appRoot, viewId, viewContent, viewImpl, errArr) {
+    const prefix = ("appPrefix" in viewContent) ? viewContent.appPrefix : appRoot.appPrefix;
+    viewImpl = viewImpl || UiFactory.view(prefix, viewId, viewContent, appRoot.bindByTag);
+    if ("_scan" in viewContent) {
+      Ui.scanForSpec(prefix, viewContent, view);
+    }
     if (viewContent._jiantSpec) {
       const spec = viewContent._jiantSpec;
       for (let key of viewContent) {
         delete viewContent[key];
       }
-      appRoot.views[viewId] = viewContent;
+      if (viewId in appRoot.views) {
+        appRoot.views[viewId] = viewContent;
+      }
       $.each(spec, function(key, val) {
         viewContent[key] = val;
       })
     }
-    const prefix = ("appPrefix" in viewContent) ? viewContent.appPrefix : appRoot.appPrefix ? appRoot.appPrefix : "",
-        result = UiFactory.ensureExists(prefix, appRoot.dirtyList, view, prefix + viewId);
+    const result = UiFactory.ensureExists(prefix, appRoot.dirtyList, viewImpl, prefix + viewId);
     if (result.length === 0) {
-      _bindContent(appRoot, viewContent, viewId, view, prefix);
+      _bindContent(appRoot, viewContent, viewId, viewImpl, prefix);
+    } else {
+      errArr[0] += result;
     }
-    ensureSafeExtend(viewContent, view);
+    ensureSafeExtend(viewContent, viewImpl);
     Ui.makePropagationFunction(viewId, viewContent, viewContent);
-    $.extend(viewContent, view);
+    $.extend(viewContent, viewImpl);
     if (viewContent.jInit && typeof viewContent.jInit === "function") {
       viewContent.jInit.call(viewContent, appRoot);
     }
-    return result;
+    return viewContent;
   }
 
   jiant.bindView = bindView;
 
   return {
-    apply: function(appRoot) {
-      _bindViews(appRoot, appRoot.views, UiFactory);
+    apply: function(appRoot, tree) {
+      _bindViews(appRoot, tree.views, UiFactory);
     }
   };
 
