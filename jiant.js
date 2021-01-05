@@ -746,7 +746,7 @@
   }
 
   function version() {
-    return 301;
+    return 401;
   }
 
   function Jiant() {}
