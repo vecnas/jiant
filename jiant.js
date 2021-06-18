@@ -1,6 +1,7 @@
 /*
   4.00 jiant broken on modules, loaded when used by application
   4.01 bindXXX methods (see docs), bindTree initial version
+  4.02 app.cacheInStorage enables modules cache in local storage
  */
 "use strict";
 (function(factory) {
@@ -230,6 +231,18 @@
     !found && modules2load.push(depModule);
   }
 
+  function isCacheInStorage(appRoot) {
+    return !!appRoot["cacheInStorage"];
+  }
+
+  function cacheKey(appRoot, moduleName) {
+    return moduleName + "_" + appRoot["id"] + "_" + appRoot["cacheInStorage"];
+  }
+
+  function isPresentInCache(appRoot, moduleName) {
+    return !!localStorage.getItem(cacheKey(appRoot, moduleName));
+  }
+
   function _loadModule(appRoot, appId, modules2load, initial, cb, moduleSpec, loading) {
     let url;
 
@@ -294,32 +307,44 @@
     }
     if (!loading[moduleName]) {
       if (!modules[moduleName]) {
-        loading[moduleName] = 1;
-        const useExact = "exactUrl" in moduleSpec;
-        url = useExact ? moduleSpec.exactUrl : isCouldBePrefixed(moduleSpec.path) ? ((appRoot.modulesPrefix || "") + moduleSpec.path) : moduleSpec.path;
-        if (!useExact) {
-          url = url + ".js" + (appRoot.modulesSuffix || "");
+        if (isCacheInStorage(appRoot) && isPresentInCache(appRoot, moduleName)) {
+          console.info("           using module cache: " + cacheKey(appRoot, moduleName));
+          const moduleContent = localStorage.getItem(cacheKey(appRoot, moduleName));
+          $.globalEval(moduleContent);
+          preprocessLoadedModule(moduleSpec, modules[moduleName]);
+          cbIf0();
+        } else {
+          loading[moduleName] = 1;
+          const useExact = "exactUrl" in moduleSpec;
+          url = useExact ? moduleSpec.exactUrl : isCouldBePrefixed(moduleSpec.path) ? ((appRoot.modulesPrefix || "") + moduleSpec.path) : moduleSpec.path;
+          if (!useExact) {
+            url = url + ".js" + (appRoot.modulesSuffix || "");
+          }
+          console.info("           module url: " + url);
+          $.ajax({
+            url: url,
+            method: "GET",
+            timeout: appRoot.modulesTimeout || 15000,
+            cache: true,
+            crossDomain: true,
+            dataType: "text"
+          }).done(function(data) {
+            $.globalEval(data);
+            if (isCacheInStorage(appRoot)) {
+              localStorage.setItem(cacheKey(appRoot, moduleName), data);
+            }
+            if (modules[moduleName]) {
+              preprocessLoadedModule(moduleSpec, modules[moduleName]);
+            }
+          }).fail(function() {
+            console.error("Application " + appId + ". Not loaded module " + moduleName);
+          }).always(function() {
+            if (loading[moduleName]) {
+              delete loading[moduleName];
+              cbIf0();
+            }
+          });
         }
-        console.info("           module url: " + url);
-        $.ajax({
-          url: url,
-          method: "GET",
-          timeout: appRoot.modulesTimeout || 15000,
-          cache: true,
-          crossDomain: true,
-          dataType: "script"
-        }).done(function() {
-          if (modules[moduleName]) {
-            preprocessLoadedModule(moduleSpec, modules[moduleName]);
-          }
-        }).fail(function() {
-          console.error("Application " + appId + ". Not loaded module " + moduleName);
-        }).always(function() {
-          if (loading[moduleName]) {
-            delete loading[moduleName];
-            cbIf0();
-          }
-        });
       } else {
         preprocessLoadedModule(moduleSpec, modules[moduleName]);
       }
@@ -490,7 +515,7 @@
   }
 
   function _bindUi(root, tree) {
-    const appLoader = {id: root.id + "_JLoader", modules: ["jiant-log", "jiant-util"], modulesPrefix: jiantPath};
+    const appLoader = {id: root.id + "_JLoader", modules: ["jiant-log", "jiant-util"], modulesPrefix: jiantPath, cacheInStorage: jiant.version()};
     //todo: xl to module
     //todo: logic extraction
     //todo: storage caching with versioning
@@ -746,7 +771,7 @@
   }
 
   function version() {
-    return 401;
+    return 402;
   }
 
   function Jiant() {}
