@@ -71,7 +71,7 @@ jiant.module("jiant-views", ["jiant-uifactory", "jiant-ui", "jiant-comp", "jiant
     jiant.DEV_MODE && errString.length > 0 && alert("Some views not bound to HTML properly, check console " + errString);
   }
 
-  function bindView(appRoot, viewId, viewContent, viewImpl, errArr) {
+  function bindView(appRoot, viewId, viewContent, viewImpl, errArr = [""]) {
     const prefix = ("appPrefix" in viewContent) ? viewContent.appPrefix : appRoot.appPrefix;
     viewImpl = viewImpl || UiFactory.view(prefix, viewId, viewContent, appRoot.bindByTag);
     if ("_scan" in viewContent) {

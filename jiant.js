@@ -2,6 +2,7 @@
   4.00 jiant broken on modules, loaded when used by application
   4.01 bindXXX methods (see docs), bindTree initial version
   4.02 app.cacheInStorage enables modules cache in local storage
+  4.03 jiant cache disabling - jiant.disableCache = true, core log calls filtered by DEV_MODE again
  */
 "use strict";
 (function(factory) {
@@ -232,7 +233,7 @@
   }
 
   function isCacheInStorage(appRoot) {
-    return !!appRoot["cacheInStorage"];
+    return !jiant["disableCache"] && !!appRoot["cacheInStorage"];
   }
 
   function cacheKey(appRoot, moduleName) {
@@ -296,7 +297,7 @@
 
     const moduleName = moduleSpec.name;
     if (!modules[moduleName]) {
-      console.info(appId + ". Loading module " + moduleSpec.name + ", initiated by " + (moduleSpec.j_initiatedBy ? moduleSpec.j_initiatedBy : "application "));
+      jiant.DEV_MODE && console.info(appId + ". Loading module " + moduleSpec.name + ", initiated by " + (moduleSpec.j_initiatedBy ? moduleSpec.j_initiatedBy : "application "));
     // } else {
     //   console.info(appId + ". Using module " + moduleSpec.name + ", requested by " + (moduleSpec.j_initiatedBy ? moduleSpec.j_initiatedBy : "application"));
     }
@@ -308,7 +309,7 @@
     if (!loading[moduleName]) {
       if (!modules[moduleName]) {
         if (isCacheInStorage(appRoot) && isPresentInCache(appRoot, moduleName)) {
-          console.info("           using module cache: " + cacheKey(appRoot, moduleName));
+          jiant.DEV_MODE && console.info("           using module cache: " + cacheKey(appRoot, moduleName));
           const moduleContent = localStorage.getItem(cacheKey(appRoot, moduleName));
           $.globalEval(moduleContent);
           preprocessLoadedModule(moduleSpec, modules[moduleName]);
@@ -320,7 +321,7 @@
           if (!useExact) {
             url = url + ".js" + (appRoot.modulesSuffix || "");
           }
-          console.info("           module url: " + url);
+          jiant.DEV_MODE && console.info("           module url: " + url);
           $.ajax({
             url: url,
             method: "GET",
@@ -480,7 +481,7 @@
     if (!modules[name]) {
       modules[name] = cb;
       modules[name].deps = deps;
-      console.info("registered module " + name);
+      jiant.DEV_MODE && console.info("registered module " + name);
     }
   }
 
@@ -585,7 +586,7 @@
       });
       if (root === tree) {
         boundApps[appId] = root;
-        console.info(appId + " bound");
+        jiant.DEV_MODE && console.info(appId + " bound");
         if ("jiant-logic" in singletones) {
           singletones["jiant-logic"].afterBind(appId);
         }

@@ -38,7 +38,7 @@ jiant.module("jiant-templates", ["jiant-uifactory", "jiant-ui", "jiant-comp", "j
     jiant.DEV_MODE && errString.length > 0 && alert("Some templates not bound to HTML properly, check console " + errString);
   }
 
-  function bindTemplate(appRoot, tmId, tmContent, tm, errArr) {
+  function bindTemplate(appRoot, tmId, tmContent, tm, errArr = [""]) {
     const prefix = ("appPrefix" in tmContent) ? tmContent.appPrefix : appRoot.appPrefix;
     tm = tm || UiFactory.view(prefix, tmId, tmContent, appRoot.bindByTag);
     tmContent._jiantSpec = {};
