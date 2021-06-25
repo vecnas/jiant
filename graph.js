@@ -161,6 +161,7 @@ jiant.declare("jiantVisualizer", {
           obj.hlLabel = makeFunctionSignature(subKey, subContent);
         } else {
           obj.hlLabel = obj.label;
+/*
           $.each(subContent._jiantSpec ? subContent._jiantSpec : subContent, function(subSubKey, subSubContent) {
             var obj = {label: subSubKey + ($.isFunction(subSubContent) ? "()" : ""), color: color, font: "10px Arial",
               visible: false, dynamic: false};
@@ -174,6 +175,7 @@ jiant.declare("jiantVisualizer", {
             var subSubSection = sys.addNode(key + ":" + subKey + ":" + subSubKey, obj);
             sys.addEdge(subSection, subSubSection);
           });
+*/
         }
       });
     } else {

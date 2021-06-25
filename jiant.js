@@ -3,6 +3,7 @@
   4.01 bindXXX methods (see docs), bindTree initial version
   4.02 app.cacheInStorage enables modules cache in local storage
   4.03 jiant cache disabling - jiant.disableCache = true, core log calls filtered by DEV_MODE again
+  4.04 jiant-xl autoload with app definition
  */
 "use strict";
 (function(factory) {
@@ -298,8 +299,8 @@
     const moduleName = moduleSpec.name;
     if (!modules[moduleName]) {
       jiant.DEV_MODE && console.info(appId + ". Loading module " + moduleSpec.name + ", initiated by " + (moduleSpec.j_initiatedBy ? moduleSpec.j_initiatedBy : "application "));
-    // } else {
-    //   console.info(appId + ". Using module " + moduleSpec.name + ", requested by " + (moduleSpec.j_initiatedBy ? moduleSpec.j_initiatedBy : "application"));
+      // } else {
+      //   console.info(appId + ". Using module " + moduleSpec.name + ", requested by " + (moduleSpec.j_initiatedBy ? moduleSpec.j_initiatedBy : "application"));
     }
     if (typeof moduleName != "string") {
       console.error("Wrong module declaration, possibly used array instead of object, moduleSpec:");
@@ -519,14 +520,13 @@
     const appLoader = {id: root.id + "_JLoader", modules: ["jiant-log", "jiant-util"], modulesPrefix: jiantPath, cacheInStorage: jiant.version()};
     //todo: xl to module
     //todo: logic extraction
-    //todo: storage caching with versioning
     //todo: final cleanup/review
 
     // order is important
     if (!String.prototype.startsWith || !String.prototype.endsWith) {
       appLoader.modules.push("jiant-poly");
     }
-    ["intl", "views", "templates", "ajax", "events", "semaphores", "states", "models", "logic"].forEach(function(moduleName) {
+    ["intl", "views", "templates", "ajax", "events", "semaphores", "states", "models", "logic", "xl"].forEach(function(moduleName) {
       if (moduleName in tree || (moduleName === "intl" && "logic" in tree && moduleName in tree.logic)) {
         appLoader.modules.push("jiant-" + moduleName);
       }
@@ -772,7 +772,7 @@
   }
 
   function version() {
-    return 402;
+    return 404;
   }
 
   function Jiant() {}

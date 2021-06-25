@@ -53,22 +53,18 @@ jiant.module("jiant-dev", function() {
     }
   }
 
-  function visualize(appId) {
-    jiant.loadModule(appId, "jiant-load", function() {
-      jiant.loadLibs(["https://rawgit.com/vecnas/jiant/master/arbor.js"], function() {
-        jiant.loadLibs(["https://rawgit.com/vecnas/jiant/master/arbor-tween.js"], function() {
-          jiant.loadLibs(["https://rawgit.com/vecnas/jiant/master/graph.js"], function() {
-            appId || $.each(jiant.getApps(), function(key, val) {
-              appId = key;
-              return false;
-            });
-            jiant.onApp(appId, ["jiantVisualizer"], function($, app) {
-              app.logic.jiantVisualizer.visualize($, app);
-            });
-          }, true)
-        })
-      })
-    })
+  function visualize(app) {
+    const path = "//cdn.jsdelivr.net/gh/vecnas/jiant@4.03/";
+    jiant.module("jiant-visualize", {js: [
+        path + "arbor.js",
+        path + "arbor-tween.js",
+        path + "graph.js",
+      ]});
+    jiant.loadModule(app, "jiant-visualize", function() {
+      jiant.onApp(app, ["jiantVisualizer"], function($, app) {
+        app.logic.jiantVisualizer.visualize($, app);
+      });
+    });
   }
 
   jiant.visualize = visualize;

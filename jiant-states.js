@@ -4,7 +4,6 @@ jiant.module("jiant-states", function() {
 
   //todo: inner module with helper fns, via jiant. search
   //todo: replace map by app id by direct app due to module per app
-  //todo: hashlistener autoload if missing
   //todo: final review/cleanup
   //todo: jiant.forget cleanup or move
 
