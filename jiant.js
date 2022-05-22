@@ -149,12 +149,14 @@
         args.push(appRoot.modules[name]);
       });
       if (!module.singleton) {
+        console.info("Executing module " + mname);
         appRoot.modules[mname] = module.apply({singleton: function() {
             module.singleton = true;
           }}, args);
         if (module.singleton) {
           singletones[mname] = appRoot.modules[mname];
         }
+        console.info("        executed " + mname);
       } else {
         appRoot.modules[mname] = singletones[mname];
       }
@@ -526,7 +528,7 @@
     if (!String.prototype.startsWith || !String.prototype.endsWith) {
       appLoader.modules.push("jiant-poly");
     }
-    ["intl", "views", "templates", "ajax", "events", "semaphores", "states", "models", "logic", "xl"].forEach(function(moduleName) {
+    ["intl", "views", "templates", "ajax", "events", "semaphores", "states", "models", "logic", "xl", "xl2"].forEach(function(moduleName) {
       if (moduleName in tree || (moduleName === "intl" && "logic" in tree && moduleName in tree.logic)) {
         appLoader.modules.push("jiant-" + moduleName);
       }

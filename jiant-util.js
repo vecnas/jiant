@@ -190,6 +190,17 @@ jiant.module("jiant-util", ["jiant-log"], function() {
     }
   }
 
+  function toArray(arr) {
+    return $.isArray(arr) ? arr : [arr];
+  }
+
+  function fluent(name) {
+    return function(val) {
+      arguments.length !== 0 && (this.data[name] = val);
+      return arguments.length !== 0 ?  this : this.data[name]
+    }
+  }
+
   const exp = {
     parseTemplate: function(text, data) {return $(parseTemplate(text, data));},
     parseTemplate2Text: parseTemplate2Text,
@@ -209,7 +220,9 @@ jiant.module("jiant-util", ["jiant-log"], function() {
     asObjArray: asObjArray,
     check: check,
     lfill: lfill,
+    fluent: fluent,
     isEmptyFunction: isEmptyFunction,
+    toArray: toArray,
     isWebComponentName: isWebComponentName
   };
 

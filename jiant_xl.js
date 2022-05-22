@@ -67,6 +67,7 @@
  xl.0.60.1: .sortFn(fn) added to bindList ret val
  xl.0.61: proper sorting in bindList
  xl.0.62: viewByAjaxOnState(view, ajax, state) added
+ xl.0.63: now jiant module: jiant-xl
  */
 
 (function() {
@@ -76,7 +77,7 @@
   var tmpJiantXl = {
 
     version: function() {
-      return 62;
+      return 63;
     },
 
     ctl2state: function(ctl, state, selectedCssClass, goProxy) {
@@ -190,14 +191,14 @@
       var m = jiant.getRepo(model),
           ret = function () {
             addHnd = m.add && m.add.on(function (arr) {
-                  $.each(arr, function (idx, obj) {
-                    renderObj(obj);
-                  });
-                });
+              $.each(arr, function (idx, obj) {
+                renderObj(obj);
+              });
+            });
             remHnd = m.remove && m.remove.on(function (obj) {
-                  obj[viewFieldSetterName] && (elemFactory ? elemFactory.remove(obj[viewFieldSetterName]()) : obj[viewFieldSetterName]().remove());
-                  sorted = $.grep(sorted, function(elem, i) {return elem != obj});
-                });
+              obj[viewFieldSetterName] && (elemFactory ? elemFactory.remove(obj[viewFieldSetterName]()) : obj[viewFieldSetterName]().remove());
+              sorted = $.grep(sorted, function(elem, i) {return elem != obj});
+            });
             $.each(jiant.getRepo(model).all(), function(i, obj) {
               renderObj(obj);
             });
@@ -495,6 +496,11 @@
     removeCtl: function(ctl, model) {}
 
   };
+
+  jiant.module("jiant-xl", function() {
+    this.singleton();
+    return tmpJiantXl;
+  });
 
   if ( typeof define === "function" && define.amd ) {
     define(["jquery", "jiant"], function ($, jiant) {
