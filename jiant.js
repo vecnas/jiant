@@ -4,6 +4,7 @@
   4.02 app.cacheInStorage enables modules cache in local storage
   4.03 jiant cache disabling - jiant.disableCache = true, core log calls filtered by DEV_MODE again
   4.04 jiant-xl autoload with app definition
+  4.05 proper source for modules including cached
  */
 "use strict";
 (function(factory) {
@@ -300,7 +301,8 @@
 
     const moduleName = moduleSpec.name;
     if (!modules[moduleName]) {
-      jiant.DEV_MODE && console.info(appId + ". Loading module " + moduleSpec.name + ", initiated by " + (moduleSpec.j_initiatedBy ? moduleSpec.j_initiatedBy : "application "));
+      jiant.DEV_MODE && console.info(appId + ". Loading module " + moduleSpec.name + ", initiated by "
+          + (moduleSpec.j_initiatedBy ? moduleSpec.j_initiatedBy : "application "));
       // } else {
       //   console.info(appId + ". Using module " + moduleSpec.name + ", requested by " + (moduleSpec.j_initiatedBy ? moduleSpec.j_initiatedBy : "application"));
     }
@@ -313,7 +315,7 @@
       if (!modules[moduleName]) {
         if (isCacheInStorage(appRoot) && isPresentInCache(appRoot, moduleName)) {
           jiant.DEV_MODE && console.info("           using module cache: " + cacheKey(appRoot, moduleName));
-          const moduleContent = localStorage.getItem(cacheKey(appRoot, moduleName));
+          let moduleContent = localStorage.getItem(cacheKey(appRoot, moduleName));
           $.globalEval(moduleContent);
           preprocessLoadedModule(moduleSpec, modules[moduleName]);
           cbIf0();
@@ -333,6 +335,7 @@
             crossDomain: true,
             dataType: "text"
           }).done(function(data) {
+            data += "\r\n//# sourceURL= " + url;
             $.globalEval(data);
             if (isCacheInStorage(appRoot)) {
               localStorage.setItem(cacheKey(appRoot, moduleName), data);
@@ -774,7 +777,7 @@
   }
 
   function version() {
-    return 404;
+    return 405;
   }
 
   function Jiant() {}
