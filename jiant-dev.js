@@ -54,7 +54,7 @@ jiant.module("jiant-dev", function() {
   }
 
   function visualize(app) {
-    const path = "//cdn.jsdelivr.net/gh/vecnas/jiant@4.03/";
+    const path = "//cdn.jsdelivr.net/gh/vecnas/jiant@4.04/";
     jiant.module("jiant-visualize", {js: [
         path + "arbor.js",
         path + "arbor-tween.js",

@@ -3,25 +3,24 @@ jiant.module("jiant-events", function() {
   this.singleton();
 
   function _bindEvents(appRoot, events) {
-    $.each(events, function(name, spec) {
-      bindEvent(spec);
-    });
+    for (const name in events) {
+      bindEvent(events[name]);
+    }
   }
 
   function bindEvent(spec) {
-    const bus = $({});
+    const bus = new EventTarget(), evtName = "e.event";
     spec.listenersCount = 0;
     spec.fire = function() {
-      bus.trigger("e.event", arguments);
+      bus.dispatchEvent(new CustomEvent(evtName, {"detail": arguments}));
     };
     spec.on = function (cb) {
       spec.listenersCount++;
-      const handler = function () {
-        const args = [...arguments];
-        args.splice(0, 1);
+      const handler = function (evt) {
+        const args = [...evt.detail];
         cb && cb.apply(cb, args);
       };
-      bus.on("e.event", handler);
+      bus.addEventListener(evtName, handler);
       return handler;
     };
     spec.once = function (cb) {
@@ -31,12 +30,8 @@ jiant.module("jiant-events", function() {
       });
     };
     spec.off = function (handler) {
-      if (jiant.DEV_MODE && (arguments.length === 0 || !handler)) {
-        jiant.logInfo("Event.off called without handler, unsubscribing all event handlers, check code if it is unintentionally",
-            jiant.getStackTrace());
-      }
       spec.listenersCount--;
-      return bus.off("e.event", handler);
+      return bus.removeEventListener(evtName, handler);
     };
     return spec;
   }

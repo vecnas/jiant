@@ -2,11 +2,11 @@ jiant.module("jiant-comp", ["jiant-ui"], function($, app, jiant, params, Ui) {
 
   this.singleton();
 
-  function getCompRenderer(appRoot, tmId, componentId, componentContentOrArr) {
+  function getCompRenderer(appRoot, tmId, componentId, compSpec) {
     return function(obj, elem, val, isUpdate, viewOrTemplate, settings) {
       let mapping = settings.mapping || {},
           actualObj = componentId in mapping ? obj[mapping[componentId]] : componentId in obj ? obj[componentId] : obj,
-          el, singleMode = !Ui.isFlagPresent(componentContentOrArr, jiant.optional);
+          el, singleMode = !Ui.isOptional(compSpec);
       if (obj === actualObj && !singleMode) {
         return;
       }
@@ -14,6 +14,7 @@ jiant.module("jiant-comp", ["jiant-ui"], function($, app, jiant, params, Ui) {
         actualObj = actualObj.apply(obj);
       }
       const dataArr = Array.isArray(actualObj) ? actualObj : [actualObj];
+      jiant.logInfo(compSpec, Ui.isOptional(compSpec));
       if (! singleMode) {
         elem.empty();
       }
@@ -21,7 +22,7 @@ jiant.module("jiant-comp", ["jiant-ui"], function($, app, jiant, params, Ui) {
       compCbSet && compCbSet.start && typeof compCbSet.start === "function" && compCbSet.start.apply();
       dataArr.forEach(function(actualObj, i) {
         if (actualObj) {
-          const param = jiant.getAt(componentContentOrArr, 2);
+          const param = compSpec.params;
           if (param) {
             actualObj = $.extend({}, actualObj, param);
           }

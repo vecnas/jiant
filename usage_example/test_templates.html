@@ -33,6 +33,8 @@
 
 <script>
     var app = {
+        id: "testTemplates",
+        appPrefix: "_",
         templates: {
             tmTest: {
                 inp: jiant.inputInt,
@@ -49,14 +51,25 @@
         }
     };
     $(function() {
-        jiant.bindUi("_", app, true);
-        app.views.main.ctl.click(function() {
-            var tm = app.templates.tmTest.parseTemplate({v1: "with spaces here", v2: "and value with spaces"});
-            app.views.main.container.append(tm);
-            tm.ctl.click(function() {
-                alert(1);
+        jiant.DEV_MODE = true;
+        jiant.app(app);
+        jiant.onApp(app, function() {
+            app.views.main.ctl.click(function() {
+                var tm = app.templates.tmTest.parseTemplate({v1: "with spaces here", v2: "and value with spaces"});
+                app.views.main.container.append(tm);
+                tm.ctl.click(function() {
+                    alert(1);
+                });
+                app.views.main.propagate({field1: "ASTA!", field2: "LA VISTA!", ctl: "MAMBA"});
             });
-            app.views.main.propagate({field1: "ASTA!", field2: "LA VISTA!", ctl: "MAMBA"});
+        });
+        jiant.onApp(app, function() {
+            var tSpec = {
+                impl: "<b><button class='btn'>my button</button></b>"
+            };
+            var myT = jiant.bindTemplate(app, "myT", tSpec);
+            jiant.logInfo(myT);
+            $("body").append(myT.parseTemplate());
         });
     });
 </script>

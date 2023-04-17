@@ -83,8 +83,8 @@ jiant.module("jiant-ui", ["jiant-fields"],function($, app, jiant, params, Fields
     });
   }
 
-  function getComponentType(tpOrArr) {
-    return jiant.getAt(tpOrArr, 0);
+  function getComponentType(spec) {
+    return (spec.tp) ? spec.tp : spec;
   }
 
   function updateViewElement(obj, elem, val, isUpdate, viewOrTemplate) {
@@ -298,18 +298,8 @@ jiant.module("jiant-ui", ["jiant-fields"],function($, app, jiant, params, Fields
     }
   }
 
-  function isFlagPresent(tpOrArr, flag) {
-    if (! Array.isArray(tpOrArr)) {
-      return false;
-    }
-    let b = false;
-    tpOrArr.some(function(item) {
-      if (item === flag) {
-        b = true;
-        return true;
-      }
-    });
-    return b;
+  function isOptional(spec) {
+    return !! spec.optional;
   }
 
   function registerCustomRenderer(customRendererName, handler) {
@@ -328,7 +318,7 @@ jiant.module("jiant-ui", ["jiant-fields"],function($, app, jiant, params, Fields
   return {
     makePropagationFunction: makePropagationFunction,
     isServiceName: isServiceName,
-    isFlagPresent: isFlagPresent,
+    isOptional: isOptional,
     scanForSpec: scanForSpec,
     getComponentType: getComponentType
   }

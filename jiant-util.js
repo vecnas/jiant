@@ -11,7 +11,15 @@ jiant.module("jiant-util", ["jiant-log"], function() {
   }
 
   function isWebComponentName(name) {
-    return name.includes("-")
+    return name.includes("-");
+  }
+
+  function toWebComponentName(name, suffix) {
+    if (isWebComponentName(name)) {
+      return name;
+    }
+    const kebabName = toKebabCase(name);
+    return kebabName !== name ? kebabName : (kebabName + "-" + suffix);
   }
 
   function copy2cb(txt) {
@@ -201,6 +209,11 @@ jiant.module("jiant-util", ["jiant-log"], function() {
     }
   }
 
+  const toKebabCase = s => s
+      .replace(/([a-z])([A-Z])/g, "$1-$2")
+      .replace(/[\s_]+/g, '-')
+      .toLowerCase();
+
   const exp = {
     parseTemplate: function(text, data) {return $(parseTemplate(text, data));},
     parseTemplate2Text: parseTemplate2Text,
@@ -223,7 +236,9 @@ jiant.module("jiant-util", ["jiant-log"], function() {
     fluent: fluent,
     isEmptyFunction: isEmptyFunction,
     toArray: toArray,
-    isWebComponentName: isWebComponentName
+    isWebComponentName: isWebComponentName,
+    toWebComponentName: toWebComponentName,
+    toKebabCase: toKebabCase
   };
 
   for (let key in exp) {

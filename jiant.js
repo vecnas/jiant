@@ -4,6 +4,8 @@
   4.02 app.cacheInStorage enables modules cache in local storage
   4.03 jiant cache disabling - jiant.disableCache = true, core log calls filtered by DEV_MODE again
   4.04 jiant-xl autoload with app definition
+  4.05 proper source for modules including cached
+  4.06 jiant-events refactored to pure js, no batch off more, internal extra info storage for fields changed to object
  */
 "use strict";
 (function(factory) {
@@ -28,23 +30,6 @@
       boundApps = {},
       bindingCurrently = {},
       pre = {};
-
-  function getAt(tpOrArr, pos) {
-    if (! Array.isArray(tpOrArr)) {
-      return pos === 0 ? tpOrArr : null;
-    }
-    let ret;
-    tpOrArr.some(function(item, i) {
-      if (item === jiant.optional) {
-        pos++;
-      }
-      if (i === pos) {
-        ret = item;
-        return true;
-      }
-    });
-    return ret;
-  }
 
   function setupLookup(viewRoot, componentId, viewElem, prefix) {
     viewRoot[componentId] = function() {return viewElem.find("." + prefix + componentId);};
@@ -86,7 +71,7 @@
       jiant.logError("Unrecognized modules type", root);
     }
     if (modules2load.length) {
-      modules2load.forEach(function(m) {
+      modules2load.forEach((m) => {
         m.replace = replace;
         m.injectTo = injectTo;
       });
@@ -300,7 +285,8 @@
 
     const moduleName = moduleSpec.name;
     if (!modules[moduleName]) {
-      jiant.DEV_MODE && console.info(appId + ". Loading module " + moduleSpec.name + ", initiated by " + (moduleSpec.j_initiatedBy ? moduleSpec.j_initiatedBy : "application "));
+      jiant.DEV_MODE && console.info(appId + ". Loading module " + moduleSpec.name + ", initiated by "
+          + (moduleSpec.j_initiatedBy ? moduleSpec.j_initiatedBy : "application "));
       // } else {
       //   console.info(appId + ". Using module " + moduleSpec.name + ", requested by " + (moduleSpec.j_initiatedBy ? moduleSpec.j_initiatedBy : "application"));
     }
@@ -313,7 +299,7 @@
       if (!modules[moduleName]) {
         if (isCacheInStorage(appRoot) && isPresentInCache(appRoot, moduleName)) {
           jiant.DEV_MODE && console.info("           using module cache: " + cacheKey(appRoot, moduleName));
-          const moduleContent = localStorage.getItem(cacheKey(appRoot, moduleName));
+          let moduleContent = localStorage.getItem(cacheKey(appRoot, moduleName));
           $.globalEval(moduleContent);
           preprocessLoadedModule(moduleSpec, modules[moduleName]);
           cbIf0();
@@ -333,6 +319,7 @@
             crossDomain: true,
             dataType: "text"
           }).done(function(data) {
+            data += "\r\n//# sourceURL= " + url;
             $.globalEval(data);
             if (isCacheInStorage(appRoot)) {
               localStorage.setItem(cacheKey(appRoot, moduleName), data);
@@ -360,7 +347,7 @@
     moduleLoads.push({
       appRoot: appRoot, modules2load: modules2load, initial: initial, cb: cb, loading: loading
     });
-    modules2load.forEach(function(moduleSpec) {
+    modules2load.forEach((moduleSpec) => {
       _loadModule(appRoot, appId, modules2load, initial, cb, moduleSpec, loading);
     });
     cbIf0();
@@ -519,7 +506,11 @@
   }
 
   function _bindUi(root, tree) {
-    const appLoader = {id: root.id + "_JLoader", modules: ["jiant-log", "jiant-util"], modulesPrefix: jiantPath, cacheInStorage: jiant.version()};
+    const appLoader = {
+      id: root.id + "_JLoader",
+      modules: ["jiant-log", "jiant-util"],
+      modulesPrefix: jiantPath,
+      cacheInStorage: jiant.version()};
     //todo: xl to module
     //todo: logic extraction
     //todo: final cleanup/review
@@ -528,7 +519,7 @@
     if (!String.prototype.startsWith || !String.prototype.endsWith) {
       appLoader.modules.push("jiant-poly");
     }
-    ["intl", "views", "templates", "ajax", "events", "semaphores", "states", "models", "logic", "xl", "xl2"].forEach(function(moduleName) {
+    ["intl", "views", "templates", "components", "ajax", "events", "semaphores", "states", "models", "logic", "xl", "xl2"].forEach(moduleName => {
       if (moduleName in tree || (moduleName === "intl" && "logic" in tree && moduleName in tree.logic)) {
         appLoader.modules.push("jiant-" + moduleName);
       }
@@ -553,6 +544,7 @@
     maybeShort(tree, "intl", "i");
     maybeShort(tree, "views", "v");
     maybeShort(tree, "templates", "t");
+    maybeShort(tree, "components", "c");
     maybeShort(tree, "ajax", "a");
     maybeShort(tree, "events", "e");
     maybeShort(tree, "semaphores", "sem");
@@ -744,37 +736,52 @@
     return appId + "jiant_uiBound_" + appId;
   }
 
+  function isObject(val) {
+    return (typeof val === "object")
+  }
+
   function optional(tp) {
-    return Array.isArray(tp) ? [optional, ...tp] : [optional, tp];
+    // return Array.isArray(tp) ? [optional, ...tp] : [optional, tp];
+    return isObject(tp) ? {...tp, optional: true} : {tp: tp, optional: true}
   }
 
   function fn(f) {
-    return [fn, f];
+    // return [fn, f];
+    return {tp: fn, func: f}
   }
 
   function comp(tp, params) {
-    return [comp, tp, params];
+    // return [comp, tp, params];
+    return  {tp: comp, compName: tp, params: params}
+  }
+
+  function isVisualType(tp) {
+    return [jiant.label, jiant.ctl, jiant.container, jiant.pager, jiant.image, jiant.input, jiant.nlabel, jiant.numLabel].includes(tp);
   }
 
   function data(field, dataName) {
-    return arguments.length === 0 ? data : [data, field, dataName];
+    // return arguments.length === 0 ? data : [data, field, dataName];
+    return arguments.length === 0 ? data : {tp: data, field: field, dataName: dataName}
   }
 
   function cssMarker(field, className) {
-    return arguments.length === 0 ? cssMarker : [cssMarker, field, className];
+    // return arguments.length === 0 ? cssMarker : [cssMarker, field, className];
+    return arguments.length === 0 ? cssMarker : {tp: cssMarker, field: field, className: className}
   }
 
   function cssFlag(field, className) {
-    return arguments.length === 0 ? cssFlag : [cssFlag, field, className];
+    // return arguments.length === 0 ? cssFlag : [cssFlag, field, className];
+    return arguments.length === 0 ? cssFlag : {tp: cssFlag, field: field, className: className}
   }
 
   function meta() {
     const arr = [meta, ...arguments];
-    return arguments.length === 0 ? meta : arr;
+    // return arguments.length === 0 ? meta : arr;
+    return arguments.length === 0 ? meta : {tp: meta, params: [...arguments]}
   }
 
   function version() {
-    return 404;
+    return 406;
   }
 
   function Jiant() {}
@@ -800,22 +807,22 @@
     preUiBound: preApp,
     preApp: preApp,
     bindTree: bindTree,
+    getAppPrefix: (appRoot, content) => ("appPrefix" in content) ? content.appPrefix : ("appPrefix" in appRoot) ? appRoot.appPrefix : "",
 
     version: version,
     nvl: nvl,
 
     getApps: function() {return boundApps},
-    getAt: getAt,
 
     optional: optional,
-
     comp: comp,
-
     meta: meta,
     cssFlag: cssFlag,
     cssMarker: cssMarker,
     fn: fn,
     data: data,
+    isVisualType: isVisualType,
+    isObject: isObject,
     lookup: function (selector) {},
     transientFn: function(val) {},
 

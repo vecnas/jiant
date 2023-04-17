@@ -17,7 +17,7 @@
 
     module("states");
 
-    test("multiapp states test", function() {
+    asyncTest("multiapp states test", function() {
 //      expect(14);
       var tstApp = {
         id: "jiantTestStates",
@@ -77,9 +77,9 @@
         }
       };
       expect(2);
-      jiant.bindUi(tstApp, true);
-      jiant.bindUi(tstApp2, true);
-      jiant.onUiBound(tstApp, function($, app) {
+      jiant.app(tstApp);
+      jiant.app(tstApp2);
+      jiant.onApp(tstApp, function($, app) {
         ok(1, "bound 1");
         $.each(app.states, function(stateId, state) {
           state.start(function(p) {
@@ -90,7 +90,7 @@
           });
         });
       });
-      jiant.onUiBound(tstApp2, function($, app) {
+      jiant.onApp(tstApp2, function($, app) {
         ok(1, "bound 2");
         $.each(app.states, function(stateId, state) {
           state.start(function(p) {
@@ -101,9 +101,9 @@
           });
         });
       });
-      jiant.logInfo("   ---  Go nonRoot1");
+      console.log("   ---  Go nonRoot1");
       tstApp.states.nonRoot1.go();
-      jiant.logInfo("   ---  Go params2");
+      console.log("   ---  Go params2");
       tstApp2.states.params2.go("some param=|");
     });
 

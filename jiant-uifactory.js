@@ -34,26 +34,21 @@ jiant.module("jiant-uifactory", function() {
     }
   }
 
-  function ensureExists(appPrefix, dirtyList, obj, idName, className, optional) {
-    if (idName && dirtyList && (dirtyList.indexOf(idName) >= 0
-        || (appPrefix && dirtyList.indexOf(idName.substring(appPrefix.length)) >= 0))) {
+  function ensureExists(obj, idName, className, optional) {
+    if (obj && obj.length) {
       return "";
     }
-    if (!obj || !obj.length) {
-      if (optional) {
-        jiant.DEV_MODE && jiant.infop("optional element .!! not present under #!!, skipping, all is ok", className, idName);
-        return "";
-      } else {
-        className ? jiant.errorp("non existing object referred by class under object id #!!, check stack trace for details, expected obj class: .!!", idName, className)
-            : jiant.errorp("non existing object referred by id, check stack trace for details, expected obj id: #!!", idName);
-        if (className) {
-          return ",    #" + idName + " ." + className;
-        } else {
-          return ", #" + idName;
-        }
-      }
+    if (optional) {
+      jiant.DEV_MODE && jiant.infop("optional element .!! not present under #!!, skipping, all is ok", className, idName);
+      return "";
     }
-    return "";
+    className ? jiant.errorp("non existing object referred by class under object id #!!, check stack trace for details, expected obj class: .!!", idName, className)
+        : jiant.errorp("non existing object referred by id, check stack trace for details, expected obj id: #!!", idName);
+    if (className) {
+      return ",    #" + idName + " ." + className;
+    } else {
+      return ", #" + idName;
+    }
   }
 
   return {

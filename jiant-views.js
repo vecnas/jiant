@@ -9,9 +9,9 @@ jiant.module("jiant-views", ["jiant-uifactory", "jiant-ui", "jiant-comp", "jiant
     const typeSpec = {};
     viewRoot._j = {};
     viewRoot._jiantSpec = typeSpec;
-    $.each(viewRoot, function (componentId, elemTypeOrArr) {
-      const componentTp = Ui.getComponentType(elemTypeOrArr);
-      typeSpec[componentId] = elemTypeOrArr;
+    $.each(viewRoot, function (componentId, elemSpec) {
+      const componentTp = Ui.getComponentType(elemSpec);
+      typeSpec[componentId] = elemSpec;
       if (componentId in {appPrefix: 1, impl: 1, compCbSet: 1, _jiantSpec: 1, _scan: 1, jInit: 1, _j: 1, customRenderer: 1}) {
         //skip
       } else if (componentTp === jiant.lookup) {
@@ -20,24 +20,24 @@ jiant.module("jiant-views", ["jiant-uifactory", "jiant-ui", "jiant-comp", "jiant
       } else if (componentTp === jiant.meta) {
         //skipping, app meta info
       } else if (componentTp === jiant.data) {
-        Fields.setupDataFunction(viewRoot, viewRoot, componentId, jiant.getAt(elemTypeOrArr, 1), jiant.getAt(elemTypeOrArr, 2));
+        Fields.setupDataFunction(viewRoot, viewRoot, componentId, elemSpec.field, elemSpec.dataName);
         viewRoot[componentId].customRenderer = function(obj, elem, val, isUpdate, viewOrTemplate) {viewRoot[componentId](val)}
       } else if (componentTp === jiant.cssMarker || componentTp === jiant.cssFlag) {
-        Fields.setupCssFlagsMarkers(viewRoot, componentId, componentTp, jiant.getAt(elemTypeOrArr, 1), jiant.getAt(elemTypeOrArr, 2));
+        Fields.setupCssFlagsMarkers(viewRoot, componentId, componentTp, elemSpec.field, elemSpec.className);
       } else if (componentTp === jiant.fn) {
-        viewRoot[componentId] = elemTypeOrArr[1];
+        viewRoot[componentId] = elemSpec[1];
       } else {
         const uiElem = uiFactory.viewComponent(viewElem, viewId, prefix, componentId, componentTp, appRoot.bindByTag);
-        errString += UiFactory.ensureExists(prefix, appRoot.dirtyList, uiElem, prefix + viewId, prefix + componentId,
-            Ui.isFlagPresent(elemTypeOrArr, jiant.optional));
+        errString += UiFactory.ensureExists(uiElem, prefix + viewId, prefix + componentId,
+            Ui.isOptional(elemSpec));
         viewRoot[componentId] = uiElem;
         // jiant.infop("!!.!! : !!", viewId, componentId, componentTp);
         Fields.setupExtras(appRoot, uiElem, componentTp, viewId, componentId, viewRoot, prefix);
         if (componentTp === jiant.comp) {
-          const tmName = jiant.getAt(elemTypeOrArr, 1);
-          viewRoot[componentId].customRenderer = Comp.getCompRenderer(appRoot, tmName, componentId, elemTypeOrArr);
+          const tmName = elemSpec.compName;
+          viewRoot[componentId].customRenderer = Comp.getCompRenderer(appRoot, tmName, componentId, elemSpec);
           // no need for such init for templates because template always propagated on creation
-          if (!Ui.isFlagPresent(elemTypeOrArr, jiant.optional)) {
+          if (!Ui.isOptional(elemSpec)) {
             jiant.onApp(appRoot, function() {
               viewRoot[componentId].customRenderer({}, viewRoot[componentId], undefined, false, viewRoot, {});
             });
@@ -71,8 +71,8 @@ jiant.module("jiant-views", ["jiant-uifactory", "jiant-ui", "jiant-comp", "jiant
     jiant.DEV_MODE && errString.length > 0 && alert("Some views not bound to HTML properly, check console " + errString);
   }
 
-  function bindView(appRoot, viewId, viewContent, viewImpl, errArr = [""]) {
-    const prefix = ("appPrefix" in viewContent) ? viewContent.appPrefix : appRoot.appPrefix;
+  function bindView(appRoot, viewId, viewContent, viewImpl, errArr) {
+    const prefix = jiant.getAppPrefix(appRoot, viewContent);
     viewImpl = viewImpl || UiFactory.view(prefix, viewId, viewContent, appRoot.bindByTag);
     if ("_scan" in viewContent) {
       Ui.scanForSpec(prefix, viewContent, view);
@@ -89,7 +89,7 @@ jiant.module("jiant-views", ["jiant-uifactory", "jiant-ui", "jiant-comp", "jiant
         viewContent[key] = val;
       })
     }
-    const result = UiFactory.ensureExists(prefix, appRoot.dirtyList, viewImpl, prefix + viewId);
+    const result = UiFactory.ensureExists(viewImpl, prefix + viewId);
     if (result.length === 0) {
       _bindContent(appRoot, viewContent, viewId, viewImpl, prefix);
     } else {

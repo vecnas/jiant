@@ -183,10 +183,11 @@ jiant.module("jiant-xl2", ["jiant-util"], function($, app, jiant, params, util) 
     BindList.prototype.elemFactory = fluent("elemFactory");
     BindList.prototype.mapping = fluent("mapping");
     BindList.prototype.off = function () {
+        const m = this.data.model;
         const viewFieldSetterName = this.data.viewFieldSetterName;
         this._addHnd && m.add.off(this._addHnd);
         this._remHnd && m.remove.off(this._remHnd);
-        $.each(this.data.model.jRepo.all(), function (i, obj) {
+        $.each(m.jRepo.all(), function (i, obj) {
             $.isFunction(obj[viewFieldSetterName]) && obj[viewFieldSetterName]()
             && $.isFunction(obj[viewFieldSetterName]().off) && obj[viewFieldSetterName]().off();
         });
@@ -459,12 +460,12 @@ jiant.module("jiant-xl2", ["jiant-util"], function($, app, jiant, params, util) 
     PseudoSelect.prototype.arrVals = fluent("arrVals");
     PseudoSelect.prototype.cb = fluent("cb");
     PseudoSelect.prototype.selectedIdx = fluent("selectedIdx");
-    PseudoSelect.prototype.selectClass = fluent("selectClass");
+    PseudoSelect.prototype.selectedClass = fluent("selectedClass");
     PseudoSelect.prototype.apply = function() {
-        const {arrElems, arrVals, selectedIdx, selectClass} = this.data;
+        const {arrElems, arrVals, selectedIdx, selectedClass} = this.data;
         let cb = this.data.cb;
         function Impl() {
-            let selectedElem, selectedVal, selectClass, defaultCb = cb;
+            let selectedElem, selectedVal, selectedClass, defaultCb = cb;
             return {
                 add: function(elem, val, cb, selected) {
                     elem = $(elem);
@@ -472,9 +473,9 @@ jiant.module("jiant-xl2", ["jiant-util"], function($, app, jiant, params, util) 
                     elem.click(function() {
                         const prevElem = selectedElem, prevVal = selectedVal;
                         selectedVal = val;
-                        if (selectClass) {
-                            selectedElem && selectedElem.removeClass(selectClass);
-                            elem.addClass(selectClass);
+                        if (selectedClass) {
+                            selectedElem && selectedElem.removeClass(selectedClass);
+                            elem.addClass(selectedClass);
                         }
                         selectedElem = elem;
                         cb && cb(selectedElem, selectedVal, prevElem, prevVal);
@@ -487,8 +488,8 @@ jiant.module("jiant-xl2", ["jiant-util"], function($, app, jiant, params, util) 
                     }
                     return selectedVal;
                 },
-                setSelectClass: function(cls) {
-                    selectClass = cls;
+                setSelectedClass: function(cls) {
+                    selectedClass = cls;
                 }
             };
         }
@@ -499,7 +500,7 @@ jiant.module("jiant-xl2", ["jiant-util"], function($, app, jiant, params, util) 
             };
         }
         const impl = new Impl();
-        impl.setSelectClass(selectClass);
+        impl.setSelectedClass(selectedClass);
         arrElems && $.each(arrElems, function(idx, elem) {
             impl.add($(elem), arrVals && arrVals.length > idx ? arrVals[idx] : null, cb, selectedIdx === idx);
         });
