@@ -1,5 +1,5 @@
 jiant.module("jiant-views", ["jiant-uifactory", "jiant-ui", "jiant-comp", "jiant-fields"],
-    function($, app, jiant, params, UiFactory, Ui, Comp, Fields) {
+    function({$, app, jiant, params, "jiant-uifactory": UiFactory, "jiant-ui": Ui, "jiant-comp": Comp, "jiant-fields": Fields}) {
 
   this.singleton();
 
@@ -12,7 +12,7 @@ jiant.module("jiant-views", ["jiant-uifactory", "jiant-ui", "jiant-comp", "jiant
     $.each(viewRoot, function (componentId, elemSpec) {
       const componentTp = Ui.getComponentType(elemSpec);
       typeSpec[componentId] = elemSpec;
-      if (componentId in {appPrefix: 1, impl: 1, compCbSet: 1, _jiantSpec: 1, _scan: 1, jInit: 1, _j: 1, customRenderer: 1}) {
+      if (componentId in {appPrefix: 1, impl: 1, compCbSet: 1, _jiantSpec: 1, _scan: 1, jInit: 1, _j: 1, renderer: 1}) {
         //skip
       } else if (componentTp === jiant.lookup) {
         jiant.logInfo("    loookup element, no checks/bindings: " + componentId);
@@ -21,7 +21,7 @@ jiant.module("jiant-views", ["jiant-uifactory", "jiant-ui", "jiant-comp", "jiant
         //skipping, app meta info
       } else if (componentTp === jiant.data) {
         Fields.setupDataFunction(viewRoot, viewRoot, componentId, elemSpec.field, elemSpec.dataName);
-        viewRoot[componentId].customRenderer = function(obj, elem, val, isUpdate, viewOrTemplate) {viewRoot[componentId](val)}
+        viewRoot[componentId].renderer = ({obj, val, view, elem, isUpdate}) => {viewRoot[componentId](val)}
       } else if (componentTp === jiant.cssMarker || componentTp === jiant.cssFlag) {
         Fields.setupCssFlagsMarkers(viewRoot, componentId, componentTp, elemSpec.field, elemSpec.className);
       } else if (componentTp === jiant.fn) {
@@ -35,11 +35,11 @@ jiant.module("jiant-views", ["jiant-uifactory", "jiant-ui", "jiant-comp", "jiant
         Fields.setupExtras(appRoot, uiElem, componentTp, viewId, componentId, viewRoot, prefix);
         if (componentTp === jiant.comp) {
           const tmName = elemSpec.compName;
-          viewRoot[componentId].customRenderer = Comp.getCompRenderer(appRoot, tmName, componentId, elemSpec);
+          viewRoot[componentId].renderer = Comp.getCompRenderer(appRoot, tmName, componentId, elemSpec);
           // no need for such init for templates because template always propagated on creation
           if (!Ui.isOptional(elemSpec)) {
             jiant.onApp(appRoot, function() {
-              viewRoot[componentId].customRenderer({}, viewRoot[componentId], undefined, false, viewRoot, {});
+              viewRoot[componentId].renderer({data: {}, elem: viewRoot[componentId], isUpdate: false, view: viewRoot, settings: {}});
             });
           }
           if (! (tmName in appRoot.templates)) {

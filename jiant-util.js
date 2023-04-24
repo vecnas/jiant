@@ -1,4 +1,4 @@
-jiant.module("jiant-util", ["jiant-log"], function() {
+jiant.module("jiant-util", ["jiant-log"], function({jiant}) {
 
   this.singleton();
 

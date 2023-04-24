@@ -1,4 +1,4 @@
-jiant.module("jiant-uifactory", function() {
+jiant.module("jiant-uifactory", function({$, jiant}) {
 
   this.singleton();
 

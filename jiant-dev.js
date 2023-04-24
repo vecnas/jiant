@@ -1,4 +1,4 @@
-jiant.module("jiant-dev", function() {
+jiant.module("jiant-dev", function({jiant}) {
 
   this.singleton();
 

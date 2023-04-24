@@ -1,4 +1,4 @@
-jiant.module("jiant-states", function() {
+jiant.module("jiant-states", function({jiant}) {
 
   this.singleton();
 

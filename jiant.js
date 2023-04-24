@@ -6,6 +6,7 @@
   4.04 jiant-xl autoload with app definition
   4.05 proper source for modules including cached
   4.06 jiant-events refactored to pure js, no batch off more, internal extra info storage for fields changed to object
+  4.07 customRenderer replaced by renderer per element cb({obj, field, view, elem}), onRender added, module called with obj instead of array
  */
 "use strict";
 (function(factory) {
@@ -129,15 +130,16 @@
         mname = moduleSpec.name,
         module = modules[mname];
     if (typeof module === "function") {
-      const args = [$, appRoot, jiant, moduleSpec];
+      const args = {$, app: appRoot, jiant, params: moduleSpec};
       module.parsedDeps && module.parsedDeps.forEach(function(name) {
-        args.push(appRoot.modules[name]);
+        args[name] = appRoot.modules[name];
+        // args.push(appRoot.modules[name]);
       });
       if (!module.singleton) {
         console.info("Executing module " + mname);
         appRoot.modules[mname] = module.apply({singleton: function() {
             module.singleton = true;
-          }}, args);
+          }}, [args]);
         if (module.singleton) {
           singletones[mname] = appRoot.modules[mname];
         }
@@ -745,14 +747,35 @@
     return isObject(tp) ? {...tp, optional: true} : {tp: tp, optional: true}
   }
 
+  function wrapType(tp) {
+    return isObject(tp) ? tp : {tp: tp}
+  }
+
+  function onRender(comp, elemName, cb) {
+    if (arguments.length === 2) {
+      comp.onRender = comp.onRender || [];
+      comp.onRender.push(elemName);
+    } else if (arguments.length === 3) {
+      let spec = comp[elemName];
+      if (! isObject(spec)) {
+        spec = comp[elemName] = {tp: spec}
+      }
+      spec.onRender = spec.onRender || [];
+      spec.onRender.push(cb);
+    } else {
+      jiant.logError("Incorrect call for renderer, must be 2 (for component) or 3 (for element) arguments:" +
+          " comp reference, element name, callback {obj, field, view, elem}")
+    }
+  }
+
   function fn(f) {
     // return [fn, f];
     return {tp: fn, func: f}
   }
 
-  function comp(tp, params) {
-    // return [comp, tp, params];
-    return  {tp: comp, compName: tp, params: params}
+  function comp(compName, params) {
+    // return [comp, compName, params];
+    return  {tp: comp, compName: compName, params: params}
   }
 
   function isVisualType(tp) {
@@ -781,7 +804,7 @@
   }
 
   function version() {
-    return 406;
+    return 407;
   }
 
   function Jiant() {}
@@ -814,6 +837,8 @@
 
     getApps: function() {return boundApps},
 
+    wrapType: wrapType,
+    onRender: onRender,
     optional: optional,
     comp: comp,
     meta: meta,

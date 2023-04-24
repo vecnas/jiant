@@ -1,4 +1,4 @@
-jiant.module("jiant-fields", [], function($, app, jiant, params) {
+jiant.module("jiant-fields", [], function({$, app, jiant, params}) {
 
   this.singleton();
 
@@ -27,19 +27,19 @@ jiant.module("jiant-fields", [], function($, app, jiant, params) {
         markerName = "j_prevMarkerClass_" + componentId;
     className = className || componentId;
     linkElement(viewRoot, componentId, mappingId);
-    viewRoot[componentId] = {};
-    viewRoot[componentId].customRenderer = function(obj, elem, val, isUpdate, viewOrTemplate) {
-      if (viewOrTemplate[markerName]) {
-        $.each(viewOrTemplate[markerName], function (i, cls) {
-          cls && viewOrTemplate.removeClass(cls);
+    viewRoot[componentId] = jiant.wrapType(componentTp);
+    viewRoot[componentId].renderer = ({data, val, view, elem, isUpdate}) => {
+      if (view[markerName]) {
+        $.each(view[markerName], function (i, cls) {
+          cls && view.removeClass(cls);
         });
       }
-      viewOrTemplate[markerName] = [];
+      view[markerName] = [];
       if (flag) {
         const _v = Array.isArray(val) && val.length === 0 ? undefined : val;
         if (!!_v) {
-          viewOrTemplate[markerName].push(className);
-          viewOrTemplate.addClass(className);
+          view[markerName].push(className);
+          view.addClass(className);
         }
       } else {
         if (val !== undefined && val !== null) {
@@ -50,8 +50,8 @@ jiant.module("jiant-fields", [], function($, app, jiant, params) {
           }
           $.each(val, function (i, v) {
             const cls = className + "_" + v;
-            viewOrTemplate[markerName].push(cls);
-            viewOrTemplate.addClass(cls);
+            view[markerName].push(cls);
+            view.addClass(cls);
           })
         }
       }

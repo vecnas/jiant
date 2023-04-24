@@ -1,4 +1,4 @@
-jiant.module("jiant-ajax", function() {
+jiant.module("jiant-ajax", function({}) {
 
   this.singleton();
 

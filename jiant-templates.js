@@ -1,5 +1,5 @@
 jiant.module("jiant-templates", ["jiant-uifactory", "jiant-ui", "jiant-comp", "jiant-fields"],
-    function($, app, jiant, params, UiFactory, Ui, Comp, Fields) {
+    function({$, app, jiant, params, "jiant-uifactory": UiFactory, "jiant-ui": Ui, "jiant-comp": Comp, "jiant-fields": Fields}) {
 
       this.singleton();
 
@@ -50,17 +50,17 @@ jiant.module("jiant-templates", ["jiant-uifactory", "jiant-ui", "jiant-comp", "j
     $.each(tmContent, function (componentId, elemSpec) {
       const elemType = Ui.getComponentType(elemSpec);
       elemTypes[componentId] = elemType;
-      if (!(componentId in {appPrefix: 1, impl: 1, compCbSet: 1, _jiantSpec: 1, _jiantType: 1, _scan: 1, jInit: 1, _j: 1, customRenderer: 1})) {
+      if (!(componentId in {appPrefix: 1, impl: 1, compCbSet: 1, _jiantSpec: 1, _jiantType: 1, _scan: 1, jInit: 1, _j: 1, renderer: 1})) {
         tmContent._jiantSpec[componentId] = elemType;
         if (elemType === jiant.lookup) {
           jiant.logInfo("    loookup element, no checks/bindings: " + componentId);
         } else if (elemType === jiant.meta) {
           //skipping, app meta info
         } else if (elemType === jiant.data) {
-          tmContent[componentId] = {jiant_data: 1, jiant_data_spec: elemSpec};
-          tmContent[componentId].customRenderer = function(obj, elem, val, isUpdate, viewOrTemplate) {
-            viewOrTemplate[componentId](val);
-          };
+          tmContent[componentId] = jiant.wrapType(tmContent[componentId]);
+          tmContent[componentId].jiant_data = 1
+          tmContent[componentId].jiant_data_spec = elemSpec;
+          tmContent[componentId].renderer = ({data, val, view, elem, isUpdate}) => view[componentId](val);
         } else if (elemType === jiant.cssMarker || elemType === jiant.cssFlag) {
           Fields.setupCssFlagsMarkers(tmContent, componentId, elemType, elemSpec.field, elemSpec.className);
         } else if (elemType === jiant.fn) {
@@ -71,7 +71,7 @@ jiant.module("jiant-templates", ["jiant-uifactory", "jiant-ui", "jiant-comp", "j
           tmContent[componentId] = {};
           if (elemType === jiant.comp) {
             const tmName = elemSpec.compName;
-            tmContent[componentId].customRenderer = Comp.getCompRenderer(appRoot, tmName, componentId, elemSpec);
+            tmContent[componentId].renderer = Comp.getCompRenderer(appRoot, tmName, componentId, elemSpec);
             if (!(tmName in appRoot.templates)) {
               jiant.error("jiant.comp element refers to non-existing template name: " + tmName + ", tm.elem " + tmId + "." + componentId);
             }

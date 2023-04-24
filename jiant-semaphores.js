@@ -1,4 +1,4 @@
-jiant.module("jiant-semaphores", function() {
+jiant.module("jiant-semaphores", function({jiant}) {
 
   this.singleton();
 

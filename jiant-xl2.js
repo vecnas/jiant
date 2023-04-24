@@ -1,4 +1,4 @@
-jiant.module("jiant-xl2", ["jiant-util"], function($, app, jiant, params, util) {
+jiant.module("jiant-xl2", ["jiant-util"], function({$, app, jiant, params, "jiant-util": util}) {
 
     const fluent = util.fluent;
 
@@ -192,9 +192,8 @@ jiant.module("jiant-xl2", ["jiant-util"], function($, app, jiant, params, util) 
             && $.isFunction(obj[viewFieldSetterName]().off) && obj[viewFieldSetterName]().off();
         });
     };
-    BindList.prototype.apply = function() {
-        const {model, container, template, viewFieldSetterName, sortFn, subscribeForUpdates, reversePropagate,
-            elemFactory, mapping} = this.data;
+    BindList.prototype.apply = function({model, container, template, viewFieldSetterName, sortFn, subscribeForUpdates,
+                                            reversePropagate, elemFactory, mapping} = this.data) {
         let sorted = [];
         function renderObj(obj) {
             let tm = $.isFunction(template) ? template(obj) : template,

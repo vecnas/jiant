@@ -1,4 +1,4 @@
-jiant.module("jiant-intl", ["jiant-logic"], function($, app, jiant, params, Logic) {
+jiant.module("jiant-intl", ["jiant-logic"], function({$, app, jiant, params, "jiant-logic": Logic}) {
 
   this.singleton();
 

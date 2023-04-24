@@ -1,4 +1,4 @@
-jiant.module("jiant-logic", ["jiant-util"], function($, app, jiant, params, Util) {
+jiant.module("jiant-logic", ["jiant-util"], function({$, app, jiant, params, "jiant-util": Util}) {
 
   this.singleton();
 

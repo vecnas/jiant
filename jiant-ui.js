@@ -1,9 +1,9 @@
-jiant.module("jiant-ui", ["jiant-fields"],function($, app, jiant, params, Fields) {
+ jiant.module("jiant-ui", ["jiant-fields"],function({$, app, jiant, params, "jiant-fields": Fields}) {
 
   this.singleton();
 
-  const customElementRenderers = {};
-  const serviceNames = ["parseTemplate", "parseTemplate2Text", "propagate", "customRenderer", "jMapping", "jMapped", "_jiantSpec"];
+  const customTypes = {};
+  const serviceNames = ["parseTemplate", "parseTemplate2Text", "propagate", "renderer", "onRender", "jMapping", "jMapped", "_jiantSpec"];
 
   function scanForSpec(prefix, content, elem) {
     const children = elem[0].getElementsByTagName("*");
@@ -56,15 +56,15 @@ jiant.module("jiant-ui", ["jiant-fields"],function($, app, jiant, params, Fields
     }
   });
 
-  function updateHref(obj, elem, val, isUpdate, viewOrTemplate) {
+  function updateHref({data, elem, val, isUpdate, view}) {
     elem.attr("href", !!val ? val : "");
   }
 
-  function updateImgBg(obj, elem, val, isUpdate, viewOrTemplate) {
+  function updateImgBg({data, elem, val, isUpdate, view}) {
     elem.css("background-image", !!val ? "url(\"" + val + "\")" : "");
   }
 
-  function updateInputSet(obj, elem, val, isUpdate, viewOrTemplate) {
+  function updateInputSet({data, elem, val, isUpdate, view}) {
     if (!elem || !elem[0]) {
       return;
     }
@@ -87,7 +87,7 @@ jiant.module("jiant-ui", ["jiant-fields"],function($, app, jiant, params, Fields
     return (spec.tp) ? spec.tp : spec;
   }
 
-  function updateViewElement(obj, elem, val, isUpdate, viewOrTemplate) {
+  function updateViewElement({data, elem, val, isUpdate, view}) {
     if (!elem || !elem[0]) {
       return;
     }
@@ -112,11 +112,12 @@ jiant.module("jiant-ui", ["jiant-fields"],function($, app, jiant, params, Fields
   }
 
   function getRenderer(obj, elemType) {
-    elemType = getComponentType(elemType);
-    if (obj && obj.customRenderer && typeof obj.customRenderer === "function") {
-      return obj.customRenderer;
-    } else if (customElementRenderers[elemType]) {
-      return customElementRenderers[elemType];
+    const wrapped = jiant.wrapType(elemType);
+    elemType = getComponentType(wrapped);
+    if (obj && obj.renderer && typeof obj.renderer === "function") {
+      return obj.renderer;
+    } else if (customTypes[elemType]) {
+      return customTypes[elemType];
     } else if (elemType === jiant.inputSet) {
       return updateInputSet;
     } else if (elemType === jiant.href) {
@@ -124,11 +125,24 @@ jiant.module("jiant-ui", ["jiant-fields"],function($, app, jiant, params, Fields
     } else if (elemType === jiant.imgBg) {
       return updateImgBg;
     } else if (elemType === jiant.inputSetAsString) {
-      return function(obj, elem, val, isUpdate, viewOrTemplate) {
-        updateInputSet(obj, elem, !val ? [val] : Array.isArray(val) ? val : $.isNumeric(val) ? [val] : ("" + val).split(","), isUpdate, viewOrTemplate);
+      return ({data, elem, val, isUpdate, view}) => {
+        updateInputSet({data, elem, isUpdate, view,
+          val: !val ? [val] : Array.isArray(val) ? val : $.isNumeric(val) ? [val] : ("" + val).split(",")});
       };
     } else {
       return updateViewElement;
+    }
+  }
+
+  function callOnRender(spec, args) {
+    const arr = spec.onRender;
+    // jiant.error("???")
+    // jiant.logInfo(spec, arr, "---")
+    if (arr && Array.isArray(arr) && arr.length > 0) {
+      for (let cb of arr) {
+        // alert(cb);
+        cb(args);
+      }
     }
   }
 
@@ -149,7 +163,7 @@ jiant.module("jiant-ui", ["jiant-fields"],function($, app, jiant, params, Fields
         let actualKey = (mapping && mapping[key]) ? mapping[key] : key,
             val = typeof actualKey === "function" ? actualKey.apply(data) : data[actualKey],
             elemType = viewOrTm._jiantSpec[key];
-        if ((spec[key] && spec[key].customRenderer) || customElementRenderers[elemType] || (spec.jMapping && spec.jMapping[key])
+        if ((spec[key] && spec[key].renderer) || customTypes[elemType] || (spec.jMapping && spec.jMapping[key])
             || (data && val !== undefined && val !== null && !isServiceName(key) && !(val instanceof $))) {
           const actualVal = typeof val === "function" ? val.apply(data) : val;
           [key].concat(spec.jMapping && spec.jMapping[key]? spec.jMapping[key] : []).some(function(compKey) {
@@ -160,9 +174,12 @@ jiant.module("jiant-ui", ["jiant-fields"],function($, app, jiant, params, Fields
                 compType = viewOrTm._jiantSpec[compKey],
                 fnKey = "_j" + compKey;
             if (compKey !== "_jiantSpec") {
-              getRenderer(spec[compKey], compType)(data, compElem, actualVal, false, viewOrTm, propSettings);
+              const args =
+                  {data: data, elem: compElem, val: actualVal, isUpdate: false, view: viewOrTm, settings: propSettings};
+              getRenderer(spec[compKey], compType)(args);
+              callOnRender(spec, compKey, args);
             }
-            if (subscribe4updates && typeof data.on === "function" && (spec[compKey].customRenderer || typeof val === "function")) { // 3rd ?
+            if (subscribe4updates && typeof data.on === "function" && (spec[compKey].renderer || typeof val === "function")) { // 3rd ?
               if (fn[fnKey]) {
                 const oldData = fn[fnKey][0];
                 oldData && oldData.off(fn[fnKey][1]);
@@ -175,7 +192,10 @@ jiant.module("jiant-ui", ["jiant-fields"],function($, app, jiant, params, Fields
                 if (arguments.length === 2 && newVal === "remove") {
                   return;
                 }
-                getRenderer(spec[compKey], compType)(data, compElem, newVal, true, viewOrTm, propSettings);
+                const args =
+                    {data: data, elem: compElem, val: newVal, isUpdate: true, view: viewOrTm, settings: propSettings};
+                getRenderer(spec[compKey], compType)();
+                callOnRender(spec, compKey, args);
               });
               fn[fnKey] = [data, handler];
             }
@@ -268,8 +288,8 @@ jiant.module("jiant-ui", ["jiant-fields"],function($, app, jiant, params, Fields
           item.el[on ? "addClass" : "removeClass"](item.cls);
         });
       }
-      if (spec.customRenderer && typeof spec.customRenderer === "function") {
-        spec.customRenderer(data, viewOrTm);
+      if (spec.renderer && typeof spec.renderer === "function") {
+        spec.renderer(data, viewOrTm);
       }
       if (jiant.DEV_MODE) {
         viewOrTm._jiantPropagationInfo = {
@@ -302,25 +322,26 @@ jiant.module("jiant-ui", ["jiant-fields"],function($, app, jiant, params, Fields
     return !! spec.optional;
   }
 
-  function registerCustomRenderer(customRendererName, handler) {
-    if (! (typeof customRendererName === 'string' || customRendererName instanceof String)) {
+  function registerType(typeName, handler) {
+    if (! (typeof typeName === 'string' || typeName instanceof String)) {
       alert("Custom renderer name should be string");
     }
-    customElementRenderers[customRendererName] = handler;
+    customTypes[typeName] = handler;
   }
 
   function isServiceName(key) {
     return serviceNames.indexOf(key) >= 0;
   }
 
-  jiant.registerCustomRenderer = registerCustomRenderer;
+  jiant.registerType = registerType;
 
   return {
     makePropagationFunction: makePropagationFunction,
     isServiceName: isServiceName,
     isOptional: isOptional,
     scanForSpec: scanForSpec,
-    getComponentType: getComponentType
+    getComponentType: getComponentType,
+    callOnRender: callOnRender
   }
 
 });

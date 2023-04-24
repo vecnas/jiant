@@ -1,4 +1,4 @@
-jiant.module("jiant-events", function() {
+jiant.module("jiant-events", function({jiant}) {
 
   this.singleton();
 

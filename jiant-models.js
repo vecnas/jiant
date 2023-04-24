@@ -1,4 +1,4 @@
-jiant.module("jiant-models", ["jiant-util"], function($, app, jiant, params, Util) {
+jiant.module("jiant-models", ["jiant-util"], function({$, app, jiant, params, "jiant-util": Util}) {
 
   this.singleton();
 
@@ -708,7 +708,15 @@ jiant.module("jiant-models", ["jiant-util"], function($, app, jiant, params, Uti
     });
   }
 
+  function dump(app) {
+    for (const modelName in app.models) {
+      console.info(`%c Model: ${modelName}`, "color:blue");
+      console.info(app.models[modelName].jRepo.all().asMap());
+    }
+  }
+
   jiant.bindModel = bindModel;
+  jiant.dump = dump;
 
   jiant.isModelSupplier = isModelSupplier;
   jiant.isModelAccessor = isModelAccessor;
