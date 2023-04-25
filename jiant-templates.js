@@ -50,7 +50,7 @@ jiant.module("jiant-templates", ["jiant-uifactory", "jiant-ui", "jiant-comp", "j
     $.each(tmContent, function (componentId, elemSpec) {
       const elemType = Ui.getComponentType(elemSpec);
       elemTypes[componentId] = elemType;
-      if (!(componentId in {appPrefix: 1, impl: 1, compCbSet: 1, _jiantSpec: 1, _jiantType: 1, _scan: 1, jInit: 1, _j: 1, renderer: 1})) {
+      if (!(componentId in {appPrefix: 1, impl: 1, compCbSet: 1, _jiantSpec: 1, _jiantType: 1, _scan: 1, jInit: 1, _j: 1, renderer: 1, onRender: 1})) {
         tmContent._jiantSpec[componentId] = elemType;
         if (elemType === jiant.lookup) {
           jiant.logInfo("    loookup element, no checks/bindings: " + componentId);
@@ -114,7 +114,7 @@ jiant.module("jiant-templates", ["jiant-uifactory", "jiant-ui", "jiant-comp", "j
         } else if (elemType === jiant.fn) {
           retVal[componentId] = elemSpec[1];
         } else if (! (componentId in {parseTemplate: 1, parseTemplate2Text: 1, templateSource: 1, appPrefix: 1,
-          impl: 1, compCbSet: 1, _jiantSpec: 1, _scan: 1, _j: 1, _jiantType: 1, jInit: 1})) {
+          impl: 1, compCbSet: 1, _jiantSpec: 1, _scan: 1, _j: 1, _jiantType: 1, jInit: 1, renderer: 1, onRender: 1})) {
           retVal[componentId] = getUsingBindBy(componentId);
           if (retVal[componentId]) {
             Fields.setupExtras(appRoot, retVal[componentId], tmContent._jiantSpec[componentId], tmId, componentId, retVal, prefix);

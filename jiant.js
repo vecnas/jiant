@@ -7,6 +7,7 @@
   4.05 proper source for modules including cached
   4.06 jiant-events refactored to pure js, no batch off more, internal extra info storage for fields changed to object
   4.07 customRenderer replaced by renderer per element cb({obj, field, view, elem}), onRender added, module called with obj instead of array
+  4.08 some renderer related tunings/debugs because of testing
  */
 "use strict";
 (function(factory) {
@@ -804,7 +805,7 @@
   }
 
   function version() {
-    return 407;
+    return 408;
   }
 
   function Jiant() {}

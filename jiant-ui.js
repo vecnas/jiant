@@ -177,7 +177,7 @@
               const args =
                   {data: data, elem: compElem, val: actualVal, isUpdate: false, view: viewOrTm, settings: propSettings};
               getRenderer(spec[compKey], compType)(args);
-              callOnRender(spec, compKey, args);
+              callOnRender(spec, args);
             }
             if (subscribe4updates && typeof data.on === "function" && (spec[compKey].renderer || typeof val === "function")) { // 3rd ?
               if (fn[fnKey]) {
@@ -194,8 +194,8 @@
                 }
                 const args =
                     {data: data, elem: compElem, val: newVal, isUpdate: true, view: viewOrTm, settings: propSettings};
-                getRenderer(spec[compKey], compType)();
-                callOnRender(spec, compKey, args);
+                getRenderer(spec[compKey], compType)(args);
+                callOnRender(spec, args);
               });
               fn[fnKey] = [data, handler];
             }

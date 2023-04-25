@@ -12,7 +12,7 @@ jiant.module("jiant-views", ["jiant-uifactory", "jiant-ui", "jiant-comp", "jiant
     $.each(viewRoot, function (componentId, elemSpec) {
       const componentTp = Ui.getComponentType(elemSpec);
       typeSpec[componentId] = elemSpec;
-      if (componentId in {appPrefix: 1, impl: 1, compCbSet: 1, _jiantSpec: 1, _scan: 1, jInit: 1, _j: 1, renderer: 1}) {
+      if (componentId in {appPrefix: 1, impl: 1, compCbSet: 1, _jiantSpec: 1, _scan: 1, jInit: 1, _j: 1, renderer: 1, onRender: 1}) {
         //skip
       } else if (componentTp === jiant.lookup) {
         jiant.logInfo("    loookup element, no checks/bindings: " + componentId);
