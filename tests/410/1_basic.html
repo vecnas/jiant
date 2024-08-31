@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html>
+<meta charset="utf-8">
+<title>Jiant basic tests</title>
+<link rel="stylesheet" href="https://code.jquery.com/qunit/qunit-2.22.0.css">
+<body>
+<div id="qunit"></div>
+<div id="qunit-fixture"></div>
+<script src="https://code.jquery.com/qunit/qunit-2.22.0.js"></script>
+<script src="https://code.jquery.com/jquery-3.7.1.min.js"
+        integrity="sha256-/JqT3SQfawRcv/BIHPThkBvs0OEvtFFmqPF/lYI/Cxo="
+        crossorigin="anonymous"></script>
+<script src="../../jiant.js"></script>
+<script>
+    QUnit.module('jiant basic', function () {
+
+        QUnit.test('hello world jiant.app', function (assert) {
+            const done = assert.async(1);
+            jiant.module("basic module", () => {
+                assert.true(true, "Got here");
+                done();
+            });
+            jiant.app(() => {
+                return {id: "Hello_world", modules: ["basic module"]}
+            });
+        });
+
+        QUnit.test('app.id containing spaces', function (assert) {
+            const done = assert.async(1);
+            jiant.module("basic module2", () => {
+                assert.true(true, "Got here");
+                done();
+            });
+            jiant.app(() => {
+                return {id: "Hello world 2", modules: ["basic module2"]}
+            });
+        });
+    });
+</script>
+</body>
+</html>

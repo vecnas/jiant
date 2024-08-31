@@ -34,7 +34,7 @@
       bindingCurrently = {},
       pre = {};
 
-  let instance;
+  let jiantInstance;
 
   // loadModule before .app puts module into list of app modules, cb ignored
   // loadModule during .app executes module immediately
@@ -508,6 +508,8 @@
   }
 
   function startAppLoader(root, tree) {
+    console.info("Starting application loader (startAppLoader) for application");
+    console.info(root);
     const appLoader = {
       id: root.id + "_JLoader",
       modules: ["jiant-log", "jiant-util", "jiant-spec"],
@@ -517,22 +519,21 @@
     if (!String.prototype.startsWith || !String.prototype.endsWith) {
       appLoader.modules.push("jiant-poly");
     }
-    ["intl", "views", "templates", "components", "ajax", "events", "semaphores", "states", "models", "logic", "xl", "xl2"].forEach(moduleName => {
+    ["intl", "views", "templates", "components", "ajax", "events", "semaphores", "states",
+      "models", "logic", "xl", "xl2"].forEach(moduleName => {
       if (moduleName in tree || (moduleName === "intl" && "logic" in tree && moduleName in tree.logic)) {
         appLoader.modules.push("jiant-" + moduleName);
       }
     });
     startApp(appLoader, appLoader);
     onApp(appLoader, function() {
+      console.error('onAppLoader')
       startApp(root, tree, appLoader);
     });
   }
 
   function startApp(root, tree, appLoader) {
     maybeSetDevModeFromQueryString();
-    if (!("id" in root)) {
-      root.id = "app_" + Math.random();
-    }
     const appId = root.id;
     if (boundApps[appId] && root === tree) {
       jiant.logError("Application '" + appId + "' already loaded, skipping multiple bind call");
@@ -568,6 +569,8 @@
     if (tree.modulesSpec) {
       tree.modules = tree.modulesSpec;
     }
+    console.info("Loading modules");
+    console.info(tree.modules);
     _loadModules(root, tree.modules, appId, true, function() {
       // intlPresent && _bindIntl(root, root.intl, appId);
       // views after intl because of nlabel proxies
@@ -591,7 +594,7 @@
 
   function app(appCb) {
     if ("jiant-types" in modules) {
-      prepareApp(appCb(instance));
+      prepareApp(appCb(jiantInstance));
     } else {
       const typesLoader = {
         id: "JTypesLoader",
@@ -600,14 +603,18 @@
         cacheInStorage: jiant.version()};
       startApp(typesLoader, typesLoader);
       onApp(typesLoader, function() {
-        prepareApp(appCb(instance));
+        prepareApp(appCb(jiantInstance));
       });
     }
   }
 
   function prepareApp(app) {
-    console.info(app);
     app.appPrefix = app.appPrefix || "";
+    if (!("id" in app)) {
+      app.id = "app_" + Math.random();
+    } else {
+      app.id = app.id.replaceAll(" ", "_");
+    }
     if ("viewsUrl" in app) {
       let injectionPoint;
       if ("injectId" in app) {
@@ -639,7 +646,7 @@
   // onApp(appId, depList, cb)
   function onApp(appIdArr, dependenciesList, cb) {
     if (!cb && !dependenciesList) {
-      jiant.error("!!! Registering anonymous logic without application id. Not recommended since 0.20");
+      jiant.error("!!! Registering anonymous logic without application id. Not recommended");
       cb = appIdArr;
       appIdArr = ["no_app_id"];
     } else if (! cb) {
@@ -806,6 +813,6 @@
 
   };
 
-  return instance = window.jiant || (window.jiant = new Jiant());
+  return jiantInstance = window.jiant || (window.jiant = new Jiant());
 
 }));

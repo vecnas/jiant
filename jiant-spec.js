@@ -1,4 +1,6 @@
-jiant.module("jiant-spec", function({jiant}) {
+jiant.module("jiant-spec", ["jiant-log"], function({jiant}) {
+
+  this.singleton();
 
   const specs = {}, {logInfo} = jiant;
 
