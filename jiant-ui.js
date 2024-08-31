@@ -1,183 +1,125 @@
- jiant.module("jiant-ui", ["jiant-fields"],function({$, app, jiant, params, "jiant-fields": Fields}) {
+jiant.module("jiant-ui", ["jiant-auto", "jiant-render", "jiant-types", "jiant-spec"],
+  function ({$, app, jiant, params, "jiant-auto": Auto, "jiant-render": Render, "jiant-types": JType,
+              "jiant-spec": Spec}) {
 
-  this.singleton();
+    this.singleton();
 
-  const customTypes = {};
-  const serviceNames = ["parseTemplate", "parseTemplate2Text", "propagate", "renderer", "onRender", "jMapping", "jMapped", "_jiantSpec"];
+    const serviceNames = ["parseTemplate", "parseTemplate2Text", "propagate", "renderer"];
 
-  function scanForSpec(prefix, content, elem) {
-    const children = elem[0].getElementsByTagName("*");
-    for (const child of children) {
-      for (const cls of child.className.split(/\s+/)) {
-        if (cls.startsWith(prefix)) {
-          const name = cls.substring(prefix.length);
-          if (! (name in content)) {
-            content[name] = Fields.getAutoType(child, name);
+    function scanForSpec(prefix, content, elem) {
+      const children = elem[0].getElementsByTagName("*");
+      for (const child of children) {
+        for (const cls of child.className.split(/\s+/)) {
+          if (cls.startsWith(prefix)) {
+            const name = cls.substring(prefix.length);
+            if (!(name in content)) {
+              content[name] = Auto.getAutoType(child, name);
+            }
           }
         }
       }
     }
-  }
 
-  function hndlOn(that, parentName, val, useCls, clsVal, useExactVal, exactVal) {
-    const p = that._j.parent._j,
+    function hndlOn({that, fnName, val, useCls, clsVal, useExactVal, exactVal}) {
+      const p = that._j.parent._j,
         fn = typeof val === "function";
-    let dir = true;
-    p[parentName] = p[parentName] || [];
-    if (!fn && val.startsWith("!")) {
-      val = val.substr(1);
-      dir = false;
-    }
-    const data = {el: that, fld: val, dir: dir, fn: fn};
-    if (useCls) {
-      data.cls = clsVal;
-    }
-    if (useExactVal) {
-      data.exactVal = exactVal;
-    }
-    p[parentName].push(data);
-  }
-  $.fn.extend({
-    showOn: function(fldOrCb, exactVal) {
-      hndlOn(this, "showing", fldOrCb, false, undefined, arguments.length > 1, exactVal);
-    },
-    hideOn: function(fldOrCb, exactVal) {
-      if (typeof fldOrCb === "function") {
-        this.showOn(function() {
-          return !fldOrCb.apply(this, arguments);
-        });
-      } else {
-        fldOrCb = (fldOrCb.startsWith("!")) ? fldOrCb.substr(1) : ("!" + fldOrCb);
-        arguments.length > 1 ? this.showOn(fldOrCb, exactVal) : this.showOn(fldOrCb);
+      let dir = true;
+      p[fnName] = p[fnName] || [];
+      if (!fn && val.startsWith("!")) {
+        val = val.substr(1);
+        dir = false;
       }
-    },
-    switchClassOn: function(clsOrCb, fldOrCb, exactVal) {
-      hndlOn(this, "switchClass", fldOrCb, true, clsOrCb, arguments.length > 1, exactVal);
-    }
-  });
-
-  function updateHref({data, elem, val, isUpdate, view}) {
-    elem.attr("href", !!val ? val : "");
-  }
-
-  function updateImgBg({data, elem, val, isUpdate, view}) {
-    elem.css("background-image", !!val ? "url(\"" + val + "\")" : "");
-  }
-
-  function updateInputSet({data, elem, val, isUpdate, view}) {
-    if (!elem || !elem[0]) {
-      return;
-    }
-    $.each(elem, function(i, item) {
-      item = $(item);
-      let check = item.val() === val + "";
-      if (!check && Array.isArray(val)) {
-        val.forEach(function(subval) {
-          if (subval + "" === item.val() + "") {
-            check = true;
-            return false;
-          }
-        });
+      const data = {el: that, fld: val, dir: dir, fn: fn};
+      if (useCls) {
+        data.cls = clsVal;
       }
-      item.prop("checked", check);
+      if (useExactVal) {
+        data.exactVal = exactVal;
+      }
+      p[fnName].push(data);
+    }
+
+    $.fn.extend({
+      showOn: function (fldOrCb, exactVal) {
+        hndlOn({that: this, fnName: "showing", val: fldOrCb, useCls: false,
+          useExactVal: arguments.length > 1, exactVal: exactVal});
+      },
+      hideOn: function (fldOrCb, exactVal) {
+        if (typeof fldOrCb === "function") {
+          this.showOn(function () {
+            return !fldOrCb.apply(this, arguments);
+          });
+        } else {
+          fldOrCb = (fldOrCb.startsWith("!")) ? fldOrCb.substr(1) : ("!" + fldOrCb);
+          arguments.length > 1 ? this.showOn(fldOrCb, exactVal) : this.showOn(fldOrCb);
+        }
+      },
+      switchClassOn: function (clsOrCb, fldOrCb, exactVal) {
+        hndlOn({that: this, fnName: "switchClass", val: fldOrCb, useCls: true,
+          clsVal: clsOrCb, useExactVal: arguments.length > 1, exactVal: exactVal});
+      }
     });
-  }
 
-  function getComponentType(spec) {
-    return (spec.tp) ? spec.tp : spec;
-  }
-
-  function updateViewElement({data, elem, val, isUpdate, view}) {
-    if (!elem || !elem[0]) {
-      return;
+    function getComponentType(spec) {
+      return JType.is(spec) ? spec.tp() : (typeof spec === "object" && "tp" in spec) ? spec.tp : spec;
     }
-    const tagName = elem[0].tagName.toLowerCase();
-    if (tagName in {"input": 1, "textarea": 1, "select": 1}) {
-      const el = $(elem[0]),
-          tp = el.attr("type");
-      if (tp === "checkbox") {
-        elem.prop("checked", !!val);
-      } else if (tp === "radio") {
-        elem.forEach(function(subelem) {
-          $(subelem).prop("checked", subelem.value === (val + ""));
-        });
-      } else {
-        (val === undefined || val === null) ? elem.val(val) : elem.val(val + "");
-      }
-    } else if (tagName === "img") {
-      elem.attr("src", val);
-    } else {
-      elem.html(val === undefined ? "" : val);
-    }
-  }
 
-  function getRenderer(obj, elemType) {
-    const wrapped = jiant.wrapType(elemType);
-    elemType = getComponentType(wrapped);
-    if (obj && obj.renderer && typeof obj.renderer === "function") {
-      return obj.renderer;
-    } else if (customTypes[elemType]) {
-      return customTypes[elemType];
-    } else if (elemType === jiant.inputSet) {
-      return updateInputSet;
-    } else if (elemType === jiant.href) {
-      return updateHref;
-    } else if (elemType === jiant.imgBg) {
-      return updateImgBg;
-    } else if (elemType === jiant.inputSetAsString) {
-      return ({data, elem, val, isUpdate, view}) => {
-        updateInputSet({data, elem, isUpdate, view,
-          val: !val ? [val] : Array.isArray(val) ? val : $.isNumeric(val) ? [val] : ("" + val).split(",")});
-      };
-    } else {
-      return updateViewElement;
-    }
-  }
-
-  function callOnRender(spec, args) {
-    const arr = spec.onRender;
-    // jiant.error("???")
-    // jiant.logInfo(spec, arr, "---")
-    if (arr && Array.isArray(arr) && arr.length > 0) {
-      for (let cb of arr) {
-        // alert(cb);
-        cb(args);
-      }
-    }
-  }
-
-  function makePropagationFunction(viewId, spec, viewOrTm) {
-    const map = {};
-    $.each(spec, function (key, elem) {
-      map[key] = elem;
-    });
-    spec.jMapped && $.each(spec.jMapped, function(key, arr) {
-      arr.forEach(function(elem) {
-        map[elem] = map[elem] || 1;
+    function updateShowHideCls(view, data) {
+      view._j.showing && view._j.showing.forEach(function (item) {
+        let on;
+        if (item.fn) {
+          on = item.fld.call(data, data);
+        } else {
+          on = typeof data[item.fld] === "function" ? data[item.fld]() : data[item.fld];
+        }
+        if ("exactVal" in item) {
+          on = Array.isArray(item.exactVal) ? $.inArray(on, item.exactVal) >= 0 : on === item.exactVal;
+        }
+        on = item.dir ? on : !on;
+        item.el[on ? "show" : "hide"]();
       });
-    });
-    const fn = function(data, subscribe4updates, reverseBinding, mapping) {
-      const propSettings = {subscribe4updates: subscribe4updates, reverseBinding: reverseBinding, mapping: mapping};
-      subscribe4updates = (subscribe4updates === undefined) ? true : subscribe4updates;
-      $.each(map, function (key, elem) {
-        let actualKey = (mapping && mapping[key]) ? mapping[key] : key,
-            val = typeof actualKey === "function" ? actualKey.apply(data) : data[actualKey],
-            elemType = viewOrTm._jiantSpec[key];
-        if ((spec[key] && spec[key].renderer) || customTypes[elemType] || (spec.jMapping && spec.jMapping[key])
+      view._j.switchClass && view._j.switchClass.forEach(function (item) {
+        let on;
+        if (item.fn) {
+          on = item.fld.call(data, data);
+        } else {
+          on = typeof data[item.fld] === "function" ? data[item.fld]() : data[item.fld];
+        }
+        if ("exactVal" in item) {
+          on = Array.isArray(item.exactVal) ? $.inArray(on, item.exactVal) >= 0 : on === item.exactVal;
+        }
+        on = item.dir ? on : !on;
+        item.el[on ? "addClass" : "removeClass"](item.cls);
+      });
+    }
+
+    function makePropagationFunction({app, viewId, templateId, content, spec, viewOrTm}) {
+      const fn = function (data, subscribe4updates, reverseBinding, mapping) {
+        const propSettings = {subscribe4updates: subscribe4updates, reverseBinding: reverseBinding, mapping: mapping};
+        subscribe4updates = (subscribe4updates === undefined) ? true : subscribe4updates;
+
+        for (let [key, keySpec] of Object.entries(spec)) {
+          const compKey = key;
+          if (JType.is(keySpec)) {
+            key = keySpec.field() || key;
+          }
+          let actualKey, val, elemType = getComponentType(keySpec);
+          actualKey = (mapping && mapping[key]) ? mapping[key] : key;
+          val = typeof actualKey === "function" ? actualKey.apply(data) : data[actualKey];
+          if (content[key]?.renderer
+            || Render.isOnRenderPresent({app, viewId, templateId, field: key})
             || (data && val !== undefined && val !== null && !isServiceName(key) && !(val instanceof $))) {
-          const actualVal = typeof val === "function" ? val.apply(data) : val;
-          [key].concat(spec.jMapping && spec.jMapping[key]? spec.jMapping[key] : []).some(function(compKey) {
-            if (compKey === key && spec.jMapped && spec.jMapped[compKey]) {
-              return true;
-            }
+            const actualVal = typeof val === "function" ? val.apply(data) : val;
+
             const compElem = viewOrTm[compKey],
-                compType = viewOrTm._jiantSpec[compKey],
-                fnKey = "_j" + compKey;
-            if (compKey !== "_jiantSpec") {
-              const args =
-                  {data: data, elem: compElem, val: actualVal, isUpdate: false, view: viewOrTm, settings: propSettings};
-              getRenderer(spec[compKey], compType)(args);
-              callOnRender(spec, args);
+              compType = elemType,
+              fnKey = "_j" + compKey;
+            const args =
+              {data: data, elem: compElem, val: actualVal, isUpdate: false, view: viewOrTm, settings: propSettings};
+            // jiant.logError("R UI 119 " + viewId + "::" + compKey);
+            content[compKey].renderer(args);
+            if (elemType !== jiant.comp) {
+              Render.callOnRender({app, viewId, templateId, field: compKey, args});
             }
             if (subscribe4updates && typeof data.on === "function" && (spec[compKey].renderer || typeof val === "function")) { // 3rd ?
               if (fn[fnKey]) {
@@ -188,33 +130,42 @@
               if (typeof val !== "function") { // ?
                 actualKey = null;
               }
-              const handler = data.on(actualKey, function(obj, newVal) {
+              const handler = data.on(actualKey, function (obj, newVal) {
                 if (arguments.length === 2 && newVal === "remove") {
                   return;
                 }
                 const args =
-                    {data: data, elem: compElem, val: newVal, isUpdate: true, view: viewOrTm, settings: propSettings};
-                getRenderer(spec[compKey], compType)(args);
-                callOnRender(spec, args);
+                  {data: data, elem: compElem, val: newVal, isUpdate: true, view: viewOrTm, settings: propSettings};
+                // jiant.logError("R UI 139 " + viewId + "::" + compKey);
+                content[compKey].renderer(args);
+                if (getComponentType(compType) !== jiant.comp) {
+                  Render.callOnRender({app, viewId, templateId, field: key, args});
+                }
               });
               fn[fnKey] = [data, handler];
             }
             if (reverseBinding && compElem && compElem.change) {
-              const backHandler = function(event) {
+              const backHandler = function (event) {
                 const tagName = compElem[0].tagName.toLowerCase(),
-                    tp = compElem.attr("type"),
-                    etype = viewOrTm._jiantSpec[compKey];
+                  tp = compElem.attr("type"),
+                  etype = spec[compKey];
+
                 function convert(val) {
                   return val === "undefined" ? undefined : val;
                 }
+
                 function elem2arr(elem) {
                   const arr = [];
-                  $.each(elem, function (i, item) {!!$(item).prop("checked") && arr.push(convert($(item).val()));});
+                  $.each(elem, function (i, item) {
+                    !!$(item).prop("checked") && arr.push(convert($(item).val()));
+                  });
                   return arr;
                 }
+
                 function joinOrUndef(arr) {
                   return arr.length === 0 || (arr.length === 1 && arr[0] === undefined) ? undefined : arr.join();
                 }
+
                 if (val && typeof val === "function") {
                   if (etype === jiant.inputSet) {
                     val.call(data, elem2arr(compElem));
@@ -225,7 +176,7 @@
                       val.call(data, !!compElem.prop("checked"));
                     } else if (tagName === "input" && tp === "radio") {
                       val.call(data, joinOrUndef(elem2arr(compElem)));
-                    } else if (tagName in {"input": 1,  "select": 1, "textarea": 1}) {
+                    } else if (tagName in {"input": 1, "select": 1, "textarea": 1}) {
                       val.call(data, compElem.val()); // don't convert due to user may input "undefined" as string
                     } else if (tagName === "img") {
                       val.call(data, compElem.attr("src"));
@@ -240,108 +191,71 @@
               compElem.change(backHandler);
               fn[fnKey] && fn[fnKey].push(backHandler);
             }
+          }
+        }
+        const that = this;
+        updateShowHideCls(this, data);
+        if (subscribe4updates && typeof data.on === "function") {
+          const fnKey = "_jShowHideCls";
+          if (fn[fnKey]) {
+            const oldData = fn[fnKey][0];
+            oldData && oldData.off(fn[fnKey][1]);
+          }
+          const handler = data.on(function (obj, newVal) {
+            if (arguments.length === 2 && newVal === "remove") {
+              return;
+            }
+            updateShowHideCls(that, data);
           });
+          fn[fnKey] = [data, handler];
         }
-      });
-      const that = this;
-      updateShowHideCls(this, data);
-      if (subscribe4updates && typeof data.on === "function") {
-        const fnKey = "_jShowHideCls";
-        if (fn[fnKey]) {
-          const oldData = fn[fnKey][0];
-          oldData && oldData.off(fn[fnKey][1]);
+        const args = {data: data, view: viewOrTm};
+        if (content.renderer && typeof content.renderer === "function") {
+          // jiant.logError("R UI 214 " + viewId + "::");
+          content.renderer(args);
         }
-        const handler = data.on(function(obj, newVal) {
-          if (arguments.length === 2 && newVal === "remove") {
-            return;
-          }
-          updateShowHideCls(that, data);
-        });
-        fn[fnKey] = [data, handler];
-      }
-
-      function updateShowHideCls(view, data) {
-        view._j.showing && view._j.showing.forEach(function(item) {
-          let on;
-          if (item.fn) {
-            on = item.fld.call(data, data);
-          } else {
-            on = typeof data[item.fld] === "function" ? data[item.fld]() : data[item.fld];
-          }
-          if ("exactVal" in item) {
-            on = Array.isArray(item.exactVal) ? $.inArray(on, item.exactVal) >= 0 : on === item.exactVal;
-          }
-          on = item.dir ? on : !on;
-          item.el[on ? "show" : "hide"]();
-        });
-        view._j.switchClass && view._j.switchClass.forEach(function(item) {
-          let on;
-          if (item.fn) {
-            on = item.fld.call(data, data);
-          } else {
-            on = typeof data[item.fld] === "function" ? data[item.fld]() : data[item.fld];
-          }
-          if ("exactVal" in item) {
-            on = Array.isArray(item.exactVal) ? $.inArray(on, item.exactVal) >= 0 : on === item.exactVal;
-          }
-          on = item.dir ? on : !on;
-          item.el[on ? "addClass" : "removeClass"](item.cls);
-        });
-      }
-      if (spec.renderer && typeof spec.renderer === "function") {
-        spec.renderer(data, viewOrTm);
-      }
-      if (jiant.DEV_MODE) {
-        viewOrTm._jiantPropagationInfo = {
-          modelName: data ? data.jModelName : "",
-          data: data,
-          subscribe4updates: subscribe4updates,
-          reverseBinding: reverseBinding,
-          mapping: mapping,
-          trace: jiant.getStackTrace()
-        };
-      }
-    };
-    viewOrTm.propagate = fn;
-    viewOrTm.unpropagate = function() {
-      $.each(map, function (key, elem) {
-        const fnKey = "_j" + key;
-        if (fn[fnKey]) {
-          const oldData = fn[fnKey][0];
-          oldData && oldData.off(fn[fnKey][1]);
-          fn[fnKey][2] && elem.off && elem.off("change", fn[fnKey][2]);
+        Render.callOnRender({app, viewId, templateId, spec, args});
+        if (jiant.DEV_MODE) {
+          viewOrTm._jiantPropagationInfo = {
+            modelName: data ? data.jModelName : "",
+            data: data,
+            subscribe4updates: subscribe4updates,
+            reverseBinding: reverseBinding,
+            mapping: mapping,
+            trace: jiant.getStackTrace()
+          };
         }
-      });
-      if (jiant.DEV_MODE) {
-        delete viewOrTm._jiantPropagationInfo;
+      };
+      viewOrTm.propagate = fn;
+      viewOrTm.unpropagate = function () {
+        for (let [key, elem] of Object.entries(spec)) {
+          const fnKey = "_j" + key;
+          if (fn[fnKey]) {
+            const oldData = fn[fnKey][0];
+            oldData && oldData.off(fn[fnKey][1]);
+            fn[fnKey][2] && elem.off && elem.off("change", fn[fnKey][2]);
+          }
+        }
+        if (jiant.DEV_MODE) {
+          delete viewOrTm._jiantPropagationInfo;
+        }
       }
     }
-  }
 
-  function isOptional(spec) {
-    return !! spec.optional;
-  }
-
-  function registerType(typeName, handler) {
-    if (! (typeof typeName === 'string' || typeName instanceof String)) {
-      alert("Custom renderer name should be string");
+    function isOptional(spec) {
+      return !!spec.optional;
     }
-    customTypes[typeName] = handler;
-  }
 
-  function isServiceName(key) {
-    return serviceNames.indexOf(key) >= 0;
-  }
+    function isServiceName(key) {
+      return serviceNames.indexOf(key) >= 0;
+    }
 
-  jiant.registerType = registerType;
+    return {
+      makePropagationFunction,
+      isServiceName,
+      isOptional,
+      scanForSpec,
+      getComponentType,
+    }
 
-  return {
-    makePropagationFunction: makePropagationFunction,
-    isServiceName: isServiceName,
-    isOptional: isOptional,
-    scanForSpec: scanForSpec,
-    getComponentType: getComponentType,
-    callOnRender: callOnRender
-  }
-
-});
+  });

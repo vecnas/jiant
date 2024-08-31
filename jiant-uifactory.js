@@ -19,19 +19,27 @@ jiant.module("jiant-uifactory", function({$, jiant}) {
     }
   }
 
-  function viewComponent(viewElem, viewId, prefix, componentId, componentContent, byTags) {
+  function viewComponent(viewElem, viewId, prefix, componentId, componentContent, byTags, optional, bindLogger) {
     const path = "." + prefix + componentId;
+    let result;
     if (byTags === "after-class") {
       const byCls = viewElem.find(path);
-      return byCls[0] ? byCls : viewElem.find(componentId);
+      result = byCls[0] ? byCls : viewElem.find(componentId);
     } else if (byTags === "before-class") {
       const byTag = viewElem.find(componentId);
-      return byTag[0] ? byTag : viewElem.find(path);
+      result = byTag[0] ? byTag : viewElem.find(path);
     } else if (!!byTags) {
-      return viewElem.find(componentId);
+      result = viewElem.find(componentId);
     } else {
-      return viewElem.find(path);
+      result = viewElem.find(path);
     }
+    if (!result.length) {
+      result = viewElem.filter(path);
+    }
+    if (!optional) {
+      bindLogger && bindLogger.result(ensureExists(result, prefix + viewId, prefix + componentId, optional));
+    }
+    return result;
   }
 
   function ensureExists(obj, idName, className, optional) {

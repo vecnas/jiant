@@ -1,5 +1,6 @@
-jiant.module("jiant-templates", ["jiant-uifactory", "jiant-ui", "jiant-comp", "jiant-fields"],
-    function({$, app, jiant, params, "jiant-uifactory": UiFactory, "jiant-ui": Ui, "jiant-comp": Comp, "jiant-fields": Fields}) {
+jiant.module("jiant-templates", ["jiant-uifactory", "jiant-ui", "jiant-types", "jiant-spec"],
+    function({$, app, jiant, params, "jiant-uifactory": UiFactory, "jiant-ui": Ui,
+               "jiant-types": JType, "jiant-spec": Spec}) {
 
       this.singleton();
 
@@ -7,8 +8,7 @@ jiant.module("jiant-templates", ["jiant-uifactory", "jiant-ui", "jiant-comp", "j
   let errString;
 
   function fillClassMappings(elem, classMapping) {
-    const childs = elem.find("*"),
-        selfs = elem.filter("*");
+    const childs = elem.find("*"), selfs = elem.filter("*");
     $.each($.merge(selfs, childs), function(i, item) {
       if (typeof item.className.split === "function" && item.className.length > 0) {
         const clss = item.className.split(" ");
@@ -21,8 +21,7 @@ jiant.module("jiant-templates", ["jiant-uifactory", "jiant-ui", "jiant-comp", "j
   }
 
   function fillTagMappings(elem, tagMapping) {
-    const childs = elem.find("*"),
-        selfs = elem.filter("*");
+    const childs = elem.find("*"), selfs = elem.filter("*");
     $.each($.merge(selfs, childs), function(i, item) {
       const tag = item.tagName.toLowerCase();
       tagMapping[tag] = tagMapping[tag] || [];
@@ -39,51 +38,39 @@ jiant.module("jiant-templates", ["jiant-uifactory", "jiant-ui", "jiant-comp", "j
   }
 
   function bindTemplate(appRoot, tmId, tmContent, tm, errArr) {
+    const addOnRender = (componentId) => tmContent[componentId].onRender =
+      (cb) => jiant.onRender({app: appRoot, templateId: tmId, field: componentId, cb});
     const prefix = jiant.getAppPrefix(appRoot, tmContent);
     tm = tm || UiFactory.view(prefix, tmId, tmContent, appRoot.bindByTag);
-    tmContent._jiantSpec = {};
     tmContent._jiantType = jTypeTemplate;
     if ("_scan" in tmContent) {
       Ui.scanForSpec(prefix, tmContent, tm);
     }
-    const elemTypes = {};
     $.each(tmContent, function (componentId, elemSpec) {
-      const elemType = Ui.getComponentType(elemSpec);
-      elemTypes[componentId] = elemType;
-      if (!(componentId in {appPrefix: 1, impl: 1, compCbSet: 1, _jiantSpec: 1, _jiantType: 1, _scan: 1, jInit: 1, _j: 1, renderer: 1, onRender: 1})) {
-        tmContent._jiantSpec[componentId] = elemType;
-        if (elemType === jiant.lookup) {
-          jiant.logInfo("    loookup element, no checks/bindings: " + componentId);
-        } else if (elemType === jiant.meta) {
-          //skipping, app meta info
-        } else if (elemType === jiant.data) {
-          tmContent[componentId] = jiant.wrapType(tmContent[componentId]);
-          tmContent[componentId].jiant_data = 1
-          tmContent[componentId].jiant_data_spec = elemSpec;
-          tmContent[componentId].renderer = ({data, val, view, elem, isUpdate}) => view[componentId](val);
-        } else if (elemType === jiant.cssMarker || elemType === jiant.cssFlag) {
-          Fields.setupCssFlagsMarkers(tmContent, componentId, elemType, elemSpec.field, elemSpec.className);
-        } else if (elemType === jiant.fn) {
-        } else {
-          const comp = UiFactory.viewComponent(tm, tmId, prefix, componentId, elemType, appRoot.bindByTag);
-          errArr[0] += UiFactory.ensureExists(comp, prefix + tmId, prefix + componentId,
-              Ui.isOptional(elemSpec));
-          tmContent[componentId] = {};
-          if (elemType === jiant.comp) {
-            const tmName = elemSpec.compName;
-            tmContent[componentId].renderer = Comp.getCompRenderer(appRoot, tmName, componentId, elemSpec);
-            if (!(tmName in appRoot.templates)) {
-              jiant.error("jiant.comp element refers to non-existing template name: " + tmName + ", tm.elem " + tmId + "." + componentId);
-            }
-          }
+      if (! (componentId in {"renderer": 1, "jInit": 1})) {
+        elemSpec = tmContent[componentId] = jiant.wrapType(tmContent[componentId]);
+      }
+      const elemType = JType.is(elemSpec) ? elemSpec.tp() : Ui.getComponentType(elemSpec);
+      if (JType.is(elemType)) {
+        Spec.templateSpec(appRoot, tmId)[componentId] = elemSpec;
+        if (elemSpec.renderProducer) {
+          tmContent[componentId].renderer = elemSpec.renderProducer(
+            {view: tmContent, templateId: tmId, app: appRoot, componentId, tpInstance: elemSpec});
         }
+        addOnRender(componentId);
+      } else if (!(componentId in {appPrefix: 1, impl: 1, _jiantType: 1, _scan: 1, jInit: 1, _j: 1, renderer: 1})) {
+        Spec.templateSpec(appRoot, tmId)[componentId] = jiant.wrapType(elemType);
+        const comp = UiFactory.viewComponent(tm, tmId, prefix, componentId, elemType, appRoot.bindByTag);
+        errArr[0] += UiFactory.ensureExists(comp, prefix + tmId, prefix + componentId, Ui.isOptional(elemSpec));
+        tmContent[componentId] = {};
+        addOnRender(componentId);
       }
     });
+    tmContent.onRender = (cb) => jiant.onRender({app: appRoot, templateId: tmId, cb});
     errArr[0] += UiFactory.ensureExists(tm, prefix + tmId);
     tmContent.templateSource = function() {return tm.html().trim()};
     tmContent.parseTemplate = function(data, subscribeForUpdates, reverseBind, mapping) {
       const retVal = $("<!-- -->" + jiant._parseTemplate(tm, data, tmId, mapping)); // add comment to force jQuery to read it as HTML fragment
-      retVal._jiantSpec = tmContent._jiantSpec;
       retVal._j = {};
       const classMappings = {},
           tagMappings = {};
@@ -104,20 +91,17 @@ jiant.module("jiant-templates", ["jiant-uifactory", "jiant-ui", "jiant-comp", "j
           return;
         }
         const elemType = Ui.getComponentType(elemSpec);
-        if (elemType === jiant.lookup) {
-          jiant.info("    loookup element, no checks/bindings: " + componentId);
-          jiant.setupLookup(retVal, componentId, retVal, prefix);
-        } else if (elemType === jiant.meta) {
-        } else if (elemType.jiant_data) {
-          Fields.setupDataFunction(retVal, tmContent, componentId, elemSpec.jiant_data_spec.field, elemSpec.jiant_data_spec.dataName);
-        } else if (elemTypes[componentId] === jiant.cssMarker || elemTypes[componentId] === jiant.cssFlag) {
-        } else if (elemType === jiant.fn) {
-          retVal[componentId] = elemSpec[1];
+        if (JType.is(elemType)) {
+          if (elemSpec.componentProducer) {
+            const bindLogger = {result: res => {bindLogger.res = res}, res: ""};
+            retVal[componentId] = elemSpec.componentProducer(
+              {view: tmContent, viewImpl: retVal, templateId: tmId, componentId, app: appRoot, tpInstance: elemSpec, uiFactory: UiFactory, bindLogger});
+            // errString += bindLogger.res;
+          }
         } else if (! (componentId in {parseTemplate: 1, parseTemplate2Text: 1, templateSource: 1, appPrefix: 1,
-          impl: 1, compCbSet: 1, _jiantSpec: 1, _scan: 1, _j: 1, _jiantType: 1, jInit: 1, renderer: 1, onRender: 1})) {
+          impl: 1, _scan: 1, _j: 1, _jiantType: 1, jInit: 1, renderer: 1})) {
           retVal[componentId] = getUsingBindBy(componentId);
           if (retVal[componentId]) {
-            Fields.setupExtras(appRoot, retVal[componentId], tmContent._jiantSpec[componentId], tmId, componentId, retVal, prefix);
             retVal[componentId]._j = {
               parent: retVal
             };
@@ -125,7 +109,8 @@ jiant.module("jiant-templates", ["jiant-uifactory", "jiant-ui", "jiant-comp", "j
         }
       });
       retVal.splice(0, 1); // remove first comment
-      Ui.makePropagationFunction(tmId, tmContent, retVal);
+      Ui.makePropagationFunction({app: appRoot, templateId: tmId, content: tmContent,
+        spec: Spec.templateSpec(appRoot, tmId), viewOrTm: retVal});
       if (tmContent.jInit && typeof tmContent.jInit === "function") {
         tmContent.jInit.call(retVal, appRoot);
       }

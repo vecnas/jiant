@@ -51,6 +51,10 @@ jiant.module("jiant-log", function({jiant}) {
     jiant.DEV_MODE && print("info", arguments);
   }
 
+  function debug(s) {
+    jiant.DEV_MODE && print("info", arguments);
+  }
+
   function error() {
     printShort(logError, arguments);
   }
@@ -78,14 +82,15 @@ jiant.module("jiant-log", function({jiant}) {
   }
 
   const exp = {
-    logInfo: logInfo,
-    logError: logError,
-    info: info,
-    error: error,
-    infop: infop,
-    errorp: errorp,
-    getStackTrace: getStackTrace,
-    showTrace: showTrace
+    logInfo,
+    logError,
+    debug,
+    info,
+    error,
+    infop,
+    errorp,
+    getStackTrace,
+    showTrace
   };
 
   for (let key in exp) {

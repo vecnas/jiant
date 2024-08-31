@@ -4,17 +4,11 @@ jiant.module("jiant-ajax", function({}) {
 
   const restRegexp = /:([^\/]+)(\/|$)/g;
 
-  function getDeclaredName(obj) {
-    return !!obj ? obj._jiantSpecName : undefined;
-  }
-
   function bindAjax(name, funcSpec, appRoot) {
     let params = jiant.getParamNames(funcSpec);
     params && params.length > 0 ? params.splice(params.length - 1, 1) : params = [];
     const impl = makeAjaxPerformer(appRoot, appRoot.ajaxPrefix, appRoot.ajaxSuffix, name, params,
         typeof funcSpec === "function" ? funcSpec() : undefined, appRoot.crossDomain);
-    impl._jiantSpec = funcSpec;
-    impl._jiantSpecName = name;
     return impl;
   }
 
@@ -189,7 +183,6 @@ jiant.module("jiant-ajax", function({}) {
   jiant.bindAjax = bindAjax;
 
   jiant.handleErrorFn = defaultAjaxErrorsHandle;
-  jiant.getDeclaredName = getDeclaredName;
   jiant.flags.ajaxSubmitAsMap = "_jiantFlagSubmitAsMap";
 
   return {

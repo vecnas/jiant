@@ -22,11 +22,10 @@ jiant.module("jiant-fields", [], function({$, app, jiant, params}) {
     }
   }
 
-  function setupCssFlagsMarkers(viewRoot, componentId, componentTp, mappingId, className) {
+  function setupCssFlagsMarkers(viewRoot, componentId, componentTp, mappingId, className, spec) {
     const flag = componentTp === jiant.cssFlag,
         markerName = "j_prevMarkerClass_" + componentId;
     className = className || componentId;
-    linkElement(viewRoot, componentId, mappingId);
     viewRoot[componentId] = jiant.wrapType(componentTp);
     viewRoot[componentId].renderer = ({data, val, view, elem, isUpdate}) => {
       if (view[markerName]) {
@@ -59,7 +58,6 @@ jiant.module("jiant-fields", [], function({$, app, jiant, params}) {
   }
 
   function setupDataFunction(viewRoot, linkRoot, componentId, mappingId, dataName) {
-    linkElement(linkRoot, componentId, mappingId);
     dataName = dataName || componentId;
     viewRoot[componentId] = function(val) {
       if (arguments.length === 0) {
@@ -68,17 +66,6 @@ jiant.module("jiant-fields", [], function({$, app, jiant, params}) {
         return viewRoot.attr("data-" + dataName, val);
       }
     };
-  }
-
-  function linkElement(viewRoot, componentId, mappingId) {
-    if (mappingId) {
-      viewRoot.jMapping = viewRoot.jMapping || [];
-      viewRoot.jMapping[mappingId] = viewRoot.jMapping[mappingId] || [];
-      viewRoot.jMapping[mappingId].push(componentId);
-      viewRoot.jMapped = viewRoot.jMapped || {};
-      viewRoot.jMapped[componentId] = viewRoot.jMapped[componentId] || [];
-      viewRoot.jMapped[componentId].push(mappingId);
-    }
   }
 
   function setupPager(uiElem) {
@@ -374,17 +361,17 @@ jiant.module("jiant-fields", [], function({$, app, jiant, params}) {
       uiElem.refreshTabs = function() {uiElem.tabs("refresh");};
     } else if (elemType === jiant.ctlHide) {
       setupCtlHide(viewOrTm, uiElem);
-    } else if (elemType === jiant.et.ctl2state) {
+    } else if (elemType === jiant.ctl2state) {
       setupCtl2state(viewOrTm, uiElem, appRoot, elemKey);
-    } else if (elemType === jiant.et.ctlBack) {
+    } else if (elemType === jiant.ctlBack) {
       setupCtlBack(viewOrTm, uiElem);
-    } else if (elemType === jiant.et.ctl2root) {
+    } else if (elemType === jiant.ctl2root) {
       setupCtl2root(appRoot, uiElem);
     } else if (elemType === jiant.inputInt) {
       setupInputInt(uiElem);
     } else if (elemType === jiant.inputFloat) {
       setupInputFloat(uiElem);
-    } else if (elemType === jiant.inputDate && uiElem.datepicker) {
+    } else if (elemType === jiant.inputDate && ("datepicker" in uiElem)) {
       const dp = appRoot.dateFormat ? uiElem.datepicker({format: appRoot.dateFormat}) : uiElem.datepicker();
       dp.on('changeDate', function() {uiElem.trigger("change")});
     } else if (elemType === jiant.pager) {
