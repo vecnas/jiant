@@ -22,11 +22,10 @@ jiant.module("jiant-fields", [], function({$, app, jiant, params}) {
     }
   }
 
-  function setupCssFlagsMarkers(viewRoot, componentId, componentTp, mappingId, className) {
+  function setupCssFlagsMarkers(viewRoot, componentId, componentTp, mappingId, className, spec) {
     const flag = componentTp === jiant.cssFlag,
         markerName = "j_prevMarkerClass_" + componentId;
     className = className || componentId;
-    linkElement(viewRoot, componentId, mappingId);
     viewRoot[componentId] = jiant.wrapType(componentTp);
     viewRoot[componentId].renderer = ({data, val, view, elem, isUpdate}) => {
       if (view[markerName]) {
@@ -59,7 +58,6 @@ jiant.module("jiant-fields", [], function({$, app, jiant, params}) {
   }
 
   function setupDataFunction(viewRoot, linkRoot, componentId, mappingId, dataName) {
-    linkElement(linkRoot, componentId, mappingId);
     dataName = dataName || componentId;
     viewRoot[componentId] = function(val) {
       if (arguments.length === 0) {
@@ -68,17 +66,6 @@ jiant.module("jiant-fields", [], function({$, app, jiant, params}) {
         return viewRoot.attr("data-" + dataName, val);
       }
     };
-  }
-
-  function linkElement(viewRoot, componentId, mappingId) {
-    if (mappingId) {
-      viewRoot.jMapping = viewRoot.jMapping || [];
-      viewRoot.jMapping[mappingId] = viewRoot.jMapping[mappingId] || [];
-      viewRoot.jMapping[mappingId].push(componentId);
-      viewRoot.jMapped = viewRoot.jMapped || {};
-      viewRoot.jMapped[componentId] = viewRoot.jMapped[componentId] || [];
-      viewRoot.jMapped[componentId].push(mappingId);
-    }
   }
 
   function setupPager(uiElem) {

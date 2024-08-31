@@ -8,6 +8,7 @@
   4.06 jiant-events refactored to pure js, no batch off more, internal extra info storage for fields changed to object
   4.07 customRenderer replaced by renderer per element cb({obj, field, view, elem}), onRender added, module called with obj instead of array
   4.08 some renderer related tunings/debugs because of testing
+  4.09 separation of spec for views/templates
  */
 "use strict";
 (function(factory) {
@@ -33,9 +34,7 @@
       bindingCurrently = {},
       pre = {};
 
-  function setupLookup(viewRoot, componentId, viewElem, prefix) {
-    viewRoot[componentId] = function() {return viewElem.find("." + prefix + componentId);};
-  }
+  let instance;
 
   // loadModule before .app puts module into list of app modules, cb ignored
   // loadModule during .app executes module immediately
@@ -471,7 +470,7 @@
       cb = deps;
       deps = [];
     }
-    if (!modules[name]) {
+    if (!(name in modules)) {
       modules[name] = cb;
       modules[name].deps = deps;
       jiant.DEV_MODE && console.info("registered module " + name);
@@ -504,20 +503,16 @@
   }
 
   function bindTree(app, tree) {
-    _bindUi(app, tree);
+    startAppLoader(app, tree);
     return tree;
   }
 
-  function _bindUi(root, tree) {
+  function startAppLoader(root, tree) {
     const appLoader = {
       id: root.id + "_JLoader",
-      modules: ["jiant-log", "jiant-util"],
+      modules: ["jiant-log", "jiant-util", "jiant-spec"],
       modulesPrefix: jiantPath,
       cacheInStorage: jiant.version()};
-    //todo: xl to module
-    //todo: logic extraction
-    //todo: final cleanup/review
-
     // order is important
     if (!String.prototype.startsWith || !String.prototype.endsWith) {
       appLoader.modules.push("jiant-poly");
@@ -527,18 +522,18 @@
         appLoader.modules.push("jiant-" + moduleName);
       }
     });
-    __bindUi(appLoader, appLoader);
+    startApp(appLoader, appLoader);
     onApp(appLoader, function() {
-      __bindUi(root, tree, appLoader);
+      startApp(root, tree, appLoader);
     });
   }
 
-  function __bindUi(root, tree, appLoader) {
+  function startApp(root, tree, appLoader) {
     maybeSetDevModeFromQueryString();
-    const appId = (root.id ? root.id : "no_app_id");
-    if (! root.id) {
-      jiant.logError("!!! Application id not specified. Not recommended since 0.20. Use 'id' property of application root to specify application id");
+    if (!("id" in root)) {
+      root.id = "app_" + Math.random();
     }
+    const appId = root.id;
     if (boundApps[appId] && root === tree) {
       jiant.logError("Application '" + appId + "' already loaded, skipping multiple bind call");
       return;
@@ -594,47 +589,41 @@
     });
   }
 
-  function app(app) {
-    bindUi(app.appPrefix, app, undefined, app.viewsUrl, app.injectId);
+  function app(appCb) {
+    if ("jiant-types" in modules) {
+      prepareApp(appCb(instance));
+    } else {
+      const typesLoader = {
+        id: "JTypesLoader",
+        modules: ["jiant-types"],
+        modulesPrefix: jiantPath,
+        cacheInStorage: jiant.version()};
+      startApp(typesLoader, typesLoader);
+      onApp(typesLoader, function() {
+        prepareApp(appCb(instance));
+      });
+    }
   }
 
-  function bindUi(prefix, root, devMode, viewsUrl, injectId) {
-    if ($.isPlainObject(prefix)) { // no prefix syntax
-      injectId = viewsUrl;
-      viewsUrl = devMode;
-      devMode = root;
-      root = prefix;
-      prefix = root.appPrefix;
-    }
-    root.appPrefix = prefix || "";
-    if (devMode === undefined) {
-      devMode = true;
-    }
-    if (typeof viewsUrl !== "string") {
-      viewsUrl = undefined;
-    }
-    if (typeof injectId !== "string") {
-      injectId = undefined;
-    }
-    if (typeof devMode !== "boolean") {
-      devMode = undefined;
-    }
-    if (viewsUrl) {
+  function prepareApp(app) {
+    console.info(app);
+    app.appPrefix = app.appPrefix || "";
+    if ("viewsUrl" in app) {
       let injectionPoint;
-      if (injectId) {
-        injectionPoint = $("#" + injectId);
+      if ("injectId" in app) {
+        injectionPoint = $("#" + app.injectId);
         if (!injectionPoint[0]) {
-          injectionPoint = $("<div id='" + injectId + "' style='display:none'></div>");
+          injectionPoint = $("<div id='" + app.injectId + "' style='display:none'></div>");
           $("body").append(injectionPoint);
         }
       } else {
         injectionPoint = $("body");
       }
-      injectionPoint.load(viewsUrl, null, function () {
-        _bindUi(root, root);
+      injectionPoint.load(app.viewsUrl, null, function () {
+        startAppLoader(app, app);
       });
     } else {
-      _bindUi(root, root);
+      startAppLoader(app, app);
     }
   }
 
@@ -745,72 +734,35 @@
 
   function optional(tp) {
     // return Array.isArray(tp) ? [optional, ...tp] : [optional, tp];
-    return isObject(tp) ? {...tp, optional: true} : {tp: tp, optional: true}
+    console.info(tp);
+    return tp.optional ? tp.optional(true) : (isObject(tp) ? {...tp, optional: true} : {tp: tp, optional: true});
   }
 
   function wrapType(tp) {
     return isObject(tp) ? tp : {tp: tp}
   }
 
-  function onRender(comp, elemName, cb) {
-    if (arguments.length === 2) {
-      comp.onRender = comp.onRender || [];
-      comp.onRender.push(elemName);
-    } else if (arguments.length === 3) {
-      let spec = comp[elemName];
-      if (! isObject(spec)) {
-        spec = comp[elemName] = {tp: spec}
-      }
-      spec.onRender = spec.onRender || [];
-      spec.onRender.push(cb);
-    } else {
-      jiant.logError("Incorrect call for renderer, must be 2 (for component) or 3 (for element) arguments:" +
-          " comp reference, element name, callback {obj, field, view, elem}")
-    }
-  }
-
-  function fn(f) {
-    // return [fn, f];
-    return {tp: fn, func: f}
-  }
-
-  function comp(compName, params) {
-    // return [comp, compName, params];
-    return  {tp: comp, compName: compName, params: params}
-  }
-
   function isVisualType(tp) {
     return [jiant.label, jiant.ctl, jiant.container, jiant.pager, jiant.image, jiant.input, jiant.nlabel, jiant.numLabel].includes(tp);
   }
 
-  function data(field, dataName) {
-    // return arguments.length === 0 ? data : [data, field, dataName];
-    return arguments.length === 0 ? data : {tp: data, field: field, dataName: dataName}
-  }
-
-  function cssMarker(field, className) {
-    // return arguments.length === 0 ? cssMarker : [cssMarker, field, className];
-    return arguments.length === 0 ? cssMarker : {tp: cssMarker, field: field, className: className}
-  }
-
-  function cssFlag(field, className) {
-    // return arguments.length === 0 ? cssFlag : [cssFlag, field, className];
-    return arguments.length === 0 ? cssFlag : {tp: cssFlag, field: field, className: className}
-  }
-
-  function meta() {
-    const arr = [meta, ...arguments];
-    // return arguments.length === 0 ? meta : arr;
-    return arguments.length === 0 ? meta : {tp: meta, params: [...arguments]}
+  function required(val, field) {
+    if (val === undefined) {
+      console.error(`%c Field ${field} is required`, "color: lime; background-color: darkblue; font-weight: bold");
+      return false;
+    }
+    return true;
   }
 
   function version() {
-    return 408;
+    return 409;
   }
 
   function Jiant() {}
 
   Jiant.prototype = {
+    disableCache: true, //temporary disabled due to problems with async vs sync loading
+
     AJAX_PREFIX: "",
     AJAX_SUFFIX: "",
     DEV_MODE: false,
@@ -819,10 +771,9 @@
     LIB_LOAD_TIMEOUT: 15000,
     isMSIE: eval("/*@cc_on!@*/!1"),
     STATE_EXTERNAL_BASE: undefined,
-    extractApplicationId: extractApplicationId,
-    setupLookup: setupLookup,
+    extractApplicationId,
+    required,
 
-    bindUi: bindUi,
     app: app,
     module: module,
     loadModule: loadModule,
@@ -839,47 +790,12 @@
     getApps: function() {return boundApps},
 
     wrapType: wrapType,
-    onRender: onRender,
     optional: optional,
-    comp: comp,
-    meta: meta,
-    cssFlag: cssFlag,
-    cssMarker: cssMarker,
-    fn: fn,
-    data: data,
     isVisualType: isVisualType,
     isObject: isObject,
     lookup: function (selector) {},
     transientFn: function(val) {},
-
-    collection: "jiant.collection",
-    container: "jiant.container",
-    containerPaged: "jiant.containerPaged",
-    ctl: "jiant.ctl",
-    ctlHide: "jiant.ctlHide",
-    form: "jiant.form",
-    grid: "jiant.grid",
-    image: "jiant.image",
-    imgBg: "jiant.imgBg",
-    input: "jiant.input",
-    href: "jiant.href",
-    inputSet: "jiant.inputSet",
-    inputSetAsString: "jiant.inputSetAsString",
-    inputDate: "jiant.inputDate",
-    inputInt: "jiant.inputInt",
-    inputFloat: "jiant.inputFloat",
-    label: "jiant.label",
-    nlabel: "jiant.nlabel",
-    pager: "jiant.pager",
-    slider: "jiant.slider",
-    tabs: "jiant.tabs",
-    numLabel: "jiant.numLabel",
-
-    et: { // element types
-      ctl2state: "jiant.ctl2state",
-      ctl2root: "jiant.ctl2root",
-      ctlBack: "jiant.ctlBack"
-    },
+    isCouldBePrefixed: isCouldBePrefixed,
     flags: {},
     intro: {},
 
@@ -890,6 +806,6 @@
 
   };
 
-  return window.jiant || (window.jiant = new Jiant());
+  return instance = window.jiant || (window.jiant = new Jiant());
 
 }));

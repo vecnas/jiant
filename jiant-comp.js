@@ -1,13 +1,14 @@
-jiant.module("jiant-comp", ["jiant-ui"], function({$, app, jiant, params, "jiant-ui": Ui}) {
+jiant.module("jiant-comp", ["jiant-render", "jiant-spec"],
+  function({$, jiant, "jiant-render": Render, "jiant-spec": Spec}) {
 
   this.singleton();
 
-  function getCompRenderer(appRoot, tmId, componentId, compSpec) {
+  function getCompRenderer({app: appRoot, componentId, templateId, viewId, field, spec: compSpec}) {
     return function({data, val, view, elem, isUpdate, settings}) {
-      // jiant.logInfo("AAA", componentId, compSpec, "BBB");
+      // jiant.logInfo("AAA", arguments, "BBB");
       let mapping = settings.mapping || {},
-          actualObj = componentId in mapping ? data[mapping[componentId]] : componentId in data ? data[componentId] : data,
-          el, singleMode = !Ui.isOptional(compSpec);
+          actualObj = field in mapping ? data[mapping[field]] : field in data ? data[field] : data,
+          el, singleMode = !compSpec.optional();
       if (data === actualObj && !singleMode) {
         return;
       }
@@ -18,43 +19,42 @@ jiant.module("jiant-comp", ["jiant-ui"], function({$, app, jiant, params, "jiant
       if (! singleMode) {
         elem.empty();
       }
-      const compCbSet = appRoot.templates[tmId].compCbSet;
-      compCbSet && compCbSet.start && typeof compCbSet.start === "function" && compCbSet.start.apply();
       dataArr.forEach(function(actualObj, i) {
         if (actualObj) {
-          const param = compSpec.params;
+          const param = compSpec.params();
           if (param) {
             actualObj = $.extend({}, actualObj, param);
           }
           if ((typeof actualObj == "object") && !("index" in actualObj)) {
             actualObj.index = i;
           }
-          const mp = $.isPlainObject(mapping[componentId]) ? mapping[componentId] : mapping;
-          if (singleMode && ("propagate" in view[componentId])) {
-            view[componentId].propagate(actualObj, settings.subscribeForUpdates, settings.reverseBind, mp);
-            Ui.callOnRender(compSpec, {data: actualObj, val, view: view, elem: view[componentId], isUpdate, settings});
+          const mp = $.isPlainObject(mapping[field]) ? mapping[field] : mapping;
+          if (singleMode && ("propagate" in view[field])) {
+            view[field].propagate(actualObj, settings.subscribeForUpdates, settings.reverseBind, mp);
+            const args = {data: actualObj, val, view,  elem: view[field], isUpdate, settings};
+            Render.callOnRender({app: appRoot, viewId, templateId, field, args});
           } else {
-            el = appRoot.templates[tmId].parseTemplate(actualObj, settings.subscribeForUpdates, settings.reverseBind, mp);
-            $.each(appRoot.templates[tmId]._jiantSpec, function(cId, cElem) {
+            el = appRoot.templates[componentId].parseTemplate(actualObj, settings.subscribeForUpdates, settings.reverseBind, mp);
+            $.each(Spec.templateSpec(appRoot, componentId), function(cId, cElem) {
               if (typeof el[cId] === "function") {
-                view[componentId][cId] = el[cId].bind(el);
+                view[field][cId] = el[cId].bind(el);
               } else {
-                view[componentId][cId] = el[cId];
+                view[field][cId] = el[cId];
               }
             });
-            view[componentId].propagate = () => el.propagate.apply(el, arguments);
+            view[field].propagate = () => el.propagate.apply(el, arguments);
+            // jiant.logError("!!", elem, el);
             elem.append(el);
-            Ui.callOnRender(compSpec, {data: actualObj, val, view: view, elem: el, isUpdate, settings});
+            const args = {data: actualObj, val, view, elem: el, isUpdate, settings};
+            Render.callOnRender({app: appRoot, viewId, templateId, field, args});
           }
-          compCbSet && "perItem" in compCbSet && typeof compCbSet.perItem === "function" && compCbSet.perItem.apply(actualObj, el);
         }
       });
-      compCbSet && "end" in compCbSet && typeof compCbSet.end === "function" && compCbSet.end.apply();
     };
   }
 
   return {
-    getCompRenderer: getCompRenderer
+    getCompRenderer
   }
 
 });
