@@ -9,6 +9,7 @@
   4.07 customRenderer replaced by renderer per element cb({obj, field, view, elem}), onRender added, module called with obj instead of array
   4.08 some renderer related tunings/debugs because of testing
   4.09 separation of spec for views/templates
+  4.10 jsdoc commented, some fixes
  */
 "use strict";
 (function(factory) {
@@ -19,26 +20,90 @@
   }
 }(function($) {
 
-  const jsrc = document.currentScript.src, j2s = "jiant.js",
-      jiantPath = jsrc.substring(0, jsrc.indexOf(j2s));
+  /**
+   * Temp variables just to parse jiantPath
+   * @type {string}
+   */
+  const jsrc = document.currentScript.src, j2s = "jiant.js";
+  /**
+   * Path to jiant location from jiant script url, used for jiant itself modules load as <b>app.modulesPrefix</b>
+   * @type {string}
+   */
+  const jiantPath = jsrc.substring(0, jsrc.indexOf(j2s));
 
+  /**
+   * Tracks loaded external libs by url (external lib - {css: , js:, html:}, key is url, value is 1.
+   * Used during load of external lib to prevent load of already loaded library
+   * @type {{string:number}}
+   */
   const addedLibs = {},
+      /**
+       * Used for loading external libs, contains content of loaded external lib (including css, html, js)
+       * @type {string:string}
+       */
       loadedLibs = {},
+      /**
+       * Contains currently loading external lib url, and list of callbacks waiting for load
+       * @type {{string:[string]}}
+       */
       loadingLibs = {},
+      /**
+       * Contains list of module descriptors to load, starting with application modules
+       * and with added dependencies for all modules.
+       * @type {[{appRoot, modules2load, initial, cb, loading}]}
+       */
       moduleLoads = [],
-      modules = {},
+      /**
+       * Contains all modules, already loaded by jiant. Key is module name, value is module definition function.
+       * For module function set attribute deps - containing list of module dependencies
+       * @type {{string: function}}
+       */
+      loadedModules = {},
+      /**
+       * Contains list of all modules, defined as singletones (module function executed only once, even if module used multiple times).
+       * Key is module name, value is module definition function
+       * @type {{string: function}}
+       */
       singletones = {},
-      eventBus = $({}),
+      /**
+       * Event bus for application bound events, events identified by application id
+       * @type {jQuery|HTMLElement|*}
+       */
+      appBoundEventBus = $({}),
+      /**
+       * List of application ids, on a stage of pre-app - code that should be executed before application binding.
+       * Possible use is inter-application integration. Key - application id, value - application definition tree.
+       * @type {{string:app}}
+       */
       preApping = {},
+      /**
+       * List of successfully bound applications. Key is application id, value - application definition tree
+       * @type {{string:app}}
+       */
       boundApps = {},
+      /**
+       * List of applications currently in binding progress. Key is application id, value - application definition tree
+       * @type {{string: app}}
+       */
       bindingCurrently = {},
-      pre = {};
+      /**
+       * List of registered pre app binding callbacks. Key is application id, value - array of callbacks
+       * @type {{string:[function]}}
+       */
+      preAppCallbacks = {};
 
+  /**
+   * Global singleton jiant instance
+   * @type {jiant}
+   */
   let jiantInstance;
 
-  // loadModule before .app puts module into list of app modules, cb ignored
-  // loadModule during .app executes module immediately
-  // loadModule after .app executes module immediately
+  /**
+   * Loads specified module or array of modules and possibly executes callback
+   * loadModule before .app puts module into list of app modules, cb ignored
+   * loadModule during .app executes module immediately
+   * loadModule after .app executes module immediately
+   */
   function loadModule(app, modules, cb, replace, injectTo) {
     const appId = extractApplicationId(app);
     if (! Array.isArray(modules)) {
@@ -61,15 +126,18 @@
     }
   }
 
-  function _loadModules(appRoot, root, appId, initial, cb, replace, injectTo) {
+  /**
+   * Performs specified module or modules array loading
+   */
+  function _loadModules(appRoot, modules, appId, initial, cb, replace, injectTo) {
     let modules2load = [];
     cb = cb || function() {};
-    if ($.isPlainObject(root)) {
-      modules2load = parseObjectModules(root, appId);
-    } else if (Array.isArray(root)) {
-      modules2load = parseArrayModules(root, appId);
+    if ($.isPlainObject(modules)) {
+      modules2load = parseObjectModules(modules, appId);
+    } else if (Array.isArray(modules)) {
+      modules2load = parseArrayModules(modules, appId);
     } else {
-      jiant.logError("Unrecognized modules type", root);
+      jiant.logError("Unrecognized modules type", modules);
     }
     if (modules2load.length) {
       modules2load.forEach((m) => {
@@ -82,6 +150,12 @@
     }
   }
 
+  /**
+   * Executes loaded external module. Stores flag to addedLibs for loaded urls (css, html, javascript - all urls)
+   * css is added to document head,
+   * html appended to specified inject point or body
+   * javascript executed immediately, like it was added as script tag
+   */
   function executeExternal(appRoot, cb, arr, idx, module) {
     module.css && module.css.some(function(url) {
       if (addedLibs[url]) {
@@ -128,7 +202,7 @@
     }
     const moduleSpec = arr[idx],
         mname = moduleSpec.name,
-        module = modules[mname];
+        module = loadedModules[mname];
     if (typeof module === "function") {
       const args = {$, app: appRoot, jiant, params: moduleSpec};
       module.parsedDeps && module.parsedDeps.forEach(function(name) {
@@ -175,7 +249,7 @@
     }
     for (const i in modules2load) {
       const mName = modules2load[i].name,
-          m = modules[mName];
+          m = loadedModules[mName];
       if (!m || m.cssCount || m.jsCount || m.htmlCount) {
         return false;
       }
@@ -252,12 +326,12 @@
       return depModule.name;
     }
     function handleModuleDeps(moduleName, moduleSpec) {
-      if (typeof modules[moduleName].deps == "string") {
+      if (typeof loadedModules[moduleName].deps == "string") {
         jiant.errorp("Dependencies for module should be array, not string, error in module: !!, module url: !!", moduleName, url);
-        modules[moduleName].deps = [modules[moduleName].deps];
+        loadedModules[moduleName].deps = [loadedModules[moduleName].deps];
       }
-      const deps = modules[moduleName].deps,
-          darr = modules[moduleName].parsedDeps = [];
+      const deps = loadedModules[moduleName].deps,
+          darr = loadedModules[moduleName].parsedDeps = [];
       deps && deps.forEach(function(dep) {
         if (typeof dep === "string") {
           darr.push(loadDep("", dep, moduleSpec))
@@ -286,7 +360,7 @@
     }
 
     const moduleName = moduleSpec.name;
-    if (!modules[moduleName]) {
+    if (!loadedModules[moduleName]) {
       jiant.DEV_MODE && console.info(appId + ". Loading module " + moduleSpec.name + ", initiated by "
           + (moduleSpec.j_initiatedBy ? moduleSpec.j_initiatedBy : "application "));
       // } else {
@@ -298,12 +372,12 @@
       return;
     }
     if (!loading[moduleName]) {
-      if (!modules[moduleName]) {
+      if (!loadedModules[moduleName]) {
         if (isCacheInStorage(appRoot) && isPresentInCache(appRoot, moduleName)) {
           jiant.DEV_MODE && console.info("           using module cache: " + cacheKey(appRoot, moduleName));
           let moduleContent = localStorage.getItem(cacheKey(appRoot, moduleName));
           $.globalEval(moduleContent);
-          preprocessLoadedModule(moduleSpec, modules[moduleName]);
+          preprocessLoadedModule(moduleSpec, loadedModules[moduleName]);
           cbIf0();
         } else {
           loading[moduleName] = 1;
@@ -326,8 +400,8 @@
             if (isCacheInStorage(appRoot)) {
               localStorage.setItem(cacheKey(appRoot, moduleName), data);
             }
-            if (modules[moduleName]) {
-              preprocessLoadedModule(moduleSpec, modules[moduleName]);
+            if (loadedModules[moduleName]) {
+              preprocessLoadedModule(moduleSpec, loadedModules[moduleName]);
             }
           }).fail(function() {
             console.error("Application " + appId + ". Not loaded module " + moduleName);
@@ -339,7 +413,7 @@
           });
         }
       } else {
-        preprocessLoadedModule(moduleSpec, modules[moduleName]);
+        preprocessLoadedModule(moduleSpec, loadedModules[moduleName]);
       }
     }
   }
@@ -470,9 +544,9 @@
       cb = deps;
       deps = [];
     }
-    if (!(name in modules)) {
-      modules[name] = cb;
-      modules[name].deps = deps;
+    if (!(name in loadedModules)) {
+      loadedModules[name] = cb;
+      loadedModules[name].deps = deps;
       jiant.DEV_MODE && console.info("registered module " + name);
     }
   }
@@ -527,7 +601,6 @@
     });
     startApp(appLoader, appLoader);
     onApp(appLoader, function() {
-      console.error('onAppLoader')
       startApp(root, tree, appLoader);
     });
   }
@@ -552,14 +625,14 @@
     tree.modules = tree.modules || [];
     if (root === tree) {
       preApping[appId] = root;
-      if (pre[appId]) {
-        pre[appId].forEach(function(cb) {
+      if (preAppCallbacks[appId]) {
+        preAppCallbacks[appId].forEach(function(cb) {
           cb($, root, jiant);
         });
-        delete pre[appId];
+        delete preAppCallbacks[appId];
       }
-      if (appId !== "*" && pre["*"]) {
-        pre["*"].forEach(function(cb) {
+      if (appId !== "*" && preAppCallbacks["*"]) {
+        preAppCallbacks["*"].forEach(function(cb) {
           cb($, root, jiant);
         });
       }
@@ -586,14 +659,14 @@
           singletones["jiant-logic"].afterBind(appId);
         }
         delete bindingCurrently[appId];
-        eventBus.trigger(appBoundEventName(appId));
+        appBoundEventBus.trigger(appBoundEventName(appId));
       }
       appLoader && (delete boundApps[appLoader.id]);
     });
   }
 
   function app(appCb) {
-    if ("jiant-types" in modules) {
+    if ("jiant-types" in loadedModules) {
       prepareApp(appCb(jiantInstance));
     } else {
       const typesLoader = {
@@ -692,7 +765,7 @@
     } else if (bindingCurrently[appId]) {
       jiant.errorp("Application !! binding in progress, preApp should be called before bindUi", appId);
     } else {
-      const arr = pre[appId] = nvl(pre[appId], []);
+      const arr = preAppCallbacks[appId] = nvl(preAppCallbacks[appId], []);
       arr.push(cb);
       if (preApping[appId]) {
         cb($, preApping[appId], jiant);
@@ -704,7 +777,7 @@
     let allBound = true;
     appIdArr.some(function(appId) {
       if (! boundApps[appId]) {
-        eventBus.one(appBoundEventName(appId), function() {
+        appBoundEventBus.one(appBoundEventName(appId), function() {
           handleBoundArr(appIdArr, cb);
         });
         allBound = false;
@@ -762,7 +835,7 @@
   }
 
   function version() {
-    return 409;
+    return 410;
   }
 
   function Jiant() {}

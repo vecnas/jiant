@@ -47,7 +47,9 @@ jiant.module("jiant-templates", ["jiant-uifactory", "jiant-ui", "jiant-types", "
       Ui.scanForSpec(prefix, tmContent, tm);
     }
     $.each(tmContent, function (componentId, elemSpec) {
-      elemSpec = tmContent[componentId] = jiant.wrapType(tmContent[componentId]);
+      if (! (componentId in {"renderer": 1, "jInit": 1})) {
+        elemSpec = tmContent[componentId] = jiant.wrapType(tmContent[componentId]);
+      }
       const elemType = JType.is(elemSpec) ? elemSpec.tp() : Ui.getComponentType(elemSpec);
       if (JType.is(elemType)) {
         Spec.templateSpec(appRoot, tmId)[componentId] = elemSpec;

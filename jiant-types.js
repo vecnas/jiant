@@ -480,12 +480,17 @@ jiant.module("jiant-types", ["jiant-jtype", "jiant-comp"],
   const comp = initType({clz: class comp extends JType {}, fields: {compName: 1, params: 0},
     componentProducer: visualComponentProducer,
     renderProducer: ({app, view, viewId, templateId, componentId, tpInstance}) => {
+      const isParentView = viewId !== undefined;
       if (! (tpInstance.compName() in app.templates)) {
         jiant.error("jiant.comp element refers to non-existing template name: " + tpInstance.compName() + ", view.elem: " + viewId + "." + componentId);
       }
-      if (!tpInstance.optional()) {
-        jiant.onApp(app, () =>
-          view[componentId].renderer({data: {}, elem: view[componentId], isUpdate: false, view: view, settings: {}}));
+      if (!tpInstance.optional() && isParentView) {
+        // jiant.logError("Scheduling R TP 487 " + viewId + templateId + "::" + componentId);
+        jiant.onApp(app, () => {
+          // jiant.logError("R TP 489 " + viewId + templateId + "::" + componentId);
+          view[componentId].renderer({data: {}, elem: view[componentId], isUpdate: false, view: view, settings: {}})
+        }
+      );
       }
       return getCompRenderer({app, componentId: tpInstance.compName(), templateId, viewId, field: componentId, spec: tpInstance});
     }

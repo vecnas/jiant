@@ -61,7 +61,7 @@ jiant.module("jiant-ui", ["jiant-auto", "jiant-render", "jiant-types", "jiant-sp
     });
 
     function getComponentType(spec) {
-      return JType.is(spec) ? spec.tp() : (spec.tp) ? spec.tp : spec;
+      return JType.is(spec) ? spec.tp() : (typeof spec === "object" && "tp" in spec) ? spec.tp : spec;
     }
 
     function updateShowHideCls(view, data) {
@@ -116,6 +116,7 @@ jiant.module("jiant-ui", ["jiant-auto", "jiant-render", "jiant-types", "jiant-sp
               fnKey = "_j" + compKey;
             const args =
               {data: data, elem: compElem, val: actualVal, isUpdate: false, view: viewOrTm, settings: propSettings};
+            // jiant.logError("R UI 119 " + viewId + "::" + compKey);
             content[compKey].renderer(args);
             if (elemType !== jiant.comp) {
               Render.callOnRender({app, viewId, templateId, field: compKey, args});
@@ -135,6 +136,7 @@ jiant.module("jiant-ui", ["jiant-auto", "jiant-render", "jiant-types", "jiant-sp
                 }
                 const args =
                   {data: data, elem: compElem, val: newVal, isUpdate: true, view: viewOrTm, settings: propSettings};
+                // jiant.logError("R UI 139 " + viewId + "::" + compKey);
                 content[compKey].renderer(args);
                 if (getComponentType(compType) !== jiant.comp) {
                   Render.callOnRender({app, viewId, templateId, field: key, args});
@@ -208,8 +210,9 @@ jiant.module("jiant-ui", ["jiant-auto", "jiant-render", "jiant-types", "jiant-sp
           fn[fnKey] = [data, handler];
         }
         const args = {data: data, view: viewOrTm};
-        if (spec.renderer && typeof spec.renderer === "function") {
-          spec.renderer(args);
+        if (content.renderer && typeof content.renderer === "function") {
+          // jiant.logError("R UI 214 " + viewId + "::");
+          content.renderer(args);
         }
         Render.callOnRender({app, viewId, templateId, spec, args});
         if (jiant.DEV_MODE) {

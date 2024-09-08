@@ -12,7 +12,11 @@ jiant.module("jiant-views", ["jiant-uifactory", "jiant-ui", "jiant-types", "jian
     viewRoot._j = {};
     $.each(viewRoot, function (componentId, elemSpec) {
       let componentTp = JType.is(elemSpec) ? elemSpec.tp() : Ui.getComponentType(elemSpec);
-      Spec.viewSpec(appRoot, viewId)[componentId] = jiant.wrapType(elemSpec);
+      // if (componentId === "renderer" || componentId === "jInit") {
+      //   Spec.viewSpec(appRoot, viewId)[componentId] = elemSpec;
+      if (! (componentId in {"_scan": 1, "impl": 1, "appPrefix": 1, "renderer": 1, "jInit": 1})) {
+        Spec.viewSpec(appRoot, viewId)[componentId] = jiant.wrapType(elemSpec);
+      }
       if (JType.is(componentTp)) {
         if (elemSpec.componentProducer) {
           const bindLogger = {result: res => {bindLogger.res = res}, res: ""};
@@ -20,7 +24,7 @@ jiant.module("jiant-views", ["jiant-uifactory", "jiant-ui", "jiant-types", "jian
             {view: viewRoot, viewImpl: viewElem, viewId, componentId, app: appRoot, tpInstance: elemSpec, uiFactory, bindLogger});
           errString += bindLogger.res;
         }
-        if (elemSpec.renderProducer) {
+        if ("renderProducer" in elemSpec) {
           viewRoot[componentId].renderer = elemSpec.renderProducer({view: viewRoot, viewId, app: appRoot, componentId, tpInstance: elemSpec});
         }
         addOnRender(componentId);
@@ -64,11 +68,6 @@ jiant.module("jiant-views", ["jiant-uifactory", "jiant-ui", "jiant-types", "jian
     if ("_scan" in viewContent) {
       Ui.scanForSpec(prefix, viewContent, viewImpl);
     }
-    for (let key in viewContent) {
-      if (! (key in {"_scan": 1, "impl": 1, "jInit": 1, "appPrefix": 1, "renderer": 1})) {
-        viewContent[key] = jiant.wrapType(viewContent[key]);
-      }
-    }
     const result = UiFactory.ensureExists(viewImpl, prefix + viewId);
     if (result.length === 0) {
       _bindContent(appRoot, viewContent, viewId, viewImpl, prefix);
@@ -76,8 +75,9 @@ jiant.module("jiant-views", ["jiant-uifactory", "jiant-ui", "jiant-types", "jian
       errArr[0] += result;
     }
     ensureSafeExtend(viewContent, viewImpl);
+    const viewSpec = Spec.viewSpec(appRoot, viewId);
     Ui.makePropagationFunction({app: appRoot, viewId: viewId, content: viewContent,
-      spec: Spec.viewSpec(appRoot, viewId), viewOrTm: viewContent});
+      spec: viewSpec, viewOrTm: viewContent});
     $.extend(viewContent, viewImpl);
     if (viewContent.jInit && typeof viewContent.jInit === "function") {
       viewContent.jInit.call(viewContent, appRoot);
