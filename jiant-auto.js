@@ -1,7 +1,7 @@
 jiant.module("jiant-auto", [], function({$, app, jiant, params}) {
 
   this.singleton();
-
+/*
   function getAutoType(child, name) {
     switch (child.tagName.toUpperCase()) {
       case "INPUT": return jiant.input;
@@ -22,6 +22,8 @@ jiant.module("jiant-auto", [], function({$, app, jiant, params}) {
 
   return {
     getAutoType: getAutoType
-  }
+  }*/
+
+  return {}
 
 });

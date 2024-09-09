@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <meta charset="utf-8">
 <title>Jiant basic tests</title>
 <link rel="stylesheet" href="https://code.jquery.com/qunit/qunit-2.22.0.css">
@@ -13,7 +13,9 @@
 <script src="../../jiant.js"></script>
 <script>
     const timeout = 1000;
-    QUnit.module('jiant basic', function () {
+
+/*
+    QUnit.module('jInit and render behavior', function () {
 
         QUnit.test('hello world jiant.app', function (assert) {
             assert.timeout(timeout);
@@ -172,7 +174,31 @@
             });
         });
 
+        });
+*/
+
+
+        QUnit.module('Types', function () {
+
+            QUnit.test('hello world jiant.app', function (assert) {
+                assert.timeout(timeout);
+                const done = assert.async(1);
+                jiant.module("typesMod", () => {
+                    assert.true(true, "Got here");
+                    done();
+                });
+                jiant.app(() => {
+                    return {id: "TypesApp", modules: ["typesMod"], views: {
+                            typesView: {
+                                impl: "<b id='typesView'><button class='ctlBack'>Back</button></b>",
+                                ctlBack: jiant.ctlBack
+                            }
+                        }}
+                });
+            });
+
     });
+
 </script>
 </body>
 </html>

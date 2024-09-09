@@ -157,6 +157,12 @@ jiant.module("jiant-types", ["jiant-jtype", "jiant-comp"],
           uiElem.refreshPage();
         }
       };
+      /**
+       * Updates pager state with page data from server, in spring format, function extends ui element api (jquery object)
+       * @param {Object} page
+       * @param {number} page.totalPages - amount of total available pages
+       * @param {number} page.number - currently active page, for first page added class pager_first, for last - added class pager_last
+       */
       uiElem.updatePager = function(page) {
         $.each(roots, function(idx, root) {
           root.empty();

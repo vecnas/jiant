@@ -361,17 +361,17 @@ jiant.module("jiant-fields", [], function({$, app, jiant, params}) {
       uiElem.refreshTabs = function() {uiElem.tabs("refresh");};
     } else if (elemType === jiant.ctlHide) {
       setupCtlHide(viewOrTm, uiElem);
-    } else if (elemType === jiant.et.ctl2state) {
+    } else if (elemType === jiant.ctl2state) {
       setupCtl2state(viewOrTm, uiElem, appRoot, elemKey);
-    } else if (elemType === jiant.et.ctlBack) {
+    } else if (elemType === jiant.ctlBack) {
       setupCtlBack(viewOrTm, uiElem);
-    } else if (elemType === jiant.et.ctl2root) {
+    } else if (elemType === jiant.ctl2root) {
       setupCtl2root(appRoot, uiElem);
     } else if (elemType === jiant.inputInt) {
       setupInputInt(uiElem);
     } else if (elemType === jiant.inputFloat) {
       setupInputFloat(uiElem);
-    } else if (elemType === jiant.inputDate && uiElem.datepicker) {
+    } else if (elemType === jiant.inputDate && ("datepicker" in uiElem)) {
       const dp = appRoot.dateFormat ? uiElem.datepicker({format: appRoot.dateFormat}) : uiElem.datepicker();
       dp.on('changeDate', function() {uiElem.trigger("change")});
     } else if (elemType === jiant.pager) {

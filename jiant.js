@@ -32,14 +32,14 @@
   const jiantPath = jsrc.substring(0, jsrc.indexOf(j2s));
 
   /**
-   * Tracks loaded external libs by url (external lib - {css: , js:, html:}, key is url, value is 1.
+   * Tracks loaded external libs by url (external lib - {css: , js:, html:}), key is url, value is 1.
    * Used during load of external lib to prevent load of already loaded library
    * @type {{string:number}}
    */
   const addedLibs = {},
       /**
        * Used for loading external libs, contains content of loaded external lib (including css, html, js)
-       * @type {string:string}
+       * @type {Object}
        */
       loadedLibs = {},
       /**
@@ -330,18 +330,18 @@
         jiant.errorp("Dependencies for module should be array, not string, error in module: !!, module url: !!", moduleName, url);
         loadedModules[moduleName].deps = [loadedModules[moduleName].deps];
       }
-      const deps = loadedModules[moduleName].deps,
-          darr = loadedModules[moduleName].parsedDeps = [];
+      const deps = loadedModules[moduleName].deps;
+      loadedModules[moduleName].parsedDeps = [];
       deps && deps.forEach(function(dep) {
         if (typeof dep === "string") {
-          darr.push(loadDep("", dep, moduleSpec))
+          loadedModules[moduleName].parsedDeps.push(loadDep("", dep, moduleSpec))
         } else {
           $.each(dep, function(path, arr) {
             if (! Array.isArray(arr)) {
               arr = [arr];
             }
             arr.forEach(function(val) {
-              darr.push(loadDep(path, val, moduleSpec));
+              loadedModules[moduleName].parsedDeps.push(loadDep(path, val, moduleSpec));
             });
           });
         }
@@ -363,8 +363,6 @@
     if (!loadedModules[moduleName]) {
       jiant.DEV_MODE && console.info(appId + ". Loading module " + moduleSpec.name + ", initiated by "
           + (moduleSpec.j_initiatedBy ? moduleSpec.j_initiatedBy : "application "));
-      // } else {
-      //   console.info(appId + ". Using module " + moduleSpec.name + ", requested by " + (moduleSpec.j_initiatedBy ? moduleSpec.j_initiatedBy : "application"));
     }
     if (typeof moduleName != "string") {
       console.error("Wrong module declaration, possibly used array instead of object, moduleSpec:");
