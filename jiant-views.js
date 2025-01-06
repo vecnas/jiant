@@ -1,5 +1,5 @@
 jiant.module("jiant-views", ["jiant-uifactory", "jiant-ui", "jiant-types", "jiant-render", "jiant-spec"],
-    function({$, app, jiant, params, "jiant-uifactory": UiFactory, "jiant-ui": Ui, "jiant-types": JType,
+    function({$, app, jiant, params, "jiant-uifactory": UiFactory, "jiant-ui": Ui, "jiant-types": Types,
                "jiant-spec": Spec}) {
 
   this.singleton();
@@ -7,29 +7,30 @@ jiant.module("jiant-views", ["jiant-uifactory", "jiant-ui", "jiant-types", "jian
   let uiFactory, errString;
 
   function _bindContent(appRoot, viewRoot, viewId, viewElem, prefix) {
+    Types.canonizeMap(viewRoot);
     const addOnRender = (componentId) => viewRoot[componentId].onRender =
       (cb) => jiant.onRender({app: appRoot, viewId, field: componentId, cb});
     viewRoot._j = {};
     $.each(viewRoot, function (componentId, elemSpec) {
-      let componentTp = JType.is(elemSpec) ? elemSpec.tp() : Ui.getComponentType(elemSpec);
-      // if (componentId === "renderer" || componentId === "jInit") {
-      //   Spec.viewSpec(appRoot, viewId)[componentId] = elemSpec;
-      if (! (componentId in {"_scan": 1, "impl": 1, "appPrefix": 1, "renderer": 1, "jInit": 1})) {
+      const componentTp = Ui.getComponentType(elemSpec);
+      const predefined = componentId in {"_scan": 1, "impl": 1, "appPrefix": 1, "renderer": 1, "jInit": 1, "_j": 1};
+      if (! predefined) {
         Spec.viewSpec(appRoot, viewId)[componentId] = jiant.wrapType(elemSpec);
       }
-      if (JType.is(componentTp)) {
+      if (Types.is(componentTp)) {
         if (elemSpec.componentProducer) {
           const bindLogger = {result: res => {bindLogger.res = res}, res: ""};
-          viewRoot[componentId] = elemSpec.componentProducer(
-            {view: viewRoot, viewImpl: viewElem, viewId, componentId, app: appRoot, tpInstance: elemSpec, uiFactory, bindLogger});
+          viewRoot[componentId] = elemSpec.componentProducer({view: viewRoot, viewImpl: viewElem,
+            viewId, componentId, app: appRoot, tpInstance: elemSpec, uiFactory, bindLogger});
           errString += bindLogger.res;
         }
         if ("renderProducer" in elemSpec) {
-          viewRoot[componentId].renderer = elemSpec.renderProducer({view: viewRoot, viewId, app: appRoot, componentId, tpInstance: elemSpec});
+          viewRoot[componentId].renderer = elemSpec.renderProducer({view: viewRoot, viewId,
+            app: appRoot, componentId, tpInstance: elemSpec});
         }
         addOnRender(componentId);
         viewRoot[componentId]._j = {parent: viewRoot};
-      } else if (!(componentId in {appPrefix: 1, impl: 1, _scan: 1, jInit: 1, _j: 1, renderer: 1})) {
+      } else if (! predefined) {
         const uiElem = uiFactory.viewComponent(viewElem, viewId, prefix, componentId, componentTp, appRoot.bindByTag);
         errString += UiFactory.ensureExists(uiElem, prefix + viewId, prefix + componentId,
             Ui.isOptional(elemSpec));

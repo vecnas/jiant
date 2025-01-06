@@ -14,9 +14,9 @@ jiant.module("jiant-jtype", function() {
     }
   }
 
-  return {
+  const jt = {
     JType,
-    initType: function({clz, fields = {}, componentProducer, renderProducer}) {
+    initType: function({clz, fields = {}, componentProducer, renderProducer, alwaysUpdatable}) {
       for (const [key,] of Object.entries({field: 0, optional: 0, ...fields})) {
         clz.prototype[key] = function(val) {
           if (arguments.length === 0) {
@@ -35,8 +35,15 @@ jiant.module("jiant-jtype", function() {
       }
       const rootInstance = new clz();
       clz.prototype.tp = () => rootInstance;
+      clz.prototype.alwaysUpdatable = !!alwaysUpdatable;
       return rootInstance;
     }
   }
+
+  for (let key in jt) {
+    jiant[key] = jt[key];
+  }
+
+  return jt;
 
 });

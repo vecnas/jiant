@@ -1,6 +1,6 @@
 jiant.module("jiant-templates", ["jiant-uifactory", "jiant-ui", "jiant-types", "jiant-spec"],
     function({$, app, jiant, params, "jiant-uifactory": UiFactory, "jiant-ui": Ui,
-               "jiant-types": JType, "jiant-spec": Spec}) {
+               "jiant-types": Types, "jiant-spec": Spec}) {
 
       this.singleton();
 
@@ -38,6 +38,7 @@ jiant.module("jiant-templates", ["jiant-uifactory", "jiant-ui", "jiant-types", "
   }
 
   function bindTemplate(appRoot, tmId, tmContent, tm, errArr) {
+    Types.canonizeMap(tmContent);
     const addOnRender = (componentId) => tmContent[componentId].onRender =
       (cb) => jiant.onRender({app: appRoot, templateId: tmId, field: componentId, cb});
     const prefix = jiant.getAppPrefix(appRoot, tmContent);
@@ -47,18 +48,19 @@ jiant.module("jiant-templates", ["jiant-uifactory", "jiant-ui", "jiant-types", "
       Ui.scanForSpec(prefix, tmContent, tm);
     }
     $.each(tmContent, function (componentId, elemSpec) {
-      if (! (componentId in {"renderer": 1, "jInit": 1})) {
+      const predefined = componentId in {appPrefix: 1, impl: 1, _jiantType: 1, _scan: 1, jInit: 1, _j: 1, renderer: 1};
+      if (! predefined) {
         elemSpec = tmContent[componentId] = jiant.wrapType(tmContent[componentId]);
       }
-      const elemType = JType.is(elemSpec) ? elemSpec.tp() : Ui.getComponentType(elemSpec);
-      if (JType.is(elemType)) {
+      const elemType = Ui.getComponentType(elemSpec);
+      if (Types.is(elemType)) {
         Spec.templateSpec(appRoot, tmId)[componentId] = elemSpec;
         if (elemSpec.renderProducer) {
           tmContent[componentId].renderer = elemSpec.renderProducer(
             {view: tmContent, templateId: tmId, app: appRoot, componentId, tpInstance: elemSpec});
         }
         addOnRender(componentId);
-      } else if (!(componentId in {appPrefix: 1, impl: 1, _jiantType: 1, _scan: 1, jInit: 1, _j: 1, renderer: 1})) {
+      } else if (! predefined) {
         Spec.templateSpec(appRoot, tmId)[componentId] = jiant.wrapType(elemType);
         const comp = UiFactory.viewComponent(tm, tmId, prefix, componentId, elemType, appRoot.bindByTag);
         errArr[0] += UiFactory.ensureExists(comp, prefix + tmId, prefix + componentId, Ui.isOptional(elemSpec));
@@ -91,26 +93,25 @@ jiant.module("jiant-templates", ["jiant-uifactory", "jiant-ui", "jiant-types", "
           return;
         }
         const elemType = Ui.getComponentType(elemSpec);
-        if (JType.is(elemType)) {
+        if (Types.is(elemType)) {
           if (elemSpec.componentProducer) {
             const bindLogger = {result: res => {bindLogger.res = res}, res: ""};
             retVal[componentId] = elemSpec.componentProducer(
-              {view: tmContent, viewImpl: retVal, templateId: tmId, componentId, app: appRoot, tpInstance: elemSpec, uiFactory: UiFactory, bindLogger});
+              {view: tmContent, viewImpl: retVal, templateId: tmId, componentId,
+                app: appRoot, tpInstance: elemSpec, uiFactory: UiFactory, bindLogger});
             // errString += bindLogger.res;
           }
         } else if (! (componentId in {parseTemplate: 1, parseTemplate2Text: 1, templateSource: 1, appPrefix: 1,
           impl: 1, _scan: 1, _j: 1, _jiantType: 1, jInit: 1, renderer: 1})) {
           retVal[componentId] = getUsingBindBy(componentId);
-          if (retVal[componentId]) {
-            retVal[componentId]._j = {
-              parent: retVal
-            };
-          }
+        }
+        if (retVal[componentId]) {
+          retVal[componentId]._j = {parent: retVal};
         }
       });
       retVal.splice(0, 1); // remove first comment
-      Ui.makePropagationFunction({app: appRoot, templateId: tmId, content: tmContent,
-        spec: Spec.templateSpec(appRoot, tmId), viewOrTm: retVal});
+      Ui.makePropagationFunction({app: appRoot, templateId: tmId,
+        content: tmContent, spec: Spec.templateSpec(appRoot, tmId), viewOrTm: retVal});
       if (tmContent.jInit && typeof tmContent.jInit === "function") {
         tmContent.jInit.call(retVal, appRoot);
       }

@@ -39,7 +39,7 @@ jiant.module("jiant-types", ["jiant-jtype", "jiant-comp"],
   }
 
   const visualRenderProducer = ({app, view, viewId, templateId, componentId, tpInstance}) =>
-    ({data, elem, val, isUpdate, view}) => {
+    ({data, elem, val, isUpdate, view, fieldPresent}) => {
       if (!elem || !elem[0]) {
         return;
       }
@@ -58,12 +58,12 @@ jiant.module("jiant-types", ["jiant-jtype", "jiant-comp"],
         }
       } else if (tagName === "img") {
         elem.attr("src", val);
-      } else {
+      } else if (fieldPresent) {
         elem.html(val === undefined ? "" : val);
       }
     };
 
-  const meta = initType({clz: class meta extends JType {}, fields: {params: 0}});
+  const meta = initType({clz: class meta extends JType {}, fields: {flags: 0}});
   const container = initType({clz: class container extends JType {},
     componentProducer: visualComponentProducer, renderProducer: visualRenderProducer});
   const label = initType({clz: class label extends JType {},
@@ -87,12 +87,12 @@ jiant.module("jiant-types", ["jiant-jtype", "jiant-comp"],
       componentProducer: visualComponentProducer, renderProducer: () => updateInputSet});
 
   const imgBg = initType({clz: class imgBg extends JType {},
-    componentProducer: visualComponentProducer, renderProducer: ({elem, val}) => {
+    componentProducer: visualComponentProducer, renderProducer: () => ({elem, val}) => {
       elem.css("background-image", !!val ? "url(\"" + val + "\")" : "");
     }});
 
   const href = initType({clz: class href extends JType {},
-    componentProducer: visualComponentProducer, renderProducer: ({elem, val}) => {
+    componentProducer: visualComponentProducer, renderProducer: () => ({elem, val}) => {
       elem.attr("href", !!val ? val : "");
     }});
 
@@ -313,26 +313,26 @@ jiant.module("jiant-types", ["jiant-jtype", "jiant-comp"],
       elem.tabs();
       elem.refreshTabs = function() {elem.tabs("refresh")};
     }),
-    renderProducer: visualRenderProducer});
+    renderProducer: null});
 
   const ctlHide = initType({clz: class ctlHide extends JType {},
     componentProducer: visualComponentProducer.and(({elem, view}) => elem.click(e => view.hide())),
-    renderProducer: visualRenderProducer});
+    renderProducer: null});
 
   const ctlBack = initType({clz: class ctlBack extends JType {},
     componentProducer: visualComponentProducer.and(({elem, view}) => elem.click(e => window.history.back())),
-    renderProducer: visualRenderProducer});
+    renderProducer: null});
 
   const ctl2state = initType({clz: class ctl2state extends JType {},
     componentProducer: visualComponentProducer.and(({elem, app, componentId}) => {
       const stateName = componentId.endsWith("Ctl") ? componentId.substring(0, componentId.length - 3) : componentId;
       elem.click(e => app.states[stateName].go())
     }),
-    renderProducer: visualRenderProducer});
+    renderProducer: null});
 
   const ctl2root = initType({clz: class ctl2root extends JType {},
     componentProducer: visualComponentProducer.and(({elem, app}) => elem.click(e => jiant.goRoot(app))),
-    renderProducer: visualRenderProducer});
+    renderProducer: null});
 
   const inputInt = initType({clz: class inputInt extends JType {},
     componentProducer: visualComponentProducer.and(({elem: input}) => {
@@ -431,18 +431,18 @@ jiant.module("jiant-types", ["jiant-jtype", "jiant-comp"],
       function() { return view.find("." + app.appPrefix + componentId)}});
 
   const data = initType({clz: class data extends JType {}, fields: {dataName: 0},
-    componentProducer: ({app, view, componentId, tpInstance}) => function(val) {
+    componentProducer: ({app, view, viewImpl, componentId, tpInstance}) => function(val) {
       const attrName = "data-" + (tpInstance.dataName() || componentId);
       if (arguments.length === 0) {
-        return view.attr(attrName);
+        return viewImpl.attr(attrName);
       } else {
-        return view.attr(attrName, val);
+        return viewImpl.attr(attrName, val);
       }
     },
-    renderProducer: ({app, view, componentId}) => ({val}) => {view[componentId](val)}
+    renderProducer: ({componentId}) => function ({val, view}) {view[componentId](val)}
   });
 
-  const cssMarker = initType({clz: class cssMarker extends JType {}, fields: {className: 0},
+  const cssMarker = initType({clz: class cssMarker extends JType {}, fields: {className: 0}, alwaysUpdatable: true,
     renderProducer: ({app, view, componentId, tpInstance}) => ({data, val, view, elem, isUpdate}) => {
       const markerName = "j_prevMarkerClass_" + componentId;
       const className = tpInstance.className() || componentId;
@@ -466,7 +466,7 @@ jiant.module("jiant-types", ["jiant-jtype", "jiant-comp"],
       }
   }});
 
-  const cssFlag = initType({clz: class cssFlag extends JType {}, fields: {className: 0},
+  const cssFlag = initType({clz: class cssFlag extends JType {}, fields: {className: 0}, alwaysUpdatable: true,
     renderProducer: ({app, view, componentId, tpInstance}) => ({data, val, view, elem, isUpdate}) => {
       const markerName = "j_prevMarkerClass_" + componentId;
       const className = tpInstance.className() || componentId;
@@ -483,7 +483,7 @@ jiant.module("jiant-types", ["jiant-jtype", "jiant-comp"],
       }
   }});
 
-  const comp = initType({clz: class comp extends JType {}, fields: {compName: 1, params: 0},
+  const comp = initType({clz: class comp extends JType {}, fields: {compName: 0, params: 0}, alwaysUpdatable: true,
     componentProducer: visualComponentProducer,
     renderProducer: ({app, view, viewId, templateId, componentId, tpInstance}) => {
       const isParentView = viewId !== undefined;
@@ -501,6 +501,8 @@ jiant.module("jiant-types", ["jiant-jtype", "jiant-comp"],
       return getCompRenderer({app, componentId: tpInstance.compName(), templateId, viewId, field: componentId, spec: tpInstance});
     }
   });
+
+  const is = p => p instanceof JType;
 
   const module = {
     comp,
@@ -541,7 +543,14 @@ jiant.module("jiant-types", ["jiant-jtype", "jiant-comp"],
 
   return {
     ...module,
-    is: p => p instanceof JType
+    is: is,
+    canonizeMap: (obj) => {
+      for (const [key, val] of Object.entries(obj)) {
+        if (is(val) && val.field() === undefined) {
+          obj[key] = val.field(key);
+        }
+      }
+    }
   };
 
 });

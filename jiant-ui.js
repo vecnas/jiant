@@ -98,57 +98,55 @@ jiant.module("jiant-ui", ["jiant-auto", "jiant-render", "jiant-types", "jiant-sp
         const propSettings = {subscribe4updates: subscribe4updates, reverseBinding: reverseBinding, mapping: mapping};
         subscribe4updates = (subscribe4updates === undefined) ? true : subscribe4updates;
 
-        for (let [key, keySpec] of Object.entries(spec)) {
-          const compKey = key;
-          if (JType.is(keySpec)) {
-            key = keySpec.field() || key;
-          }
-          let actualKey, val, elemType = getComponentType(keySpec);
-          actualKey = (mapping && mapping[key]) ? mapping[key] : key;
-          val = typeof actualKey === "function" ? actualKey.apply(data) : data[actualKey];
-          if (content[key]?.renderer
-            || Render.isOnRenderPresent({app, viewId, templateId, field: key})
-            || (data && val !== undefined && val !== null && !isServiceName(key) && !(val instanceof $))) {
-            const actualVal = typeof val === "function" ? val.apply(data) : val;
+        for (let [componentKey, componentSpec] of Object.entries(spec)) {
+          let fieldKey = JType.is(componentSpec) ? componentSpec.field() : componentKey;
+          let mappedKey, val, elemType = getComponentType(componentSpec);
+          mappedKey = (mapping && (fieldKey in mapping)) ? mapping[fieldKey] : fieldKey;
+          val = typeof mappedKey === "function" ? mappedKey.apply(data) : data[mappedKey];
+          if (elemType?.alwaysUpdatable || Render.isOnRenderPresent({app, viewId, templateId, field: fieldKey})
+            || (data && val !== undefined && val !== null && !isServiceName(fieldKey) && !(val instanceof $))) {
 
-            const compElem = viewOrTm[compKey],
+            const actualVal = typeof val === "function" ? val.apply(data) : val;
+            const actualElement = viewOrTm[componentKey],
               compType = elemType,
-              fnKey = "_j" + compKey;
+              fnKey = "_j" + componentKey;
             const args =
-              {data: data, elem: compElem, val: actualVal, isUpdate: false, view: viewOrTm, settings: propSettings};
-            // jiant.logError("R UI 119 " + viewId + "::" + compKey);
-            content[compKey].renderer(args);
-            if (elemType !== jiant.comp) {
-              Render.callOnRender({app, viewId, templateId, field: compKey, args});
+              {data: data, elem: actualElement, val: actualVal, isUpdate: false, view: viewOrTm,
+                settings: propSettings, fieldPresent: typeof data === "object" && mappedKey in data};
+            if (content[componentKey].renderer) {
+              content[componentKey].renderer(args);
             }
-            if (subscribe4updates && typeof data.on === "function" && (spec[compKey].renderer || typeof val === "function")) { // 3rd ?
+            if (elemType !== jiant.comp) {
+              Render.callOnRender({app, viewId, templateId, field: fieldKey, args});
+            }
+            if (subscribe4updates && typeof data.on === "function" && (spec[componentKey].renderer || typeof val === "function")) { // 3rd ?
               if (fn[fnKey]) {
                 const oldData = fn[fnKey][0];
                 oldData && oldData.off(fn[fnKey][1]);
-                fn[fnKey][2] && compElem.off && compElem.off("change", fn[fnKey][2]);
+                fn[fnKey][2] && actualElement.off && actualElement.off("change", fn[fnKey][2]);
               }
               if (typeof val !== "function") { // ?
-                actualKey = null;
+                mappedKey = null;
               }
-              const handler = data.on(actualKey, function (obj, newVal) {
+              const handler = data.on(mappedKey, function (obj, newVal) {
                 if (arguments.length === 2 && newVal === "remove") {
                   return;
                 }
                 const args =
-                  {data: data, elem: compElem, val: newVal, isUpdate: true, view: viewOrTm, settings: propSettings};
-                // jiant.logError("R UI 139 " + viewId + "::" + compKey);
-                content[compKey].renderer(args);
+                  {data: obj, elem: actualElement, val: newVal, isUpdate: true, view: viewOrTm,
+                    settings: propSettings, fieldPresent: mappedKey in obj};
+                content[componentKey].renderer(args);
                 if (getComponentType(compType) !== jiant.comp) {
-                  Render.callOnRender({app, viewId, templateId, field: key, args});
+                  Render.callOnRender({app, viewId, templateId, field: fieldKey, args});
                 }
               });
               fn[fnKey] = [data, handler];
             }
-            if (reverseBinding && compElem && compElem.change) {
+            if (reverseBinding && actualElement && actualElement.change) {
               const backHandler = function (event) {
-                const tagName = compElem[0].tagName.toLowerCase(),
-                  tp = compElem.attr("type"),
-                  etype = spec[compKey];
+                const tagName = actualElement[0].tagName.toLowerCase(),
+                  tp = actualElement.attr("type"),
+                  etype = spec[componentKey];
 
                 function convert(val) {
                   return val === "undefined" ? undefined : val;
@@ -168,27 +166,27 @@ jiant.module("jiant-ui", ["jiant-auto", "jiant-render", "jiant-types", "jiant-sp
 
                 if (val && typeof val === "function") {
                   if (etype === jiant.inputSet) {
-                    val.call(data, elem2arr(compElem));
+                    val.call(data, elem2arr(actualElement));
                   } else if (etype === jiant.inputSetAsString) {
-                    val.call(data, joinOrUndef(elem2arr(compElem)));
+                    val.call(data, joinOrUndef(elem2arr(actualElement)));
                   } else {
                     if (tagName === "input" && tp === "checkbox") {
-                      val.call(data, !!compElem.prop("checked"));
+                      val.call(data, !!actualElement.prop("checked"));
                     } else if (tagName === "input" && tp === "radio") {
-                      val.call(data, joinOrUndef(elem2arr(compElem)));
+                      val.call(data, joinOrUndef(elem2arr(actualElement)));
                     } else if (tagName in {"input": 1, "select": 1, "textarea": 1}) {
-                      val.call(data, compElem.val()); // don't convert due to user may input "undefined" as string
+                      val.call(data, actualElement.val()); // don't convert due to user may input "undefined" as string
                     } else if (tagName === "img") {
-                      val.call(data, compElem.attr("src"));
+                      val.call(data, actualElement.attr("src"));
                       // no actual event for changing html, manual 'change' trigger supported by this code
                     } else {
-                      val.call(data, compElem.html());
+                      val.call(data, actualElement.html());
                     }
                   }
                 }
               };
               // jiant.logInfo(viewOrTm, compKey, compElem);
-              compElem.change(backHandler);
+              actualElement.change(backHandler);
               fn[fnKey] && fn[fnKey].push(backHandler);
             }
           }

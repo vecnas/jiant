@@ -183,22 +183,39 @@
             QUnit.test('hello world jiant.app', function (assert) {
                 assert.timeout(timeout);
                 const done = assert.async(1);
-                jiant.module("typesMod", () => {
-                    assert.true(true, "Got here");
-                    done();
+                jiant.module("typesMod", ({app}) => {
+                  jiant.onApp(app, () => {
+                    app.views.typesView.propagate({compo: {tdt: 'la-la'}, tdv: "tdddt"});
+                  })
+
+                  assert.true(true, "Got here");
+                  done();
                 });
-                jiant.app(() => {
-                    return {id: "TypesApp", modules: ["typesMod"], views: {
-                            typesView: {
-                                impl: "<b id='typesView'><button class='ctlBack'>Back</button></b>",
-                                ctlBack: jiant.ctlBack
-                            }
-                        }}
-                });
+                jiant.app(() => ({id: "TypesApp", modules: ["typesMod"],
+                  views: {
+                    typesView: {
+                      ctlBack: jiant.ctlBack,
+                      tdv: jiant.data,
+                      compo: jiant.comp.compName("t"),
+                      compo2: jiant.comp.compName("t2")
+                    }
+                  },
+                  templates: {
+                      t: {
+                        impl: "<b id='t'><h1 style='padding-top: 400px'>TEMPL</h1></b>",
+                        tdt: jiant.data
+                      },
+                      t2: {
+                        impl: "<b id='t2'><h2 style='padding-top: 400px'>TEMPL2</h2></b>",
+                        tdt2: jiant.data
+                      }
+                  }
+                }));
             });
 
     });
 
 </script>
+<b id='typesView'><b class='compo'></b><b class='compo2'></b><button class='ctlBack'>Back</button></b>
 </body>
 </html>

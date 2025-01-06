@@ -5,7 +5,6 @@ jiant.module("jiant-comp", ["jiant-render", "jiant-spec"],
 
   function getCompRenderer({app: appRoot, componentId, templateId, viewId, field, spec: compSpec}) {
     return function({data, val, view, elem, isUpdate, settings}) {
-      // jiant.logInfo("AAA", arguments, "BBB");
       let mapping = settings.mapping || {},
           actualObj = field in mapping ? data[mapping[field]] : field in data ? data[field] : data,
           el, singleMode = !compSpec.optional();
@@ -42,8 +41,7 @@ jiant.module("jiant-comp", ["jiant-render", "jiant-spec"],
                 view[field][cId] = el[cId];
               }
             });
-            view[field].propagate = () => el.propagate.apply(el, arguments);
-            // jiant.logError("!!", elem, el);
+            view[field].propagate = function() {el.propagate.apply(el, arguments)};
             elem.append(el);
             const args = {data: actualObj, val, view, elem: el, isUpdate, settings};
             Render.callOnRender({app: appRoot, viewId, templateId, field, args});
