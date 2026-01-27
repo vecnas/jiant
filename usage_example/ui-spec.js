@@ -21,6 +21,7 @@ var helloJiant = helloJiant || (function(jiant) {
   return {
 
     id: "helloJiant",
+    appPrefix: "_",
 
     ajax: {
 
