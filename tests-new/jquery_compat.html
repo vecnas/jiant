@@ -1,0 +1,394 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Jiant jQuery compatibility tests</title>
+  <link rel="stylesheet" href="https://code.jquery.com/qunit/qunit-2.22.0.css">
+</head>
+<body>
+<div id="qunit"></div>
+<div id="qunit-fixture"></div>
+<script src="https://code.jquery.com/qunit/qunit-2.22.0.js"></script>
+<script src="https://code.jquery.com/jquery-3.7.1.min.js"
+        integrity="sha256-/JqT3SQfawRcv/BIHPThkBvs0OEvtFFmqPF/lYI/Cxo="
+        crossorigin="anonymous"></script>
+<script src="../jquery.hashchange.js"></script>
+<script src="../jiant.js"></script>
+<script>
+  const timeout = 2000;
+
+  QUnit.module("jQuery compatibility", function() {
+
+    QUnit.test("jiant toArray uses array detection", function(assert) {
+      assert.timeout(timeout);
+      const done = assert.async();
+      jiant.app(() => ({id: "JQAppUtil"}));
+      jiant.onApp("JQAppUtil", function() {
+        const arr = [1, 2];
+        assert.deepEqual(jiant.toArray(arr), arr, "toArray preserves arrays");
+        assert.deepEqual(jiant.toArray("x"), ["x"], "toArray wraps non-array values");
+        done();
+      });
+    });
+
+    QUnit.test("onApp provides jQuery and view/components are jQuery objects", function(assert) {
+      assert.timeout(timeout);
+      const done = assert.async();
+      $("#qunit-fixture").html("<div id='v1'><span class='fld'></span></div>");
+
+      jiant.app(() => ({
+        id: "JQApp1",
+        views: {
+          v1: {
+            fld: jiant.label
+          }
+        }
+      }));
+
+      jiant.onApp("JQApp1", function($, app) {
+        assert.ok(typeof $ === "function" && $.fn && $.fn.jquery, "onApp passes jQuery function");
+        assert.ok(!!app.views.v1.jquery, "view is a jQuery object");
+        assert.ok(!!app.views.v1.fld.jquery, "component is a jQuery object");
+        done();
+      });
+    });
+
+    QUnit.test("onApp with multiple apps receives each app", function(assert) {
+      assert.timeout(timeout);
+      const done = assert.async();
+      $("#qunit-fixture").html("<div id='a1'></div><div id='a2'></div>");
+
+      jiant.app(() => ({id: "JQAppMulti1", views: {a1: {}}}));
+      jiant.app(() => ({id: "JQAppMulti2", views: {a2: {}}}));
+
+      jiant.onApp(["JQAppMulti1", "JQAppMulti2"], function($, app1, app2) {
+        assert.equal(app1.id, "JQAppMulti1", "first app provided");
+        assert.equal(app2.id, "JQAppMulti2", "second app provided");
+        done();
+      });
+    });
+
+    QUnit.test("parseTemplate returns jQuery fragment and component jQuery elements", function(assert) {
+      assert.timeout(timeout);
+      const done = assert.async();
+      $("#qunit-fixture").empty();
+
+      jiant.app(() => ({
+        id: "JQApp2",
+        templates: {
+          t1: {
+            impl: "<div id='t1'><div class='fld'></div></div>",
+            fld: jiant.label
+          }
+        }
+      }));
+
+      jiant.onApp("JQApp2", function($, app) {
+        const frag = app.templates.t1.parseTemplate({fld: "x"}, false);
+        assert.ok(!!frag.jquery, "parseTemplate returns jQuery");
+        assert.ok(!!frag.fld.jquery, "template component is jQuery");
+        done();
+      });
+    });
+
+    QUnit.test("bindByTag after-class prefers class over tag", function(assert) {
+      assert.timeout(timeout);
+      const done = assert.async();
+      $("#qunit-fixture").html("<div id='vbt1'><div class='item' data-src='class'></div><item data-src='tag'></item></div>");
+
+      jiant.app(() => ({
+        id: "JQAppBindAfter",
+        bindByTag: "after-class",
+        views: { vbt1: { item: jiant.label } }
+      }));
+
+      jiant.onApp("JQAppBindAfter", function($, app) {
+        assert.equal(app.views.vbt1.item.attr("data-src"), "class", "class element selected");
+        done();
+      });
+    });
+
+    QUnit.test("bindByTag before-class prefers tag over class", function(assert) {
+      assert.timeout(timeout);
+      const done = assert.async();
+      $("#qunit-fixture").html("<div id='vbt2'><div class='item' data-src='class'></div><item data-src='tag'></item></div>");
+
+      jiant.app(() => ({
+        id: "JQAppBindBefore",
+        bindByTag: "before-class",
+        views: { vbt2: { item: jiant.label } }
+      }));
+
+      jiant.onApp("JQAppBindBefore", function($, app) {
+        assert.equal(app.views.vbt2.item.attr("data-src"), "tag", "tag element selected");
+        done();
+      });
+    });
+
+    QUnit.test("bindByTag true uses tag selection", function(assert) {
+      assert.timeout(timeout);
+      const done = assert.async();
+      $("#qunit-fixture").html("<vbt3><div class='item' data-src='class'></div><item data-src='tag'></item></vbt3>");
+
+      jiant.app(() => ({
+        id: "JQAppBindTag",
+        bindByTag: true,
+        views: { vbt3: { item: jiant.label } }
+      }));
+
+      jiant.onApp("JQAppBindTag", function($, app) {
+        assert.equal(app.views.vbt3.item.attr("data-src"), "tag", "tag element selected");
+        done();
+      });
+    });
+
+    QUnit.test("showOn/hideOn are available on jQuery objects", function(assert) {
+      assert.timeout(timeout);
+      const done = assert.async();
+      $("#qunit-fixture").html("<div id='v3'><div class='box'></div></div>");
+
+      jiant.app(() => ({
+        id: "JQApp3",
+        views: {
+          v3: {
+            box: jiant.label
+          }
+        }
+      }));
+
+      jiant.onApp("JQApp3", function($, app) {
+        const box = app.views.v3.box;
+        assert.equal(typeof $.fn.showOn, "function", "showOn exists on jQuery prototype");
+        assert.equal(typeof $.fn.hideOn, "function", "hideOn exists on jQuery prototype");
+
+        box.hideOn("flag");
+        app.views.v3.propagate({flag: true});
+        assert.notOk(box.is(":visible"), "hideOn hides when flag is true");
+
+        app.views.v3.propagate({flag: false});
+        assert.ok(box.is(":visible"), "hideOn shows when flag is false");
+        done();
+      });
+    });
+
+    QUnit.test("reverse binding updates model on input change", function(assert) {
+      assert.timeout(timeout);
+      const done = assert.async();
+      $("#qunit-fixture").html("<div id='v4'><input class='name' type='text'/></div>");
+
+      jiant.app(() => ({
+        id: "JQAppReverseBind",
+        views: { v4: { name: jiant.input } }
+      }));
+
+      jiant.onApp("JQAppReverseBind", function($, app) {
+        const data = { _name: "", name: function(val) { this._name = val; } };
+        app.views.v4.propagate(data, true, true);
+        app.views.v4.name.val("abc").change();
+        assert.equal(data._name, "abc", "reverse binding set value from input");
+        done();
+      });
+    });
+
+    QUnit.test("intl loads data and updates scanDoc labels", function(assert) {
+      assert.timeout(timeout);
+      const done = assert.async();
+      $("#qunit-fixture").html("<div id='intl_el' data-nlabel='someText'></div>");
+
+      jiant.app(() => ({
+        id: "JQAppIntl",
+        logic: {
+          intl: {
+            url: "/tests-new/intlData.json",
+            scanDoc: true,
+            t: function(key) {},
+            someText: function() {},
+            otherText: function() {}
+          }
+        }
+      }));
+
+      jiant.onApp("JQAppIntl", function($, app) {
+        jiant.onApp("JQAppIntl", ["intl"], function($, app2) {
+          assert.equal(app2.logic.intl.t("someKey"), "Some key for t()", "intl.t returns translation");
+          assert.equal(app2.logic.intl.someText(), "Me some text", "intl function implemented");
+          setTimeout(function() {
+            assert.equal($("#intl_el").text(), "Me some text", "scanDoc updated element text");
+            done();
+          }, 0);
+        });
+      });
+    });
+
+    QUnit.test("loadCss loads stylesheet and applies styles", function(assert) {
+      assert.timeout(timeout);
+      const done = assert.async();
+      $("#qunit-fixture").html("<div id='cssTarget' class='css-test'>X</div>");
+
+      jiant.app(() => ({
+        id: "JQAppLoadCss",
+        modulesPrefix: "../",
+        modules: []
+      }));
+
+      jiant.onApp("JQAppLoadCss", function($, app) {
+        jiant.loadModule(app, "jiant-load", function() {
+          jiant.loadCss("/tests-new/fixtures/test.css", function() {
+            const styleTag = $("style[data-uri='/tests-new/fixtures/test.css']");
+            assert.equal(styleTag.length, 1, "css stylesheet tag added");
+            done();
+          });
+        });
+      });
+    });
+
+    QUnit.test("states go triggers start with params", function(assert) {
+      assert.timeout(timeout);
+      const done = assert.async();
+      $("#qunit-fixture").empty();
+      window.location.hash = "";
+
+      jiant.app(() => ({
+        id: "JQAppStates",
+        states: {
+          s1: { go: function(id) {} }
+        }
+      }));
+
+      jiant.onApp("JQAppStates", function($, app) {
+        app.states.s1.start(function(id) {
+          assert.equal(id, 5, "state param passed");
+          done();
+        });
+        app.states.s1.go(5);
+      });
+    });
+
+    QUnit.test("models repo add and update emit events", function(assert) {
+      assert.timeout(timeout);
+      const done = assert.async();
+      $("#qunit-fixture").empty();
+
+      jiant.app(() => ({
+        id: "JQAppModels",
+        models: {
+          item: {
+            id: function(val) {},
+            name: function(val) {},
+            jRepo: {}
+          }
+        }
+      }));
+
+      jiant.onApp("JQAppModels", function($, app) {
+        const repo = app.models.item.jRepo;
+        repo.add({id: 1, name: "a"});
+        const all = repo.all();
+        assert.equal(all.length, 1, "repo contains one item");
+        const obj = all[0];
+        let updated = false;
+        obj.on(function() { updated = true; });
+        obj.update({name: "b"});
+        assert.equal(obj.name(), "b", "model update applied");
+        assert.ok(updated, "model update event fired");
+        done();
+      });
+    });
+
+    QUnit.test("jiant ajax parses JSON response", function(assert) {
+      assert.timeout(timeout);
+      const done = assert.async();
+      $("#qunit-fixture").empty();
+
+      jiant.app(() => ({
+        id: "JQAppAjaxOk",
+        ajax: {
+          getData: function(id, cb) {
+            return {url: "/tests-new/fixtures/ajax_ok.json", method: "GET"};
+          }
+        }
+      }));
+
+      jiant.onApp("JQAppAjaxOk", function($, app) {
+        app.ajax.getData(5, function(data) {
+          assert.equal(data.status, "ok", "ajax callback receives parsed JSON");
+          assert.equal(data.value, 123, "ajax callback receives numeric field");
+          done();
+        });
+      });
+    });
+
+    QUnit.test("jiant ajax flattens objects into query params", function(assert) {
+      assert.timeout(timeout);
+      const done = assert.async();
+      $("#qunit-fixture").empty();
+
+      jiant.app(() => ({
+        id: "JQAppAjaxEcho",
+        ajax: {
+          echo: function(payload, cb) {
+            return {url: "/tests-new/fixtures/echo", method: "GET"};
+          }
+        }
+      }));
+
+      jiant.onApp("JQAppAjaxEcho", function($, app) {
+        app.ajax.echo({foo: "bar", nested: {x: 7}}, function(data) {
+          assert.equal(data.foo, "bar", "top-level value passed");
+          assert.equal(data["nested.x"], "7", "nested value flattened with dot notation");
+          done();
+        });
+      });
+    });
+
+    QUnit.test("jiant ajax replaces url params", function(assert) {
+      assert.timeout(timeout);
+      const done = assert.async();
+      $("#qunit-fixture").empty();
+
+      jiant.app(() => ({
+        id: "JQAppAjaxRest",
+        ajax: {
+          byId: function(id, cb) {
+            return {url: "/tests-new/fixtures/echo/:id", method: "GET"};
+          }
+        }
+      }));
+
+      jiant.onApp("JQAppAjaxRest", function($, app) {
+        app.ajax.byId(7, function(data) {
+          assert.equal(data.id, "7", "path param substituted in url");
+          done();
+        });
+      });
+    });
+
+    QUnit.test("jiant ajax error handler is called on 404", function(assert) {
+      assert.timeout(timeout);
+      const done = assert.async();
+      $("#qunit-fixture").empty();
+
+      jiant.app(() => ({
+        id: "JQAppAjaxErr",
+        ajax: {
+          getMissing: function(id, cb, err) {
+            return {url: "/tests-new/fixtures/missing.json", method: "GET"};
+          }
+        }
+      }));
+
+      jiant.onApp("JQAppAjaxErr", function($, app) {
+        app.ajax.getMissing(1, function() {
+          assert.ok(false, "success callback should not be called");
+        }, function(errText) {
+          assert.ok(true, "error handler called");
+          assert.ok(typeof errText === "string", "error handler receives response text");
+          done();
+        });
+      });
+    });
+
+  });
+</script>
+</body>
+</html>
