@@ -1,7 +1,7 @@
 const { chromium } = require("playwright");
 
 const baseUrl = process.env.BASE_URL || "http://localhost:8080";
-const url = `${baseUrl}/tests-new/modules.html`;
+const url = `${baseUrl}/tests/modules.html`;
 
 (async () => {
   const browser = await chromium.launch();

@@ -199,7 +199,7 @@
         id: "JQAppIntl",
         logic: {
           intl: {
-            url: "/tests-new/intlData.json",
+            url: "/tests/intlData.json",
             scanDoc: true,
             t: function(key) {},
             someText: function() {},
@@ -233,8 +233,8 @@
 
       jiant.onApp("JQAppLoadCss", function($, app) {
         jiant.loadModule(app, "jiant-load", function() {
-          jiant.loadCss("/tests-new/fixtures/test.css", function() {
-            const styleTag = $("style[data-uri='/tests-new/fixtures/test.css']");
+          jiant.loadCss("/tests/fixtures/test.css", function() {
+            const styleTag = $("style[data-uri='/tests/fixtures/test.css']");
             assert.equal(styleTag.length, 1, "css stylesheet tag added");
             done();
           });
@@ -304,7 +304,7 @@
         id: "JQAppAjaxOk",
         ajax: {
           getData: function(id, cb) {
-            return {url: "/tests-new/fixtures/ajax_ok.json", method: "GET"};
+            return {url: "/tests/fixtures/ajax_ok.json", method: "GET"};
           }
         }
       }));
@@ -327,7 +327,7 @@
         id: "JQAppAjaxEcho",
         ajax: {
           echo: function(payload, cb) {
-            return {url: "/tests-new/fixtures/echo", method: "GET"};
+            return {url: "/tests/fixtures/echo", method: "GET"};
           }
         }
       }));
@@ -350,7 +350,7 @@
         id: "JQAppAjaxRest",
         ajax: {
           byId: function(id, cb) {
-            return {url: "/tests-new/fixtures/echo/:id", method: "GET"};
+            return {url: "/tests/fixtures/echo/:id", method: "GET"};
           }
         }
       }));
@@ -372,7 +372,7 @@
         id: "JQAppAjaxErr",
         ajax: {
           getMissing: function(id, cb, err) {
-            return {url: "/tests-new/fixtures/missing.json", method: "GET"};
+            return {url: "/tests/fixtures/missing.json", method: "GET"};
           }
         }
       }));

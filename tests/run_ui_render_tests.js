@@ -1,7 +1,7 @@
 const { chromium } = require("playwright");
 
 const baseUrl = process.env.BASE_URL || "http://localhost:8080";
-const url = `${baseUrl}/tests-new/jquery_compat.html`;
+const url = `${baseUrl}/tests/ui_render.html`;
 
 (async () => {
   const browser = await chromium.launch();
@@ -32,7 +32,7 @@ const url = `${baseUrl}/tests-new/jquery_compat.html`;
   if (failed > 0) {
     const qunitHtml = await page.$eval("#qunit-tests", el => el.innerHTML || "");
     console.error("QUnit tests HTML (truncated):");
-    console.error(qunitHtml.slice(0, 40000));
+    console.error(qunitHtml.slice(0, 16000));
   }
 
   await browser.close();

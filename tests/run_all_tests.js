@@ -5,12 +5,12 @@ const baseUrl = process.env.BASE_URL || "http://localhost:8080";
 const serverCmd = process.env.TEST_SERVER_CMD || "node";
 const serverArgs = process.env.TEST_SERVER_ARGS
   ? process.env.TEST_SERVER_ARGS.split(" ")
-  : ["tests-new/server.js"];
+  : ["tests/server.js"];
 
 const runners = [
-  ["node", ["tests-new/run_modules_tests.js"]],
-  ["node", ["tests-new/run_jquery_compat.js"]],
-  ["node", ["tests-new/run_ui_render_tests.js"]]
+  ["node", ["tests/run_modules_tests.js"]],
+  ["node", ["tests/run_jquery_compat.js"]],
+  ["node", ["tests/run_ui_render_tests.js"]]
 ];
 
 function waitForServer(url, timeoutMs) {
@@ -38,7 +38,7 @@ async function run() {
   let exitCode = 0;
 
   try {
-    await waitForServer(`${baseUrl}/tests-new/modules.html`, 5000);
+    await waitForServer(`${baseUrl}/tests/modules.html`, 5000);
     for (const [cmd, args] of runners) {
       const code = await new Promise(resolve => {
         const proc = spawn(cmd, args, { stdio: "inherit" });

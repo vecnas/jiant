@@ -31,10 +31,10 @@ function safePath(urlPath) {
 
 const server = http.createServer((req, res) => {
   const reqUrl = new URL(req.url || "/", `http://localhost:${port}`);
-  if (reqUrl.pathname === "/tests-new/fixtures/echo" || reqUrl.pathname.startsWith("/tests-new/fixtures/echo/")) {
+  if (reqUrl.pathname === "/tests/fixtures/echo" || reqUrl.pathname.startsWith("/tests/fixtures/echo/")) {
     const out = {};
-    if (reqUrl.pathname.startsWith("/tests-new/fixtures/echo/")) {
-      out.id = reqUrl.pathname.substring("/tests-new/fixtures/echo/".length);
+    if (reqUrl.pathname.startsWith("/tests/fixtures/echo/")) {
+      out.id = reqUrl.pathname.substring("/tests/fixtures/echo/".length);
     }
     reqUrl.searchParams.forEach((val, key) => {
       out[key] = val;
@@ -71,5 +71,5 @@ const server = http.createServer((req, res) => {
 
 server.listen(port, () => {
   console.log(`Test server running at http://localhost:${port}/`);
-  console.log(`Open http://localhost:${port}/tests-new/modules.html`);
+  console.log(`Open http://localhost:${port}/tests/modules.html`);
 });
