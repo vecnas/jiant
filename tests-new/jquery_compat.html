@@ -388,6 +388,144 @@
       });
     });
 
+    QUnit.test("legacy core lfill/format functions", function(assert) {
+      assert.timeout(timeout);
+      const done = assert.async();
+      jiant.app(() => ({id: "JQAppCore"}));
+      jiant.onApp("JQAppCore", function() {
+        const dt = new Date(2012, 10, 26, 9, 45, 8, 655);
+        assert.equal(jiant.lfill(2), "02", "lfill single digit");
+        assert.equal(jiant.lfill(""), "00", "lfill empty string");
+        assert.equal(jiant.formatDate(dt), "2012-11-26", "formatDate");
+        assert.equal(jiant.formatTime(dt), "09:45", "formatTime");
+        assert.equal(jiant.formatTimeSeconds(dt), "09:45:08", "formatTimeSeconds");
+        done();
+      });
+    });
+
+    QUnit.test("onUiBound alias supports object, id, and arrays", function(assert) {
+      assert.timeout(timeout);
+      const done = assert.async();
+      let count = 0;
+      const app1 = {id: "JQAppUiBound1"};
+      const app2 = {id: "JQAppUiBound2"};
+
+      jiant.onUiBound(app1, function() { count++; });
+      jiant.onUiBound(app1.id, function() { count++; });
+      jiant.onUiBound([app1, app2], function($, a1, a2) {
+        assert.equal(a1.id, "JQAppUiBound1", "array first app");
+        assert.equal(a2.id, "JQAppUiBound2", "array second app");
+        count++;
+        assert.equal(count, 3, "all callbacks fired");
+        done();
+      });
+
+      jiant.app(() => ({id: "JQAppUiBound1"}));
+      jiant.app(() => ({id: "JQAppUiBound2"}));
+    });
+
+    QUnit.test("states refreshState triggers start", function(assert) {
+      assert.timeout(timeout);
+      const done = assert.async();
+      window.location.hash = "";
+      let doneCalled = false;
+
+      jiant.app(() => ({
+        id: "JQAppStateRefresh",
+        states: {"": {go: function() {}, start: function() {}, end: function() {}}}
+      }));
+
+      jiant.onApp("JQAppStateRefresh", function($, app) {
+        app.states[""].start(function() {
+          if (doneCalled) {
+            return;
+          }
+          doneCalled = true;
+          assert.ok(true, "start triggered on refreshState");
+          done();
+        });
+        jiant.refreshState(app);
+      });
+    });
+
+    QUnit.test("states go preserves previous params when undefined", function(assert) {
+      assert.timeout(timeout);
+      const done = assert.async();
+      window.location.hash = "";
+      let calls = 0;
+
+      jiant.app(() => ({
+        id: "JQAppStateParams",
+        states: {
+          s1: {go: function(p1, p2) {}, start: function() {}, end: function() {}}
+        }
+      }));
+
+      jiant.onApp("JQAppStateParams", function($, app) {
+        app.states.s1.start(function(p1, p2) {
+          calls++;
+          if (calls === 1) {
+            assert.equal(p1, "a", "first param set");
+            assert.equal(p2, "b", "second param set");
+            app.states.s1.go(undefined, "c");
+          } else if (calls === 2) {
+            assert.equal(p1, "a", "first param preserved");
+            assert.equal(p2, "c", "second param updated");
+            done();
+          }
+        });
+        app.states.s1.go("a", "b");
+      });
+    });
+
+    QUnit.test("multi-app bind onUiBound receives both apps", function(assert) {
+      assert.timeout(timeout);
+      const done = assert.async();
+      const app1 = {id: "JQAppMultiBind1"};
+      const app2 = {id: "JQAppMultiBind2"};
+
+      jiant.onUiBound([app1, app2], function($, a1, a2) {
+        assert.equal(a1.id, "JQAppMultiBind1", "first app id ok");
+        assert.equal(a2.id, "JQAppMultiBind2", "second app id ok");
+        done();
+      });
+
+      jiant.app(() => ({id: "JQAppMultiBind1"}));
+      jiant.app(() => ({id: "JQAppMultiBind2"}));
+    });
+
+    QUnit.test("empty state triggers root state start", function(assert) {
+      assert.timeout(timeout);
+      const done = assert.async();
+      window.location.hash = "";
+
+      jiant.app(() => ({
+        id: "JQAppEmptyState",
+        states: {
+          "": {go: function() {}, start: function() {}, end: function() {}},
+          root1: {go: function() {}, start: function() {}, end: function() {}, root: 1}
+        }
+      }));
+
+      jiant.onApp("JQAppEmptyState", function($, app) {
+        let rootStarted = false;
+        app.states.root1.start(function() {
+          if (rootStarted) {
+            return;
+          }
+          rootStarted = true;
+          assert.ok(true, "root state started");
+          done();
+        });
+        app.states[""].start(function() {
+          app.states.root1.go();
+        });
+        jiant.refreshState(app);
+      });
+    });
+
+    // _scan uses Auto.getAutoType which is currently stubbed out in jiant-auto.js
+
   });
 </script>
 </body>

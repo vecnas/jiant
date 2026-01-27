@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Jiant UI render tests</title>
+  <link rel="stylesheet" href="https://code.jquery.com/qunit/qunit-2.22.0.css">
+</head>
+<body>
+<div id="qunit"></div>
+<div id="qunit-fixture"></div>
+<script src="https://code.jquery.com/qunit/qunit-2.22.0.js"></script>
+<script src="https://code.jquery.com/jquery-3.7.1.min.js"
+        integrity="sha256-/JqT3SQfawRcv/BIHPThkBvs0OEvtFFmqPF/lYI/Cxo="
+        crossorigin="anonymous"></script>
+<script src="../jiant.js"></script>
+<script>
+  const timeout = 2000;
+
+  QUnit.module("UI render", function() {
+
+    QUnit.test("jInit called for view", function(assert) {
+      assert.timeout(timeout);
+      const done = assert.async();
+      jiant.app(() => ({
+        id: "JQAppJInitView",
+        views: {
+          testView: {
+            impl: "<b id='testView'><div></div></b>",
+            jInit: function() {
+              assert.ok(true, "jInit called for view");
+              done();
+            }
+          }
+        }
+      }));
+    });
+
+    QUnit.test("renderer called for view", function(assert) {
+      assert.timeout(timeout);
+      const done = assert.async();
+      jiant.module("viewRendMod", ({app}) => {
+        jiant.onApp(app, () => {
+          app.views.testViewRV.propagate({name: "test name"});
+          $("body").append(app.views.testViewRV);
+        });
+      });
+      jiant.app(() => ({
+        id: "JQAppViewRender",
+        modules: ["viewRendMod"],
+        views: {
+          testViewRV: {
+            impl: "<div id='testViewRV'><b class='name'></b></div>",
+            name: jiant.label,
+            renderer: function() {
+              assert.ok(true, "renderer called for view");
+              done();
+            }
+          }
+        }
+      }));
+    });
+
+    QUnit.test("jInit called for component", function(assert) {
+      assert.timeout(timeout);
+      const done = assert.async();
+      jiant.module("compJinitMod", ({app}) => {
+        jiant.onApp(app, () => {
+          $("body").append(app.views.testViewJ);
+        });
+      });
+      jiant.app(() => ({
+        id: "JQAppCompJInit",
+        modules: ["compJinitMod"],
+        views: {
+          testViewJ: {
+            impl: "<div id='testViewJ'><b class='tm'></b></div>",
+            tm: jiant.comp.compName("tJI")
+          }
+        },
+        templates: {
+          tJI: {
+            impl: "<b id='tJI'><span>Component</span></b>",
+            jInit: function() {
+              assert.ok(true, "jInit called for component");
+              done();
+            }
+          }
+        }
+      }));
+    });
+
+    QUnit.test("renderer called for component", function(assert) {
+      assert.timeout(timeout);
+      const done = assert.async();
+      jiant.module("compRendererMod", ({app}) => {
+        jiant.onApp(app, () => {
+          $("body").append(app.views.testViewRC);
+        });
+      });
+      jiant.app(() => ({
+        id: "JQAppCompRenderer",
+        modules: ["compRendererMod"],
+        views: {
+          testViewRC: {
+            impl: "<div id='testViewRC'><b class='tm'></b></div>",
+            tm: jiant.comp.compName("tR")
+          }
+        },
+        templates: {
+          tR: {
+            impl: "<b id='tR'><span>Component</span></b>",
+            renderer: function({view}) {
+              view.html("wow");
+              assert.ok(true, "renderer called for component");
+              done();
+            }
+          }
+        }
+      }));
+    });
+
+    QUnit.test("component inside component renderer", function(assert) {
+      assert.timeout(timeout);
+      const done = assert.async();
+      jiant.module("compCompMod", ({app}) => {
+        jiant.onApp(app, () => {
+          $("body").append(app.views.testViewCIC);
+        });
+      });
+      jiant.app(() => ({
+        id: "JQAppCompComp",
+        modules: ["compCompMod"],
+        views: {
+          testViewCIC: {
+            impl: "<div id='testViewCIC'><b class='tm'></b></div>",
+            tm: jiant.comp.compName("tCC")
+          }
+        },
+        templates: {
+          tCC: {
+            impl: "<b id='tCC'><span>Component <b class='tt'>TT</b></span></b>",
+            tt: jiant.comp.compName("ttCC")
+          },
+          ttCC: {
+            impl: "<b id='ttCC'><span>TT Component</span></b>",
+            renderer: function({view}) {
+              view.html("comp inside comp");
+              assert.ok(true, "renderer called for component inside component");
+              done();
+            }
+          }
+        }
+      }));
+    });
+
+    QUnit.test("Types: propagate to components", function(assert) {
+      assert.timeout(timeout);
+      const done = assert.async();
+      jiant.module("typesMod", ({app}) => {
+        jiant.onApp(app, () => {
+          app.views.typesView.propagate({compo: {tdt: "la-la"}, tdv: "tdddt"});
+        });
+        assert.ok(true, "types module executed");
+      });
+      jiant.app(() => ({
+        id: "JQAppTypes",
+        modules: ["typesMod"],
+        views: {
+          typesView: {
+            ctlBack: jiant.ctlBack,
+            tdv: jiant.data,
+            compo: jiant.comp.compName("t"),
+            compo2: jiant.comp.compName("t2")
+          }
+        },
+        templates: {
+          t: { impl: "<b id='t'><b class='tdt'></b></b>", tdt: jiant.data },
+          t2: { impl: "<b id='t2'><b class='tdt2'></b></b>", tdt2: jiant.data }
+        }
+      }));
+      jiant.onApp("JQAppTypes", function($, app) {
+        assert.ok(typeof app.views.typesView.tdv !== "undefined", "data field bound on view");
+        done();
+      });
+    });
+
+  });
+</script>
+<b id='typesView'><b class='compo'></b><b class='compo2'></b><button class='ctlBack'>Back</button></b>
+</body>
+</html>

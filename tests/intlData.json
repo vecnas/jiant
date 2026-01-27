@@ -1,9 +1,0 @@
-{
-  "someKey": "Some key for t()",
-  "someText" : "Me some text",
-  "otherText" : "Tottaly another text",
-  "prefixed_text1" : "Prefixed text 1",
-  "prefixed_text2" : "Prefixed 2",
-  "custom.text3" : "Custom prefixed text 3",
-  "custom.text2" : "Custom prefixed 2"
-}

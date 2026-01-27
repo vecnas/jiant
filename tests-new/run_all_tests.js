@@ -9,7 +9,8 @@ const serverArgs = process.env.TEST_SERVER_ARGS
 
 const runners = [
   ["node", ["tests-new/run_modules_tests.js"]],
-  ["node", ["tests-new/run_jquery_compat.js"]]
+  ["node", ["tests-new/run_jquery_compat.js"]],
+  ["node", ["tests-new/run_ui_render_tests.js"]]
 ];
 
 function waitForServer(url, timeoutMs) {
