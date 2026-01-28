@@ -10,6 +10,12 @@ Initially Jiant provided means for modern auto-complete tools. Jiant eliminates 
 
 Later evolution made Jiant covering all aspects of client UI framework, such as server connectivity, application states, event bus, data models, MVC implementation, templating, cross domain, dependency management, program logic abstraction.
 
+Cross-domain notes
+------------------
+
+- Cross-domain requests and module loading rely on standard CORS headers from the remote origin.
+- Set `appRoot.crossDomain = true` for cross-domain calls, and `appRoot.withCredentials = true` only if you need cookies/credentials.
+
 Jiant is more of philosophy how to develop application, not particular technical implementation of set of tricks.
 
 Documentation website on Jiant: http://sites.google.com/site/jiantscript/

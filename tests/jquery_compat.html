@@ -387,6 +387,135 @@
       });
     });
 
+    QUnit.test("crossDomain ajax uses CORS settings (no jsonp)", function(assert) {
+      assert.timeout(timeout);
+      const done = assert.async();
+      $("#qunit-fixture").empty();
+      const origAjax = $.ajax;
+      let call;
+
+      $.ajax = function(urlOrSettings, settings) {
+        const isString = typeof urlOrSettings === "string";
+        call = {
+          url: isString ? urlOrSettings : urlOrSettings.url,
+          settings: isString ? settings : urlOrSettings
+        };
+        const d = $.Deferred();
+        d.resolve("{}");
+        return d.promise();
+      };
+
+      jiant.app(() => ({
+        id: "JQAppAjaxCorsSettings",
+        crossDomain: true,
+        ajax: {
+          ping: function(cb) {
+            return {url: "http://example.com/api/ping", method: "GET"};
+          }
+        }
+      }));
+
+      jiant.onApp("JQAppAjaxCorsSettings", function($, app) {
+        app.ajax.ping(function() {});
+        assert.ok(call, "ajax called");
+        assert.ok(call.settings.crossDomain, "crossDomain flag set");
+        assert.ok(call.settings.dataType === undefined, "dataType not forced to jsonp");
+        assert.ok(call.settings.contentType === undefined, "contentType not forced");
+        assert.ok(!call.settings.xhrFields, "xhrFields absent without withCredentials");
+        $.ajax = origAjax;
+        done();
+      });
+    });
+
+    QUnit.test("crossDomain ajax works with CORS across hostnames", function(assert) {
+      assert.timeout(timeout);
+      const done = assert.async();
+      $("#qunit-fixture").empty();
+      const altHost = window.location.hostname === "localhost" ? "127.0.0.1" : "localhost";
+      const port = window.location.port ? (":" + window.location.port) : "";
+      const url = window.location.protocol + "//" + altHost + port + "/tests/fixtures/echo";
+
+      jiant.app(() => ({
+        id: "JQAppAjaxCorsLive",
+        crossDomain: true,
+        ajax: {
+          echo: function(payload, cb) {
+            return {url: url, method: "GET"};
+          }
+        }
+      }));
+
+      jiant.onApp("JQAppAjaxCorsLive", function($, app) {
+        app.ajax.echo({foo: "bar"}, function(data) {
+          assert.equal(data.foo, "bar", "CORS request succeeds across hostnames");
+          done();
+        });
+      });
+    });
+
+    QUnit.test("submitForm uses CORS settings and withCredentials when enabled", function(assert) {
+      assert.timeout(timeout);
+      const done = assert.async();
+      $("#qunit-fixture").html("<div id='vf'><form class='frm' action='http://example.com/api'></form></div>");
+      const origAjax = $.ajax;
+      let call;
+
+      $.ajax = function(settings) {
+        call = {settings: settings};
+        const d = $.Deferred();
+        d.resolve("{}");
+        return d.promise();
+      };
+
+      jiant.app(() => ({
+        id: "JQAppFormCors",
+        crossDomain: true,
+        withCredentials: true,
+        views: {
+          vf: {
+            frm: jiant.form
+          }
+        }
+      }));
+
+      jiant.onApp("JQAppFormCors", function($, app) {
+        app.views.vf.frm.submitForm();
+        assert.ok(call, "ajax called");
+        assert.ok(call.settings.crossDomain, "crossDomain flag set");
+        assert.ok(call.settings.dataType === undefined, "dataType not forced to jsonp");
+        assert.ok(call.settings.contentType === undefined, "contentType not forced");
+        assert.ok(call.settings.xhrFields && call.settings.xhrFields.withCredentials === true,
+            "withCredentials enables xhrFields");
+        $.ajax = origAjax;
+        done();
+      });
+    });
+
+    QUnit.test("external lib loads via CORS text fetch", function(assert) {
+      assert.timeout(timeout);
+      const done = assert.async();
+      window.__jiantExternalLibLoaded = false;
+      window.__jiantExternalLibValue = undefined;
+      const altHost = window.location.hostname === "localhost" ? "127.0.0.1" : "localhost";
+      const port = window.location.port ? (":" + window.location.port) : "";
+      const url = window.location.protocol + "//" + altHost + port + "/tests/fixtures/external_lib.js";
+
+      jiant.app(() => ({
+        id: "JQAppCorsLogic",
+        logic: {}
+      }));
+
+      jiant.onApp("JQAppCorsLogic", function() {
+        jiant.declare("extCorsLib", url);
+      });
+
+      jiant.onApp("JQAppCorsLogic", ["extCorsLib"], function() {
+        assert.ok(window.__jiantExternalLibLoaded, "external lib executed");
+        assert.equal(window.__jiantExternalLibValue, "ok", "external lib value set");
+        done();
+      });
+    });
+
     QUnit.test("legacy core lfill/format functions", function(assert) {
       assert.timeout(timeout);
       const done = assert.async();

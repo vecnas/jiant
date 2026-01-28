@@ -30,6 +30,22 @@ function safePath(urlPath) {
 }
 
 const server = http.createServer((req, res) => {
+  const origin = req.headers.origin;
+  const corsHeaders = origin
+    ? {
+        "Access-Control-Allow-Origin": origin,
+        "Access-Control-Allow-Credentials": "true",
+        "Access-Control-Allow-Headers": "Content-Type",
+        "Access-Control-Allow-Methods": "GET,POST,OPTIONS"
+      }
+    : {"Access-Control-Allow-Origin": "*"};
+
+  if (req.method === "OPTIONS") {
+    res.writeHead(204, corsHeaders);
+    res.end();
+    return;
+  }
+
   const reqUrl = new URL(req.url || "/", `http://localhost:${port}`);
   if (reqUrl.pathname === "/tests/fixtures/echo" || reqUrl.pathname.startsWith("/tests/fixtures/echo/")) {
     const out = {};
@@ -39,14 +55,14 @@ const server = http.createServer((req, res) => {
     reqUrl.searchParams.forEach((val, key) => {
       out[key] = val;
     });
-    res.writeHead(200, {"Content-Type": "application/json; charset=utf-8"});
+    res.writeHead(200, {"Content-Type": "application/json; charset=utf-8", ...corsHeaders});
     res.end(JSON.stringify(out));
     return;
   }
 
   const fullPath = safePath(reqUrl.pathname || "/");
   if (!fullPath) {
-    res.writeHead(403);
+    res.writeHead(403, corsHeaders);
     res.end("Forbidden");
     return;
   }
@@ -58,13 +74,13 @@ const server = http.createServer((req, res) => {
 
   fs.readFile(target, (err, data) => {
     if (err) {
-      res.writeHead(404);
+      res.writeHead(404, corsHeaders);
       res.end("Not found");
       return;
     }
     const ext = path.extname(target).toLowerCase();
     const mime = mimeByExt[ext] || "application/octet-stream";
-    res.writeHead(200, {"Content-Type": mime});
+    res.writeHead(200, {"Content-Type": mime, ...corsHeaders});
     res.end(data);
   });
 });

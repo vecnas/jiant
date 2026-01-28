@@ -64,7 +64,10 @@ jiant.module("jiant-logic", ["jiant-util"], function({$, app, jiant, params, "ji
       cache: true,
       crossDomain: true,
       timeout: 500,
-      dataType: "script"
+      dataType: "text"
+    }).done(function(data) {
+      data += "\r\n//# sourceURL= " + objOrUrlorFn;
+      $.globalEval(data);
     }).always(handle) : handle();
   }
 

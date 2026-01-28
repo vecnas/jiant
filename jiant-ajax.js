@@ -167,10 +167,10 @@ jiant.module("jiant-ajax", function({}) {
         }
       };
       if (crossDomain) {
-        settings.contentType = "application/json";
-        settings.dataType = 'jsonp';
-        settings.xhrFields = {withCredentials: true};
         settings.crossDomain = true;
+        if (appRoot && appRoot.withCredentials) {
+          settings.xhrFields = {withCredentials: true};
+        }
       }
       return $.ajax(url, settings);
     };

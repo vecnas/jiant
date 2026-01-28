@@ -326,10 +326,10 @@ jiant.module("jiant-fields", [], function({$, app, jiant, params}) {
         }
       };
       if (appRoot.crossDomain) {
-        data.contentType = "application/json";
-        data.dataType = 'jsonp';
-        data.xhrFields = {withCredentials: true};
         data.crossDomain = true;
+        if (appRoot.withCredentials) {
+          data.xhrFields = {withCredentials: true};
+        }
       }
       return $.ajax(data);
     };
