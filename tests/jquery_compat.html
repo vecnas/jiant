@@ -12,7 +12,6 @@
 <script src="https://code.jquery.com/jquery-3.7.1.min.js"
         integrity="sha256-/JqT3SQfawRcv/BIHPThkBvs0OEvtFFmqPF/lYI/Cxo="
         crossorigin="anonymous"></script>
-<script src="../jquery.hashchange.js"></script>
 <script src="../jiant.js"></script>
 <script>
   const timeout = 2000;
@@ -475,6 +474,268 @@
           }
         });
         app.states.s1.go("a", "b");
+      });
+    });
+
+    QUnit.test("states end triggers when state changes", function(assert) {
+      assert.timeout(timeout);
+      const done = assert.async();
+      window.location.hash = "";
+      let endCalled = 0;
+
+      jiant.app(() => ({
+        id: "JQAppStateEnd",
+        states: {
+          s1: {go: function() {}, start: function() {}, end: function() {}},
+          s2: {go: function() {}, start: function() {}, end: function() {}}
+        }
+      }));
+
+      jiant.onApp("JQAppStateEnd", function($, app) {
+        app.states.s1.end(function() {
+          endCalled++;
+        });
+        app.states.s2.start(function() {
+          assert.equal(endCalled, 1, "previous state end fired once");
+          done();
+        });
+        app.states.s1.start(function() {
+          app.states.s2.go();
+        });
+        app.states.s1.go();
+      });
+    });
+
+    QUnit.test("states group preserves params across states", function(assert) {
+      assert.timeout(timeout);
+      const done = assert.async();
+      window.location.hash = "";
+
+      jiant.app(() => ({
+        id: "JQAppStateGroup",
+        states: {
+          s1: {go: function(p1, p2) {}, start: function() {}, end: function() {}, statesGroup: "g"},
+          s2: {go: function(p1, p2) {}, start: function() {}, end: function() {}, statesGroup: "g"}
+        }
+      }));
+
+      jiant.onApp("JQAppStateGroup", function($, app) {
+        app.states.s2.start(function(p1, p2) {
+          assert.equal(p1, "a", "first param preserved from group");
+          assert.equal(p2, "c", "second param updated");
+          done();
+        });
+        app.states.s1.start(function() {
+          app.states.s2.go(undefined, "c");
+        });
+        app.states.s1.go("a", "b");
+      });
+    });
+
+    QUnit.test("states apply defaults when params missing", function(assert) {
+      assert.timeout(timeout);
+      const done = assert.async();
+      window.location.hash = "";
+
+      jiant.app(() => ({
+        id: "JQAppStateDefaults",
+        states: {
+          s1: {go: function(p1, p2) {}, start: function() {}, end: function() {}, jDefaults: {p1: "d1", p2: "d2"}}
+        }
+      }));
+
+      jiant.onApp("JQAppStateDefaults", function($, app) {
+        app.states.s1.start(function(p1, p2) {
+          assert.equal(p1, "d1", "default param 1 applied");
+          assert.equal(p2, "d2", "default param 2 applied");
+          done();
+        });
+        app.states.s1.go(undefined, undefined);
+      });
+    });
+
+    QUnit.test("states pack/unpack roundtrip", function(assert) {
+      assert.timeout(timeout);
+      const done = assert.async();
+      jiant.app(() => ({id: "JQAppStatePack"}));
+
+      jiant.onApp("JQAppStatePack", function() {
+        const raw = "a;=|{}:'";
+        const packed = jiant.packForState(raw);
+        const unpacked = jiant.unpackForState(packed);
+        assert.equal(unpacked, raw, "string roundtrip with special chars");
+        assert.equal(jiant.unpackForState(jiant.packForState("#")), "'", "hash maps to apostrophe");
+
+        const obj = {a: 1, "x;y": "b|c"};
+        const packedObj = jiant.packForState(obj);
+        const unpackedObj = jiant.unpackForState(packedObj);
+        assert.equal(unpackedObj.a, 1, "object numeric value parsed");
+        assert.equal(unpackedObj["x;y"], "b|c", "object key/value roundtrip");
+        done();
+      });
+    });
+
+    QUnit.test("getCurrentState reads from hash", function(assert) {
+      assert.timeout(timeout);
+      const done = assert.async();
+      window.location.hash = "AppA=s1,5|root=";
+      jiant.app(() => ({id: "JQAppStateCurrent"}));
+
+      jiant.onApp("JQAppStateCurrent", function() {
+        assert.equal(jiant.getCurrentState("AppA"), "s1", "current state extracted");
+        done();
+      });
+    });
+
+    QUnit.test("refreshState targets only one app", function(assert) {
+      assert.timeout(timeout);
+      const done = assert.async();
+      window.location.hash = "";
+      let a1Calls = 0;
+      let a2Calls = 0;
+
+      jiant.app(() => ({
+        id: "JQAppRefreshA",
+        states: {"": {go: function() {}, start: function() {}, end: function() {}}}
+      }));
+      jiant.app(() => ({
+        id: "JQAppRefreshB",
+        states: {"": {go: function() {}, start: function() {}, end: function() {}}}
+      }));
+
+      jiant.onApp(["JQAppRefreshA", "JQAppRefreshB"], function($, appA, appB) {
+        appA.states[""].start(function() { a1Calls++; });
+        appB.states[""].start(function() { a2Calls++; });
+        jiant.refreshState(appA);
+        assert.ok(a1Calls >= 2, "refreshState retriggers appA");
+        assert.equal(a2Calls, 1, "refreshState does not retrigger appB");
+        done();
+      });
+    });
+
+    QUnit.test("goRoot resets to root state", function(assert) {
+      assert.timeout(timeout);
+      const done = assert.async();
+      window.location.hash = "";
+      let rootStarts = 0;
+
+      jiant.app(() => ({
+        id: "JQAppGoRoot",
+        states: {
+          "": {go: function() {}, start: function() {}, end: function() {}},
+          root1: {go: function() {}, start: function() {}, end: function() {}, root: 1},
+          s2: {go: function(p1) {}, start: function() {}, end: function() {}}
+        }
+      }));
+
+      jiant.onApp("JQAppGoRoot", function($, app) {
+        app.states.root1.start(function() {
+          rootStarts++;
+          if (rootStarts === 1) {
+            app.states.s2.go("x");
+          } else if (rootStarts === 2) {
+            assert.ok(true, "root state restarted after goRoot");
+            done();
+          }
+        });
+        app.states.s2.start(function() {
+          jiant.goRoot(app);
+        });
+        app.states[""].start(function() {
+          app.states.root1.go();
+        });
+        jiant.refreshState(app);
+      });
+    });
+
+    QUnit.test("states work without jquery hashchange plugin", function(assert) {
+      assert.timeout(timeout);
+      const done = assert.async();
+      const prevHashchange = $.fn.hashchange;
+      $.fn.hashchange = undefined;
+      window.location.hash = "";
+
+      jiant.app(() => ({
+        id: "JQAppNoHashchange",
+        states: {s1: {go: function() {}, start: function() {}, end: function() {}}}
+      }));
+
+      jiant.onApp("JQAppNoHashchange", function($, app) {
+        app.states.s1.start(function() {
+          $.fn.hashchange = prevHashchange;
+          assert.ok(true, "states still functional without plugin");
+          done();
+        });
+        app.states.s1.go();
+      });
+    });
+
+    QUnit.test("states support back/forward history navigation", function(assert) {
+      assert.timeout(timeout);
+      const done = assert.async();
+      window.location.hash = "";
+      let sawS1 = 0;
+
+      jiant.app(() => ({
+        id: "JQAppHistory",
+        states: {
+          s1: {go: function() {}, start: function() {}, end: function() {}},
+          s2: {go: function() {}, start: function() {}, end: function() {}}
+        }
+      }));
+
+      jiant.onApp("JQAppHistory", function($, app) {
+        app.states.s1.start(function() {
+          sawS1++;
+          if (sawS1 === 1) {
+            app.states.s2.go();
+          } else if (sawS1 === 2) {
+            assert.ok(true, "back navigated to previous hash state");
+            done();
+          }
+        });
+        app.states.s2.start(function() {
+          setTimeout(function() {
+            history.back();
+          }, 0);
+        });
+        app.states.s1.go();
+      });
+    });
+
+    QUnit.test("states replace does not add history entry", function(assert) {
+      assert.timeout(timeout);
+      const done = assert.async();
+      window.location.hash = "";
+      const len0 = history.length;
+      let s1Started = false;
+
+      jiant.app(() => ({
+        id: "JQAppReplace",
+        states: {
+          s1: {go: function() {}, start: function() {}, end: function() {}},
+          s2: {go: function() {}, start: function() {}, end: function() {}}
+        }
+      }));
+
+      jiant.onApp("JQAppReplace", function($, app) {
+        app.states.s1.start(function() {
+          if (s1Started) {
+            return;
+          }
+          s1Started = true;
+          setTimeout(function() {
+            const len1 = history.length;
+            assert.ok(len1 >= len0 + 1, "go adds history entry");
+            app.states.s2.replace();
+            setTimeout(function() {
+              const len2 = history.length;
+              assert.equal(len2, len1, "replace does not add history entry");
+              done();
+            }, 0);
+          }, 0);
+        });
+        app.states.s1.go();
       });
     });
 

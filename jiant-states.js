@@ -10,6 +10,7 @@ jiant.module("jiant-states", function({jiant}) {
   const lastStates = {},
       statesUsed = {},
       lastEncodedStates = {},
+      hashListeners = {},
       replacementRegex = /[;,=|{}:#]/gi,
       reverseRegex = /;;|;1|;2|;3|;4|;5|;6|;7/gi,
       replacementMap = {
@@ -24,6 +25,7 @@ jiant.module("jiant-states", function({jiant}) {
         "'": ";7"
       }, reverseMap = {},
       eventBus = $({});
+  let hashListenerBound = false;
   $.each(replacementMap, function(key, val) {
     reverseMap[val] = key;
   });
@@ -37,7 +39,7 @@ jiant.module("jiant-states", function({jiant}) {
   }
 
   function refreshState(appId) {
-    $(window).hashchange && $(window).trigger("hashchange", [true, jiant.extractApplicationId(appId)]);
+    triggerHashChange(true, jiant.extractApplicationId(appId));
   }
 
   function makeHashListener(appId) {
@@ -69,6 +71,31 @@ jiant.module("jiant-states", function({jiant}) {
       //            jiant.logInfo(lastEncodedStates[appId] + " params are ", params);
       eventBus.trigger(appId + "state_" + stateId + "_start", params);
     }
+  }
+
+  function triggerHashChange(enforce, runtimeAppId) {
+    $.each(hashListeners, function(appId, listener) {
+      listener({}, enforce, runtimeAppId);
+    });
+  }
+
+  function bindHashListener(appId) {
+    hashListeners[appId] = makeHashListener(appId);
+    if (!hashListenerBound) {
+      if (!("onhashchange" in window)) {
+        const err = "No hashchange support in browser and states configured. Don't use states or upgrade browser";
+        jiant.logError(err);
+        if (jiant.DEV_MODE) {
+          alert(err);
+        }
+        return false;
+      }
+      window.addEventListener("hashchange", function() {
+        triggerHashChange();
+      });
+      hashListenerBound = true;
+    }
+    return true;
   }
 
   function go(stateId, root, stateSpec, stateExternalBase, appId, assignMode, params) {
@@ -173,7 +200,7 @@ jiant.module("jiant-states", function({jiant}) {
     } else {
       window.location.replace((extBase ? extBase : "") + "#" + result);
     }
-    $(window).hashchange();
+    triggerHashChange();
   }
 
   function getStates() {
@@ -254,12 +281,7 @@ jiant.module("jiant-states", function({jiant}) {
     if (! Object.keys(states).length) {
       return;
     }
-    if (! $(window).hashchange) {
-      const err = "No hashchange plugin and states configured. Don't use states or add hashchange plugin (supplied with jiant)";
-      jiant.logError(err);
-      if (jiant.DEV_MODE) {
-        alert(err);
-      }
+    if (!bindHashListener(app.id)) {
       return;
     }
     if (! states[""]) {
@@ -268,7 +290,6 @@ jiant.module("jiant-states", function({jiant}) {
     $.each(states, function(name, stateSpec) {
       bindState(app, name, stateSpec);
     });
-    $(window).hashchange(makeHashListener(app.id));
     lastStates[app.id] = parseState(app.id).now[0];
     lastEncodedStates[app.id] = getAppState(app.id);
   }
