@@ -86,7 +86,7 @@
           goProxy ? goProxy(state) : state.go();
         });
         selectedCssClass && state.start(function() {
-          ctl.addClass(selectedCssClass);
+          jiant.addClass(ctl, selectedCssClass);
         });
         selectedCssClass && state.end(function() {
           ctl.removeClass(selectedCssClass);
@@ -97,7 +97,7 @@
     nav: function(app, view, suffix, selectedCssClass, goProxy) {
       return function() {
         suffix = suffix ? suffix : "";
-        $.each(app.states, function(stateName, stateSpec) {
+        jiant.each(app.states, function(stateName, stateSpec) {
           var ctl = view[stateName + suffix];
           ctl && jiant.xl.ctl2state(ctl, stateSpec, selectedCssClass, goProxy)();
         });
@@ -109,23 +109,23 @@
         function bind2state(state) {
           state.start(function() {
             if ($.isArray(views)) {
-              $.each(views, function(idx, view) {
-                view.show();
+              jiant.each(views, function(idx, view) {
+                jiant.show(view);
               });
             } else {
-              views.show();
+              jiant.show(views);
             }
           });
           state.end(function() {
             if ($.isArray(views)) {
-              $.each(views, function(idx, view) {view.hide();});
+              jiant.each(views, function(idx, view) {jiant.hide(view);});
             } else {
-              views.hide();
+              jiant.hide(views);
             }
           });
         }
         if ($.isArray(states)) {
-          $.each(states, function(idx, state) {
+          jiant.each(states, function(idx, state) {
             bind2state(state);
           })
         } else {
@@ -137,7 +137,7 @@
     statefulApp: function(app, viewNameSuffix, defaultState) {
       return function() {
         viewNameSuffix = viewNameSuffix ? viewNameSuffix : "";
-        $.each(app.states, function(name, state) {
+        jiant.each(app.states, function(name, state) {
           var view = app.views[name + viewNameSuffix];
           view && jiant.xl.statefulViews(state, view)();
         });
@@ -171,7 +171,7 @@
           view = tm.parseTemplate(obj, subscribeForUpdates, reversePropagate, mapping);
         }
         if (sortFn && $.isFunction(sortFn) && jiant.getRepo(model).all) {
-          $.each(sorted, function(i, item) {
+          jiant.each(sorted, function(i, item) {
             var order = sortFn(obj, item);
             if (item[viewFieldSetterName] && item[viewFieldSetterName]() && order < 0) {
               useTm && view.insertBefore(item[viewFieldSetterName]()[0]);
@@ -191,7 +191,7 @@
       var m = jiant.getRepo(model),
           ret = function () {
             addHnd = m.add && m.add.on(function (arr) {
-                  $.each(arr, function (idx, obj) {
+                  jiant.each(arr, function (idx, obj) {
                     renderObj(obj);
                   });
                 });
@@ -199,14 +199,14 @@
                   obj[viewFieldSetterName] && (elemFactory ? elemFactory.remove(obj[viewFieldSetterName]()) : obj[viewFieldSetterName]().remove());
                   sorted = $.grep(sorted, function(elem, i) {return elem != obj});
                 });
-            $.each(jiant.getRepo(model).all(), function(i, obj) {
+            jiant.each(jiant.getRepo(model).all(), function(i, obj) {
               renderObj(obj);
             });
           };
       ret.off = function () {
         addHnd && m.add.off(addHnd);
         remHnd && m.remove.off(remHnd);
-        $.each(jiant.getRepo(model).all(), function (i, obj) {
+        jiant.each(jiant.getRepo(model).all(), function (i, obj) {
           $.isFunction(obj[viewFieldSetterName]) && obj[viewFieldSetterName]() && $.isFunction(obj[viewFieldSetterName]().off) && obj[viewFieldSetterName]().off();
         });
       };
@@ -263,9 +263,9 @@
         filterModel && filterModel.sort && filterModel.sort()
         && (pageable["page.sort"] = filterModel.sort(), pageable["sort"] = filterModel.sort());
         ajax(filterModel, pageable, function(data) {
-          container.empty();
-          noItemsLabel && (data.content.length ? noItemsLabel.hide() : noItemsLabel.show());
-          $.each(data.content, function(idx, item) {
+          jiant.empty(container);
+          noItemsLabel && (data.content.length ? jiant.hide(noItemsLabel) : jiant.show(noItemsLabel));
+          jiant.each(data.content, function(idx, item) {
             var row = template.parseTemplate(item, undefined, undefined, mapping);
             container.append(row);
             perItemCb && perItemCb(item, row, idx);
@@ -301,9 +301,9 @@
           var pageable = {"page.page": pageNum, "page": parsedNum == 0 ? 0 : parsedNum - 1};
           useSorting && sort && (pageable["page.sort"] = sort, pageable["sort"] = sort);
           ajax(pageable, function(data) {
-            container.empty();
-            noItemsLabel && (data.content.length ? noItemsLabel.hide() : noItemsLabel.show());
-            $.each(data.content, function(idx, item) {
+            jiant.empty(container);
+            noItemsLabel && (data.content.length ? jiant.hide(noItemsLabel) : jiant.show(noItemsLabel));
+            jiant.each(data.content, function(idx, item) {
               var row = template.parseTemplate(item);
               container.append(row);
               perItemCb && perItemCb(item, row);
@@ -318,9 +318,9 @@
 
     renderList: function(list, container, tm, perItemCb, noItemsLabel, subscribeForUpdates, appendMode, mapping) {
       return function() {
-        noItemsLabel && (list.length ? noItemsLabel.hide() : noItemsLabel.show());
-        !appendMode && container.empty();
-        $.each(list, function(idx, item) {
+        noItemsLabel && (list.length ? jiant.hide(noItemsLabel) : jiant.show(noItemsLabel));
+        !appendMode && jiant.empty(container);
+        jiant.each(list, function(idx, item) {
           var elem = tm.parseTemplate(item, subscribeForUpdates, false, mapping);
           container.append(elem);
           perItemCb && perItemCb(item, elem, idx);
@@ -351,12 +351,12 @@
         markerElem = markerElem ? markerElem : ctl;
         markerText = markerText ? markerText : "saving";
         ctl.click(function(event) {
-          var prevLabel = markerElem.html();
+          var prevLabel = jiant.html(markerElem);
           ctl.attr("disabled", "disabled");
-          markerElem.html(markerText);
+          jiant.html(markerElem, markerText);
           saveFn(function () {
             ctl.attr("disabled", null);
-            markerElem.html(prevLabel);
+            jiant.html(markerElem, prevLabel);
           }, event);
         });
       };
@@ -367,7 +367,7 @@
         var options = [];
         function sync() {
           var arr = [], allUnchecked = true, allChecked = true;
-          $.each(options, function(idx, elem) {
+          jiant.each(options, function(idx, elem) {
             elem = $(elem);
             if (elem.prop("checked")) {
               arr.push(elem.data("val"));
@@ -380,12 +380,12 @@
           if (allChecked || allUnchecked) {
             allSelector.removeClass("middle-check");
           } else {
-            allSelector.addClass("middle-check");
+            jiant.addClass(allSelector, "middle-check");
           }
           filterFn && filterFn(arr);
         }
         allSelector.change(function() {
-          $.each(options, function(idx, option) {
+          jiant.each(options, function(idx, option) {
             var val = allSelector.prop("checked");
             $(option).prop("checked", val);
           });
@@ -413,7 +413,7 @@
           return selectedVal;
         } else {
           selectedVal = _val;
-          label && label.html(title);
+          label && jiant.html(label, title);
           ctl.trigger("change", selectedVal);
         }
       }
@@ -421,7 +421,7 @@
         add: function(_val, title, selected) {
           var elem = optionTm.parseTemplate(_val);
           if (Object.prototype.toString.call(_val) == "[object String]" && title) {
-            elem.html(title);
+            jiant.html(elem, title);
           }
           dropContainer.append(elem);
           elem.click(function() {
@@ -433,7 +433,7 @@
           ctl.change(arg);
         },
         empty: function() {
-          dropContainer.empty();
+          jiant.empty(dropContainer);
         },
         val: val
       }
@@ -451,7 +451,7 @@
               selectedVal = val;
               if (selectClass) {
                 selectedElem && selectedElem.removeClass(selectClass);
-                elem.addClass(selectClass);
+                jiant.addClass(elem, selectClass);
               }
               selectedElem = elem;
               cb && cb(selectedElem, selectedVal, prevElem, prevVal);
@@ -471,13 +471,13 @@
       }
       if (! cb) {
         cb = function(selectedElem, selectedVal, prevElem, prevVal) {
-          prevVal && $(prevVal).hide();
-          selectedVal && $(selectedVal).show();
+          prevVal && jiant.hide($(prevVal));
+          selectedVal && jiant.show($(selectedVal));
         };
       }
       var impl = new Impl();
       impl.setSelectClass(selectClass);
-      arrElems && $.each(arrElems, function(idx, elem) {
+      arrElems && jiant.each(arrElems, function(idx, elem) {
         impl.add($(elem), arrVals && arrVals.length > idx ? arrVals[idx] : null, cb, selectedIdx === idx);
       });
       return impl;

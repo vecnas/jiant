@@ -154,7 +154,7 @@ jiant.module("jiant-ui", ["jiant-auto", "jiant-render", "jiant-types", "jiant-sp
 
                 function elem2arr(elem) {
                   const arr = [];
-                  $.each(elem, function (i, item) {
+                  jiant.each(elem, function (i, item) {
                     !!$(item).prop("checked") && arr.push(convert($(item).val()));
                   });
                   return arr;
@@ -180,7 +180,7 @@ jiant.module("jiant-ui", ["jiant-auto", "jiant-render", "jiant-types", "jiant-sp
                       val.call(data, actualElement.attr("src"));
                       // no actual event for changing html, manual 'change' trigger supported by this code
                     } else {
-                      val.call(data, actualElement.html());
+                      val.call(data, jiant.html(actualElement));
                     }
                   }
                 }

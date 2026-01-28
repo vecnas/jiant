@@ -6,7 +6,7 @@ jiant.module("jiant-log", function({jiant}) {
 
   function printp(method, args) {
     let s = args[0] + "";
-    $.each(args, function(idx, arg) {
+    jiant.each(args, function(idx, arg) {
       if (idx > 0) {
         const pos = s.indexOf("!!");
         if (pos >= 0) {
@@ -22,7 +22,7 @@ jiant.module("jiant-log", function({jiant}) {
 
   function printShort(method, args) {
     let s = "";
-    $.each(args, function(idx, arg) {
+    jiant.each(args, function(idx, arg) {
       s += arg;
       s += " ";
     });
@@ -34,7 +34,7 @@ jiant.module("jiant-log", function({jiant}) {
       method = "error";
     }
     try {
-      window.console && window.console[method] && $.each(args, function(idx, arg) {
+      window.console && window.console[method] && jiant.each(args, function(idx, arg) {
         window.console[method](arg);
       });
     } catch (ex) {

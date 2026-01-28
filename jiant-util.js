@@ -114,21 +114,21 @@ jiant.module("jiant-util", ["jiant-log"], function({jiant}) {
   }
 
   function msieDom2Html(elem) {
-    $.each(elem.find("*"), function(idx, child) {
-      $.each(child.attributes, function(i, attr) {
+    jiant.each(elem.find("*"), function(idx, child) {
+      jiant.each(child.attributes, function(i, attr) {
         if (attr.value.indexOf(" ") < 0 && attr.value.indexOf("!!") >= 0) {
           $(child).attr(attr.name, attr.value.replace(/!!/g, "e2013e03e11eee "));
         }
       });
     });
-    return $(elem).html().trim().replace(/!!/g, "!! ").replace(/e2013e03e11eee /g, "!! ");
+    return jiant.html($(elem)).trim().replace(/!!/g, "!! ").replace(/e2013e03e11eee /g, "!! ");
   }
 
   function parseTemplate(that, data, tmId, mapping) {
     data = data || {};
     if (mapping) {
       data = $.extend({}, data);
-      $.each(mapping, function(key, val) {
+      jiant.each(mapping, function(key, val) {
         data[key] = data[val];
       });
     }
@@ -136,7 +136,9 @@ jiant.module("jiant-util", ["jiant-log"], function({jiant}) {
     try {
       let func = tmId ? _tmplCache[tmId] : null;
       if (!func) {
-        let str = (typeof that === "string" ? $("<i></i>").html(that) : $(that)).html().trim();
+        const tmp = $("<i></i>");
+        typeof that === "string" && jiant.html(tmp, that);
+        let str = jiant.html(typeof that === "string" ? tmp : $(that)).trim();
         if (!jiant.isMSIE) {
           str = str.replace(/!!/g, "!! ");
         } else {

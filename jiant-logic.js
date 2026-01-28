@@ -11,7 +11,7 @@ jiant.module("jiant-logic", ["jiant-util"], function({$, app, jiant, params, "ji
     if (spec._jAppId) {
       const superImpl = $.extend(true, {}, spec),
           newImpl = implFn($, jiant.getApps()[spec._jAppId], superImpl);
-      $.each(newImpl, function(fname, fbody) {
+      jiant.each(newImpl, function(fname, fbody) {
         spec[fname] = fbody;
       });
     } else {
@@ -27,7 +27,7 @@ jiant.module("jiant-logic", ["jiant-util"], function({$, app, jiant, params, "ji
     if (obj && appId in awaitingDepends && name in awaitingDepends[appId] && app) {
       app.logic = app.logic || {};
       app.logic[name] = app.logic[name] || {};
-      $.each(typeof obj === "function" ? obj($, app) : obj, function(fname, fspec) {
+      jiant.each(typeof obj === "function" ? obj($, app) : obj, function(fname, fspec) {
         app.logic[name][fname] = fspec;
       });
       loadedLogics[appId][name] = 1;
@@ -50,10 +50,10 @@ jiant.module("jiant-logic", ["jiant-util"], function({$, app, jiant, params, "ji
       const ms = new Date().getTime() - startedAt;
       lib && jiant.infop("Loaded external library !! in !! ms", objOrUrlorFn, ms);
       externalDeclarations[name] = lib ? {} : objOrUrlorFn;
-      $.each(awaitingDepends, function(appId) {
+      jiant.each(awaitingDepends, function(appId) {
         copyLogic(appId, name);
       });
-      $.each(awaitingDepends, function(appId) {
+      jiant.each(awaitingDepends, function(appId) {
         checkForExternalAwaiters(appId, name);
       });
     }
@@ -89,20 +89,20 @@ jiant.module("jiant-logic", ["jiant-util"], function({$, app, jiant, params, "ji
     }
     const awaiters = awaitingDepends[appId][name];
     delete awaitingDepends[appId][name];
-    awaiters && $.each(awaiters, function(idx, cb) {
+    awaiters && jiant.each(awaiters, function(idx, cb) {
       eventBus.trigger(dependencyResolvedEventName(appId, name));
 //            handleBound(appId, cb);
     });
   }
 
   function _bindLogic(appRoot, logics, appId) {
-    $.each(logics, function(name, spec) {
+    jiant.each(logics, function(name, spec) {
       if (typeof spec === "function") {
         if (Util.isEmptyFunction(spec)) {
           jiant.logError("don't declare empty logic functions, use objects for namespace grouping");
         }
       } else {
-        $.each(spec, function(fname, fnbody) {
+        jiant.each(spec, function(fname, fnbody) {
           if (typeof fnbody === "function") {
             const params = jiant.getParamNames(fnbody);
             if (Util.isEmptyFunction(fnbody)) {
@@ -117,7 +117,7 @@ jiant.module("jiant-logic", ["jiant-util"], function({$, app, jiant, params, "ji
         });
         spec.implement = function(obj) {
           spec._jAppId = appId;
-          $.each(spec, function(fname, fnbody) {
+          jiant.each(spec, function(fname, fnbody) {
             if (typeof fnbody === "function" && !(fname in {"implement": 1, "_jAppId": 1, "_jOverrides": 1})) {
               if (! fname in obj) {
                 jiant.logError("Logic function " + fname + " is not implemented by declared implementation");
@@ -126,10 +126,10 @@ jiant.module("jiant-logic", ["jiant-util"], function({$, app, jiant, params, "ji
               }
             }
           });
-          spec._jOverrides && spec._jOverrides.length && $.each(spec._jOverrides, function(i, implFn) {
+          spec._jOverrides && spec._jOverrides.length && jiant.each(spec._jOverrides, function(i, implFn) {
             const superImpl = $.extend(true, {}, spec),
                 newImpl = implFn($, jiant.getApps()[spec._jAppId], superImpl);
-            $.each(newImpl, function(fname, fbody) {
+            jiant.each(newImpl, function(fname, fbody) {
               spec[fname] = fbody;
             });
           });
@@ -149,12 +149,12 @@ jiant.module("jiant-logic", ["jiant-util"], function({$, app, jiant, params, "ji
 
   function logUnboundCount(appId) {
     let len = 0;
-    awaitingDepends[appId] && $.each(awaitingDepends[appId], function() {len++});
+    awaitingDepends[appId] && jiant.each(awaitingDepends[appId], function() {len++});
   }
 
   function afterBind(appId) {
     loadedLogics[appId] || (loadedLogics[appId] = {});
-    $.each(externalDeclarations, function(name, impl) {
+    jiant.each(externalDeclarations, function(name, impl) {
       if (! (name in loadedLogics[appId])) {
         loadedLogics[appId][name] = externalDeclarations[name];
         copyLogic(appId, name);
@@ -163,7 +163,7 @@ jiant.module("jiant-logic", ["jiant-util"], function({$, app, jiant, params, "ji
     });
     jiant.DEV_MODE && setTimeout(function() {
       if (awaitingDepends[appId]) {
-        $.each(awaitingDepends[appId], function(key, arr) {
+        jiant.each(awaitingDepends[appId], function(key, arr) {
           if (arr && arr.length) {
             jiant.errorp("Some logic depends for application " + appId + " are not implemented by your code, logic name: ", key);
             jiant.logError(awaitingDepends[appId]);
@@ -177,7 +177,7 @@ jiant.module("jiant-logic", ["jiant-util"], function({$, app, jiant, params, "ji
   function beforeBind(appId, dep, cb) {
     awaitingDepends[appId] = awaitingDepends[appId] || {};
     loadedLogics[appId] = loadedLogics[appId] || {};
-    dep && $.each(dep, function(idx, depName) {
+    dep && jiant.each(dep, function(idx, depName) {
       if (! (depName in awaitingDepends[appId])) {
         awaitingDepends[appId][depName] = [];
       }
@@ -193,7 +193,7 @@ jiant.module("jiant-logic", ["jiant-util"], function({$, app, jiant, params, "ji
 
   function isDependResolved(appId, cbObj) {
     let allDependsResolved = true;
-    awaitingDepends[appId] && $.each(awaitingDepends[appId], function(depName, cbArr) {
+    awaitingDepends[appId] && jiant.each(awaitingDepends[appId], function(depName, cbArr) {
       allDependsResolved = allDependsResolved && (cbArr.indexOf(cbObj.depCb) < 0);
       !allDependsResolved && eventBus.one(dependencyResolvedEventName(appId, depName), cbObj.callCb);
       return allDependsResolved;

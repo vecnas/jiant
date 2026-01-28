@@ -33,7 +33,7 @@ jiant.module("jiant-models", ["jiant-util"], function({$, app, jiant, params, "j
         Collection = function (data) {
           if (data) {
             const that = this;
-            $.each(data, function (idx, obj) {
+            jiant.each(data, function (idx, obj) {
               that.push(obj)
             });
           }
@@ -47,16 +47,16 @@ jiant.module("jiant-models", ["jiant-util"], function({$, app, jiant, params, "j
       jiant.infop("Model !! uses deprecated model repository format, switch to new, with model.jRepo = {} section", modelName);
     }
     spec[defaultsName] = spec[defaultsName] || {};
-    $.each(repoFunctions, function(i, fn) {
+    jiant.each(repoFunctions, function(i, fn) {
       repoRoot[fn] = repoRoot[fn] || function(obj) {};
     });
-    $.each(objFunctions, function(i, fn) {
+    jiant.each(objFunctions, function(i, fn) {
       spec[fn] = spec[fn] || function(obj) {};
     });
     if (spec.id) {
       repoRoot.findById = repoRoot.findById || function(val) {};
     }
-    $.each(repoRoot, function(fname, funcSpec) {
+    jiant.each(repoRoot, function(fname, funcSpec) {
       if (isFindByFunction(fname, funcSpec)) {
         const listBy = "listBy" + fname.substring(6);
         if (! repoRoot[listBy]) {
@@ -69,11 +69,11 @@ jiant.module("jiant-models", ["jiant-util"], function({$, app, jiant, params, "j
       }
     });
     if (repoMode) {
-      $.each(repoRoot, function(fname, funcSpec) {
+      jiant.each(repoRoot, function(fname, funcSpec) {
         bindFn(repoRoot, fname, funcSpec);
       });
     }
-    $.each(spec, function(fname, funcSpec) {
+    jiant.each(spec, function(fname, funcSpec) {
       bindFn(spec, fname, funcSpec);
     });
     spec.asap = proxy("asap");
@@ -107,12 +107,12 @@ jiant.module("jiant-models", ["jiant-util"], function({$, app, jiant, params, "j
       if (arr !== undefined && arr !== null) {
         arr = Array.isArray(arr) ? arr : [arr];
         if (arr.length !== 0) {
-          $.each(arr, function(idx, item) {
+          jiant.each(arr, function(idx, item) {
             const newItem = $.extend({}, spec[defaultsName], item),
                 newObj = new Model();
             storage.push(newObj);
             newArr.push(newObj);
-            $.each(newItem, function(name, val) {
+            jiant.each(newItem, function(name, val) {
               if (spec[defaultsName][name]) {
                 val = (typeof val === "function") ? val(newItem) : val;
               }
@@ -122,13 +122,13 @@ jiant.module("jiant-models", ["jiant-util"], function({$, app, jiant, params, "j
               }
             });
             addIndexes(newObj);
-            $.each(newItem, function(name, val) {
+            jiant.each(newItem, function(name, val) {
               if (isModelAccessor(newObj[name])) {
                 newObj[name](newObj[name](), true, false, undefined);
               }
             });
           });
-          $.each(newArr, function(idx, item) {
+          jiant.each(newArr, function(idx, item) {
             item.on(function(model, action) {
               if (action === "remove") {
                 removeIndexes(item);
@@ -139,7 +139,7 @@ jiant.module("jiant-models", ["jiant-util"], function({$, app, jiant, params, "j
           });
           trigger(specBus, "add", [newArr], [newArr]);
           if (specBus[evt("update")] || specBus[evt()]) {
-            $.each(newArr, function(idx, item) {
+            jiant.each(newArr, function(idx, item) {
               trigger(specBus, "update", [item], [item, "update"]);
             });
           }
@@ -154,10 +154,10 @@ jiant.module("jiant-models", ["jiant-util"], function({$, app, jiant, params, "j
 
     function indexPresent(arr) {
       let present = false;
-      $.each(indexesSpec, function(i, index) {
+      jiant.each(indexesSpec, function(i, index) {
         if (index.length === arr.length) {
           let matching = true;
-          $.each(index, function(j, elem) {
+          jiant.each(index, function(j, elem) {
             matching = matching && elem === arr[j];
           });
           if (matching) {
@@ -174,9 +174,9 @@ jiant.module("jiant-models", ["jiant-util"], function({$, app, jiant, params, "j
       if (presentIdx < 0) { // already removed object
         return;
       }
-      $.each(indexesSpec, function(i, index) {
+      jiant.each(indexesSpec, function(i, index) {
         let node = indexes;
-        $.each(index, function(j, name) {
+        jiant.each(index, function(j, name) {
           const key = name + "=" + obj[name]();
           node[key] = node[key] || {};
           node = node[key];
@@ -188,7 +188,7 @@ jiant.module("jiant-models", ["jiant-util"], function({$, app, jiant, params, "j
     }
 
     function removeIndexes(obj) {
-      $.each(obj[reverseIndexes], function(i, arr) {
+      jiant.each(obj[reverseIndexes], function(i, arr) {
         arr.splice(arr.indexOf(obj), 1);
       });
       obj[reverseIndexes] = [];
@@ -217,10 +217,10 @@ jiant.module("jiant-models", ["jiant-util"], function({$, app, jiant, params, "j
       matcherCb = matcherCb ? matcherCb : function(modelObj, outerObj) {return modelObj.id ? modelObj.id() === outerObj.id : false;};
       const toRemove = [];
       const toAdd = [];
-      $.each(arr, function(idx, item) {toAdd.push(item);});
-      $.each(storage, function(idx, oldItem) {
+      jiant.each(arr, function(idx, item) {toAdd.push(item);});
+      jiant.each(storage, function(idx, oldItem) {
         let matchingObj;
-        $.each(arr, function(idx, newItem) {
+        jiant.each(arr, function(idx, newItem) {
           if (matcherCb(oldItem, newItem)) {
             matchingObj = newItem;
             return false;
@@ -232,13 +232,13 @@ jiant.module("jiant-models", ["jiant-util"], function({$, app, jiant, params, "j
         matchingObj && idx >= 0 && toAdd.splice(idxAdd, 1);
         matchingObj && oldItem.update(matchingObj);
       });
-      removeMissing && $.each(toRemove, function(idx, item) {
+      removeMissing && jiant.each(toRemove, function(idx, item) {
         repoRoot.remove(item);
       });
       toAdd.length > 0 && repoRoot.add(toAdd);
     };
 
-    $.each(spec[defaultsName], function(key, val) {
+    jiant.each(spec[defaultsName], function(key, val) {
       val = typeof val === "function" ? val(spec) : val;
       if (isModelAccessor(spec[key])) {
         spec[key](val);
@@ -363,7 +363,7 @@ jiant.module("jiant-models", ["jiant-util"], function({$, app, jiant, params, "j
       obj.off = function(handlerOrArr) {
         const bus = this[objectBus];
         handlerOrArr = Array.isArray(handlerOrArr) ? handlerOrArr : [handlerOrArr];
-        $.each(handlerOrArr, function(i, handler) {
+        jiant.each(handlerOrArr, function(i, handler) {
           bus[handler.eventName]--;
           bus.handlers[handler.eventName].splice(bus.handlers[handler.eventName].indexOf(handler.cb), 1);
           return bus.off(handler.eventName, handler);
@@ -402,10 +402,10 @@ jiant.module("jiant-models", ["jiant-util"], function({$, app, jiant, params, "j
           if (arguments.length === 0) {
             smthChanged = true;
           } else {
-            treatMissingAsUndefined && $.each(this[modelStorage], function(key, val) {
+            treatMissingAsUndefined && jiant.each(this[modelStorage], function(key, val) {
               (key in objFrom) || (objFrom[key] = undefined);
             });
-            $.each(objFrom, function(key, val) {
+            jiant.each(objFrom, function(key, val) {
               if (isModelAccessor(that[key])) {
                 val = (typeof val === "function") ? val() : val;
                 const oldVal = that[key]();
@@ -416,7 +416,7 @@ jiant.module("jiant-models", ["jiant-util"], function({$, app, jiant, params, "j
                 }
               }
             });
-            $.each(toTrigger, function(key, oldVal) {
+            jiant.each(toTrigger, function(key, oldVal) {
               that[key](that[key](), true, false, oldVal);
             });
           }
@@ -431,7 +431,7 @@ jiant.module("jiant-models", ["jiant-util"], function({$, app, jiant, params, "j
         repoRoot[fname] = function() {
           function subsum(all, fieldName) {
             let ret;
-            $.each(all, function(i, item) {
+            jiant.each(all, function(i, item) {
               if (item[fieldName] && (typeof item[fieldName] === "function")) {
                 const val = item[fieldName]();
                 ret = ret === undefined ? val : val === undefined ? undefined : (ret + val);
@@ -441,7 +441,7 @@ jiant.module("jiant-models", ["jiant-util"], function({$, app, jiant, params, "j
           }
 
           let ret;
-          $.each(arr, function(idx, name) {
+          jiant.each(arr, function(idx, name) {
             const fieldName = name.substring(0, 1).toLowerCase() + name.substring(1);
             const perField = subsum(storage, fieldName);
             ret = ret === undefined ? perField : perField === undefined ? undefined : (ret + perField);
@@ -451,7 +451,7 @@ jiant.module("jiant-models", ["jiant-util"], function({$, app, jiant, params, "j
       } else if (fname === "filter" && !objMode) {
         repoRoot[fname] = function(cb) {
           const ret = [];
-          $.each(repoRoot.all(), function(i, obj) {
+          jiant.each(repoRoot.all(), function(i, obj) {
             if (cb(obj)) {
               ret.push(obj);
             }
@@ -466,7 +466,7 @@ jiant.module("jiant-models", ["jiant-util"], function({$, app, jiant, params, "j
         const arrNames = fname.substring(6).split("And");
         const inMap = {};
         let usesIns = false;
-        $.each(arrNames, function(idx, name) {
+        jiant.each(arrNames, function(idx, name) {
           if (name.endsWith("In") && !spec[lowerFirst(name)]) {
             name = name.substring(0, name.length - 2);
             inMap[lowerFirst(name)] = true;
@@ -484,7 +484,7 @@ jiant.module("jiant-models", ["jiant-util"], function({$, app, jiant, params, "j
           let node = indexes,
               args = arguments;
           if (! usesIns) {
-            $.each(arrNames, function(i, name) {
+            jiant.each(arrNames, function(i, name) {
               const key = name + "=" + args[i];
               node = node[key];
               if (node === undefined) {
@@ -494,12 +494,12 @@ jiant.module("jiant-models", ["jiant-util"], function({$, app, jiant, params, "j
             return new Collection(node === undefined ? [] : node.content);
           } else {
             let nodes = [indexes];
-            $.each(arrNames, function(i, name) {
+            jiant.each(arrNames, function(i, name) {
               const newNodes = [];
               args[i] = (inMap[name] && Array.isArray(args[i])) ? args[i] : [args[i]];
-              $.each(args[i], function(j, arg) {
+              jiant.each(args[i], function(j, arg) {
                 const key = name + "=" + arg;
-                $.each(nodes, function(k, node) {
+                jiant.each(nodes, function(k, node) {
                   if (node[key] !== undefined) {
                     newNodes.push(node[key]);
                   }
@@ -508,8 +508,8 @@ jiant.module("jiant-models", ["jiant-util"], function({$, app, jiant, params, "j
               nodes = newNodes;
             });
             const ret = [];
-            $.each(nodes, function(i, node) {
-              $.each(node.content, function(j, item) {
+            jiant.each(nodes, function(i, node) {
+              jiant.each(node.content, function(j, item) {
                 if ($.inArray(ret, item) < 0) {
                   ret.push(item);
                 }
@@ -525,7 +525,7 @@ jiant.module("jiant-models", ["jiant-util"], function({$, app, jiant, params, "j
         Model.prototype[fname] = function() {
           const outerArgs = arguments,
               newVals = {};
-          $.each(arr, function(idx, name) {
+          jiant.each(arr, function(idx, name) {
             const fieldName = name.substring(0, 1).toLowerCase() + name.substring(1);
             newVals[fieldName] = outerArgs[idx];
           });
@@ -537,7 +537,7 @@ jiant.module("jiant-models", ["jiant-util"], function({$, app, jiant, params, "j
         spec[fname] = proxy(fname);
         Model.prototype[fname] = function (val) {
           const that = this;
-          $.each(this, function(name, fn) {
+          jiant.each(this, function(name, fn) {
             isModelAccessor(fn) && that[name](val, true);
           });
         }
@@ -559,12 +559,12 @@ jiant.module("jiant-models", ["jiant-util"], function({$, app, jiant, params, "j
           }
           function obj2map(obj) {
             const ret = {};
-            $.each(obj, function(key, val) {
+            jiant.each(obj, function(key, val) {
               val2map(ret, val, key);
             });
             return ret;
           }
-          $.each(that, function(key) {
+          jiant.each(that, function(key) {
             const actualKey = (mapping && mapping[key]) ? mapping[key] : key,
                 fn = that[actualKey];
             if (isModelAccessor(fn) || isModelSupplier(fn)) {
@@ -656,16 +656,16 @@ jiant.module("jiant-models", ["jiant-util"], function({$, app, jiant, params, "j
   }
 
   function attachCollectionFunctions(arr, collectionFunctions) {
-    $.each(collectionFunctions, function(idx, fn) {
+    jiant.each(collectionFunctions, function(idx, fn) {
       arr[fn] = function() {
         const ret = [],
             args = arguments;
-        $.each(this, function(idx, obj) {
+        jiant.each(this, function(idx, obj) {
           ret.push(obj[fn].apply(obj, args));
         });
         if (isEventHandlerName(fn)) {
           ret.off = function() {
-            $.each(ret, function(i, item) {
+            jiant.each(ret, function(i, item) {
               item.off();
             });
           }
@@ -703,7 +703,7 @@ jiant.module("jiant-models", ["jiant-util"], function({$, app, jiant, params, "j
   }
 
   function _bindModels(appRoot, models) {
-    $.each(models, function(name, spec) {
+    jiant.each(models, function(name, spec) {
       bindModel(name, spec);
     });
   }

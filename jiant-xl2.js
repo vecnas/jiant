@@ -12,13 +12,13 @@ jiant.module("jiant-xl2", ["jiant-util"], function({$, app, jiant, params, "jian
         const views = jiant.toArray(this.views());
         const bind2state = (state) => {
             state.start(function() {
-                $.each(views, function(idx, view) {view.show()});
+                jiant.each(views, function(idx, view) {jiant.show(view)});
             });
             state.end(function() {
-                $.each(views, function(idx, view) {view.hide()});
+                jiant.each(views, function(idx, view) {jiant.hide(view)});
             });
         }
-        $.each(states, function(idx, state) {
+        jiant.each(states, function(idx, state) {
             bind2state(state);
         })
     };
@@ -30,7 +30,7 @@ jiant.module("jiant-xl2", ["jiant-util"], function({$, app, jiant, params, "jian
     StatefulApp.prototype.defaultState = fluent("defaultState");
     StatefulApp.prototype.apply = function() {
         const {app, viewNameSuffix,defaultState} = this.data;
-        $.each(app.states, function(name, state) {
+        jiant.each(app.states, function(name, state) {
             const view = app.views[name + viewNameSuffix];
             view && new StatefulViews().states(state).views(view).apply();
         });
@@ -48,7 +48,7 @@ jiant.module("jiant-xl2", ["jiant-util"], function({$, app, jiant, params, "jian
             goProxy ? goProxy(state) : state.go();
         });
         selectedCssClass && state.start(function() {
-            ctl.addClass(selectedCssClass);
+            jiant.addClass(ctl, selectedCssClass);
         });
         selectedCssClass && state.end(function() {
             ctl.removeClass(selectedCssClass);
@@ -63,7 +63,7 @@ jiant.module("jiant-xl2", ["jiant-util"], function({$, app, jiant, params, "jian
     StatefulNav.prototype.goProxy = fluent("goProxy");
     StatefulNav.prototype.apply = function() {
         const {app, view, suffix, selectedCssClass, goProxy} = this.data;
-        $.each(app.states, function(stateName, stateSpec) {
+        jiant.each(app.states, function(stateName, stateSpec) {
             const ctl = view[stateName + suffix];
             ctl && new Ctl2state().ctl(ctl).state(stateSpec).selectedCssClass(selectedCssClass).goProxy(goProxy).apply();
         });
@@ -89,9 +89,9 @@ jiant.module("jiant-xl2", ["jiant-util"], function({$, app, jiant, params, "jian
             filterModel && filterModel.sort && filterModel.sort()
             && (pageable["page.sort"] = filterModel.sort(), pageable["sort"] = filterModel.sort());
             ajax(filterModel, pageable, function(data) {
-                container.empty();
-                noItemsLabel && (data.content.length ? noItemsLabel.hide() : noItemsLabel.show());
-                $.each(data.content, function(idx, item) {
+                jiant.empty(container);
+                noItemsLabel && (data.content.length ? jiant.hide(noItemsLabel) : jiant.show(noItemsLabel));
+                jiant.each(data.content, function(idx, item) {
                     const row = template.parseTemplate(item, undefined, undefined, mapping);
                     container.append(row);
                     perItemCb && perItemCb(item, row, idx);
@@ -117,12 +117,12 @@ jiant.module("jiant-xl2", ["jiant-util"], function({$, app, jiant, params, "jian
         markerElem = markerElem ? markerElem : ctl;
         markerText = markerText ? markerText : "saving";
         ctl.click(function(event) {
-            const prevLabel = markerElem.html();
+            const prevLabel = jiant.html(markerElem);
             ctl.attr("disabled", "disabled");
-            markerElem.html(markerText);
+            jiant.html(markerElem, markerText);
             saveFn(function () {
                 ctl.attr("disabled", null);
-                markerElem.html(prevLabel);
+                jiant.html(markerElem, prevLabel);
             }, event);
         });
     };
@@ -163,10 +163,10 @@ jiant.module("jiant-xl2", ["jiant-util"], function({$, app, jiant, params, "jian
         ctl.click(function() {
             preCb && preCb();
             rememberedActionFn = actionFn;
-            confirmDialogView.show();
+            jiant.show(confirmDialogView);
         });
         dialogOkCtl.click(function() {
-            confirmDialogView.hide();
+            jiant.hide(confirmDialogView);
             rememberedActionFn && rememberedActionFn();
             rememberedActionFn = null;
         });
@@ -187,7 +187,7 @@ jiant.module("jiant-xl2", ["jiant-util"], function({$, app, jiant, params, "jian
         const viewFieldSetterName = this.data.viewFieldSetterName;
         this._addHnd && m.add.off(this._addHnd);
         this._remHnd && m.remove.off(this._remHnd);
-        $.each(m.jRepo.all(), function (i, obj) {
+        jiant.each(m.jRepo.all(), function (i, obj) {
             $.isFunction(obj[viewFieldSetterName]) && obj[viewFieldSetterName]()
             && $.isFunction(obj[viewFieldSetterName]().off) && obj[viewFieldSetterName]().off();
         });
@@ -219,7 +219,7 @@ jiant.module("jiant-xl2", ["jiant-util"], function({$, app, jiant, params, "jian
                 view = tm.parseTemplate(obj, subscribeForUpdates, reversePropagate, mapping);
             }
             if (sortFn && $.isFunction(sortFn) && jiant.getRepo(model).all) {
-                $.each(sorted, function(i, item) {
+                jiant.each(sorted, function(i, item) {
                     const order = sortFn(obj, item);
                     if (item[viewFieldSetterName] && item[viewFieldSetterName]() && order < 0) {
                         useTm && view.insertBefore(item[viewFieldSetterName]()[0]);
@@ -237,7 +237,7 @@ jiant.module("jiant-xl2", ["jiant-util"], function({$, app, jiant, params, "jian
         }
         const m = model.jRepo;
         this._addHnd = m.add && m.add.on(function (arr) {
-            $.each(arr, function (idx, obj) {
+            jiant.each(arr, function (idx, obj) {
                 renderObj(obj);
             });
         });
@@ -245,7 +245,7 @@ jiant.module("jiant-xl2", ["jiant-util"], function({$, app, jiant, params, "jian
             obj[viewFieldSetterName] && (elemFactory ? elemFactory.remove(obj[viewFieldSetterName]()) : obj[viewFieldSetterName]().remove());
             sorted = $.grep(sorted, function(elem, i) {return elem != obj});
         });
-        $.each(model.jRepo.all(), function(i, obj) {
+        jiant.each(model.jRepo.all(), function(i, obj) {
             renderObj(obj);
         });
     };
@@ -313,9 +313,9 @@ jiant.module("jiant-xl2", ["jiant-util"], function({$, app, jiant, params, "jian
     RenderList.prototype.mapping = fluent("mapping");
     RenderList.prototype.apply = function() {
         const {list, container, tm, perItemCb, noItemsLabel, subscribeForUpdates, appendMode, mapping} = this.data;
-        noItemsLabel && (list.length ? noItemsLabel.hide() : noItemsLabel.show());
-        !appendMode && container.empty();
-        $.each(list, function(idx, item) {
+        noItemsLabel && (list.length ? jiant.hide(noItemsLabel) : jiant.show(noItemsLabel));
+        !appendMode && jiant.empty(container);
+        jiant.each(list, function(idx, item) {
             const elem = tm.parseTemplate(item, subscribeForUpdates, false, mapping);
             container.append(elem);
             perItemCb && perItemCb(item, elem, idx);
@@ -353,9 +353,9 @@ jiant.module("jiant-xl2", ["jiant-util"], function({$, app, jiant, params, "jian
                 pageable["sort"] = sort;
             }
             ajax(pageable, function(data) {
-                container.empty();
-                noItemsLabel && (data.content.length ? noItemsLabel.hide() : noItemsLabel.show());
-                $.each(data.content, function(idx, item) {
+                jiant.empty(container);
+                noItemsLabel && (data.content.length ? jiant.hide(noItemsLabel) : jiant.show(noItemsLabel));
+                jiant.each(data.content, function(idx, item) {
                     const row = template.parseTemplate(item);
                     container.append(row);
                     perItemCb && perItemCb(item, row);
@@ -375,7 +375,7 @@ jiant.module("jiant-xl2", ["jiant-util"], function({$, app, jiant, params, "jian
             const options = [];
             function sync() {
                 let arr = [], allUnchecked = true, allChecked = true;
-                $.each(options, function(idx, elem) {
+                jiant.each(options, function(idx, elem) {
                     elem = $(elem);
                     if (elem.prop("checked")) {
                         arr.push(elem.data("val"));
@@ -388,12 +388,12 @@ jiant.module("jiant-xl2", ["jiant-util"], function({$, app, jiant, params, "jian
                 if (allChecked || allUnchecked) {
                     allSelector.removeClass("middle-check");
                 } else {
-                    allSelector.addClass("middle-check");
+                    jiant.addClass(allSelector, "middle-check");
                 }
                 filterFn && filterFn(arr);
             }
             allSelector.change(function() {
-                $.each(options, function(idx, option) {
+                jiant.each(options, function(idx, option) {
                     const val = allSelector.prop("checked");
                     $(option).prop("checked", val);
                 });
@@ -428,7 +428,7 @@ jiant.module("jiant-xl2", ["jiant-util"], function({$, app, jiant, params, "jian
                 return selectedVal;
             } else {
                 selectedVal = _val;
-                label && label.html(title);
+                label && jiant.html(label, title);
                 ctl.trigger("change", selectedVal);
             }
         }
@@ -436,7 +436,7 @@ jiant.module("jiant-xl2", ["jiant-util"], function({$, app, jiant, params, "jian
             add: function(_val, title, selected) {
                 const elem = optionTm.parseTemplate(_val);
                 if (Object.prototype.toString.call(_val) === "[object String]" && title) {
-                    elem.html(title);
+                    jiant.html(elem, title);
                 }
                 dropContainer.append(elem);
                 elem.click(function() {
@@ -448,7 +448,7 @@ jiant.module("jiant-xl2", ["jiant-util"], function({$, app, jiant, params, "jian
                 ctl.change(arg);
             },
             empty: function() {
-                dropContainer.empty();
+                jiant.empty(dropContainer);
             },
             val: val
         }
@@ -474,7 +474,7 @@ jiant.module("jiant-xl2", ["jiant-util"], function({$, app, jiant, params, "jian
                         selectedVal = val;
                         if (selectedClass) {
                             selectedElem && selectedElem.removeClass(selectedClass);
-                            elem.addClass(selectedClass);
+                            jiant.addClass(elem, selectedClass);
                         }
                         selectedElem = elem;
                         cb && cb(selectedElem, selectedVal, prevElem, prevVal);
@@ -494,13 +494,13 @@ jiant.module("jiant-xl2", ["jiant-util"], function({$, app, jiant, params, "jian
         }
         if (! cb) {
             cb = function(selectedElem, selectedVal, prevElem, prevVal) {
-                prevVal && $(prevVal).hide();
-                selectedVal && $(selectedVal).show();
+                prevVal && jiant.hide($(prevVal));
+                selectedVal && jiant.show($(selectedVal));
             };
         }
         const impl = new Impl();
         impl.setSelectedClass(selectedClass);
-        arrElems && $.each(arrElems, function(idx, elem) {
+        arrElems && jiant.each(arrElems, function(idx, elem) {
             impl.add($(elem), arrVals && arrVals.length > idx ? arrVals[idx] : null, cb, selectedIdx === idx);
         });
         return impl;

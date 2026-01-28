@@ -11,7 +11,7 @@ jiant.module("jiant-views", ["jiant-uifactory", "jiant-ui", "jiant-types", "jian
     const addOnRender = (componentId) => viewRoot[componentId].onRender =
       (cb) => jiant.onRender({app: appRoot, viewId, field: componentId, cb});
     viewRoot._j = {};
-    $.each(viewRoot, function (componentId, elemSpec) {
+    jiant.each(viewRoot, function (componentId, elemSpec) {
       const componentTp = Ui.getComponentType(elemSpec);
       const predefined = componentId in {"_scan": 1, "impl": 1, "appPrefix": 1, "renderer": 1, "jInit": 1, "_j": 1};
       if (! predefined) {
@@ -42,7 +42,7 @@ jiant.module("jiant-views", ["jiant-uifactory", "jiant-ui", "jiant-types", "jian
   }
 
   function ensureSafeExtend(spec, jqObject) {
-    $.each(spec, function(key, content) {
+    jiant.each(spec, function(key, content) {
       if (jqObject[key]) {
         jiant.info("unsafe extension: " + key + " already defined in base jQuery, shouldn't be used, now overriding!");
         jqObject[key] = undefined;
@@ -53,7 +53,7 @@ jiant.module("jiant-views", ["jiant-uifactory", "jiant-ui", "jiant-types", "jian
   function _bindViews(appRoot, root, appUiFactory) {
     uiFactory = appUiFactory;
     errString = "";
-    $.each(root, function(viewId, viewContent) {
+    jiant.each(root, function(viewId, viewContent) {
       bindView(appRoot, viewId, viewContent, null, [errString]);
     });
     jiant.DEV_MODE && errString.length > 0 && alert("Some views not bound to HTML properly, check console " + errString);

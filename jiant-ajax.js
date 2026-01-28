@@ -13,7 +13,7 @@ jiant.module("jiant-ajax", function({}) {
   }
 
   function _bindAjax(appRoot, ajaxRoot) {
-    $.each(ajaxRoot, function(name, funcSpec) {
+    jiant.each(ajaxRoot, function(name, funcSpec) {
       ajaxRoot[name] = bindAjax(name, funcSpec, appRoot);
     });
   }
@@ -32,7 +32,7 @@ jiant.module("jiant-ajax", function({}) {
         parseForAjaxCall(root, path + (compound ? ("[" + i + "]") : ""), obj, true);
       });
     } else if ($.isPlainObject(actual) || (actual && actual.jModelName)) {
-      $.each(actual, function(key, value) {
+      jiant.each(actual, function(key, value) {
         if (key === jiant.flags.ajaxSubmitAsMap) {
           return;
         }

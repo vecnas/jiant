@@ -29,7 +29,7 @@ jiant.module("jiant-fields", [], function({$, app, jiant, params}) {
     viewRoot[componentId] = jiant.wrapType(componentTp);
     viewRoot[componentId].renderer = ({data, val, view, elem, isUpdate}) => {
       if (view[markerName]) {
-        $.each(view[markerName], function (i, cls) {
+        jiant.each(view[markerName], function (i, cls) {
           cls && view.removeClass(cls);
         });
       }
@@ -38,7 +38,7 @@ jiant.module("jiant-fields", [], function({$, app, jiant, params}) {
         const _v = Array.isArray(val) && val.length === 0 ? undefined : val;
         if (!!_v) {
           view[markerName].push(className);
-          view.addClass(className);
+          jiant.addClass(view, className);
         }
       } else {
         if (val !== undefined && val !== null) {
@@ -47,10 +47,10 @@ jiant.module("jiant-fields", [], function({$, app, jiant, params}) {
           } else if (!Array.isArray(val)) {
             val = [val];
           }
-          $.each(val, function (i, v) {
+          jiant.each(val, function (i, v) {
             const cls = className + "_" + v;
             view[markerName].push(cls);
-            view.addClass(cls);
+            jiant.addClass(view, cls);
           })
         }
       }
@@ -72,9 +72,9 @@ jiant.module("jiant-fields", [], function({$, app, jiant, params}) {
     const pagerBus = $({}),
         roots = [];
     let lastPage = 0, lastTotalCls;
-    $.each(uiElem, function(i, elem) {
+    jiant.each(uiElem, function(i, elem) {
       const root = $("<ul></ul>");
-      root.addClass("pagination");
+      jiant.addClass(root, "pagination");
       $(elem).append(root);
       roots.push(root);
     });
@@ -93,11 +93,11 @@ jiant.module("jiant-fields", [], function({$, app, jiant, params}) {
       }
     };
     uiElem.updatePager = function(page) {
-      $.each(roots, function(idx, root) {
-        root.empty();
+      jiant.each(roots, function(idx, root) {
+        jiant.empty(root);
         lastTotalCls && root.removeClass(lastTotalCls);
         lastTotalCls = "totalPages_" + page.totalPages;
-        root.addClass(lastTotalCls);
+        jiant.addClass(root, lastTotalCls);
         const from = Math.max(0, page.number - Math.round(jiant.PAGER_RADIUS / 2)),
             to = Math.min(page.number + Math.round(jiant.PAGER_RADIUS / 2), page.totalPages);
         if (from > 0) {
@@ -139,10 +139,10 @@ jiant.module("jiant-fields", [], function({$, app, jiant, params}) {
         container = $("<div></div>"),
         pageSize = 8,
         offset = 0;
-    prev.addClass("paged-prev");
-    next.addClass("paged-next");
-    container.addClass("paged-container");
-    uiElem.empty();
+    jiant.addClass(prev, "paged-prev");
+    jiant.addClass(next, "paged-next");
+    jiant.addClass(container, "paged-container");
+    jiant.empty(uiElem);
     uiElem.append(prev);
     uiElem.append(container);
     uiElem.append(next);
@@ -159,14 +159,14 @@ jiant.module("jiant-fields", [], function({$, app, jiant, params}) {
       sync();
     };
     uiElem.empty = function() {
-      container.empty();
+      jiant.empty(container);
       sync();
     };
     uiElem.setHorizontal = function(bool) {
       const display = bool ? "inline-block" : "block";
-      prev.css("display", display);
-      next.css("display", display);
-      container.css("display", display);
+      jiant.css(prev, "display", display);
+      jiant.css(next, "display", display);
+      jiant.css(container, "display", display);
     };
     uiElem.setPageSize = function(val) {
       pageSize = val;
@@ -177,16 +177,16 @@ jiant.module("jiant-fields", [], function({$, app, jiant, params}) {
     function sync() {
       offset = Math.max(offset, 0);
       offset = Math.min(offset, container.children().length - 1);
-      prev.css("visibility", offset > 0 ? "visible" : "hidden");
-      next.css("visibility", offset < container.children().length - pageSize ? "visible" : "hidden");
-      $.each(container.children(), function(idx, domElem) {
+      jiant.css(prev, "visibility", offset > 0 ? "visible" : "hidden");
+      jiant.css(next, "visibility", offset < container.children().length - pageSize ? "visible" : "hidden");
+      jiant.each(container.children(), function(idx, domElem) {
         let elem = $(domElem);
 //        logInfo("comparing " + idx + " vs " + offset + " - " + (offset+pageSize));
         if (idx >= offset && idx < offset + pageSize) {
 //          logInfo("showing");
-          elem.show();
+          jiant.show(elem);
         } else {
-          elem.hide();
+          jiant.hide(elem);
         }
       });
     }
@@ -203,7 +203,7 @@ jiant.module("jiant-fields", [], function({$, app, jiant, params}) {
   }
 
   function setupCtlHide(viewOrTm, elem) {
-    elem.click(function() {viewOrTm.hide()})
+    elem.click(function() {jiant.hide(viewOrTm)})
   }
 
   function setupCtlBack(viewOrTm, elem) {
@@ -345,7 +345,7 @@ jiant.module("jiant-fields", [], function({$, app, jiant, params}) {
         prev.call(uiElem, jiant.formatMoney(num, appRoot.formatGroupsDelim || undefined ));
       }
     };
-    uiElem.addClass("nowrap");
+    jiant.addClass(uiElem, "nowrap");
   }
 
   function setupIntlProxies(appRoot, elem) {
@@ -389,7 +389,7 @@ jiant.module("jiant-fields", [], function({$, app, jiant, params}) {
     } else if (customElementTypes[elemType]) {
       customElementTypes[elemType](uiElem, viewOrTm, appRoot);
     } else if (Array.isArray(elemType)) {
-      $.each(elemType, function(i, tp) {
+      jiant.each(elemType, function(i, tp) {
         setupExtras(appRoot, uiElem, tp, key, elemKey, viewOrTm, prefix);
       });
     }

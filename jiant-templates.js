@@ -9,7 +9,7 @@ jiant.module("jiant-templates", ["jiant-uifactory", "jiant-ui", "jiant-types", "
 
   function fillClassMappings(elem, classMapping) {
     const childs = elem.find("*"), selfs = elem.filter("*");
-    $.each($.merge(selfs, childs), function(i, item) {
+    jiant.each($.merge(selfs, childs), function(i, item) {
       if (typeof item.className.split === "function" && item.className.length > 0) {
         const clss = item.className.split(" ");
         clss.forEach(function(cls) {
@@ -22,7 +22,7 @@ jiant.module("jiant-templates", ["jiant-uifactory", "jiant-ui", "jiant-types", "
 
   function fillTagMappings(elem, tagMapping) {
     const childs = elem.find("*"), selfs = elem.filter("*");
-    $.each($.merge(selfs, childs), function(i, item) {
+    jiant.each($.merge(selfs, childs), function(i, item) {
       const tag = item.tagName.toLowerCase();
       tagMapping[tag] = tagMapping[tag] || [];
       tagMapping[tag].push(item);
@@ -31,7 +31,7 @@ jiant.module("jiant-templates", ["jiant-uifactory", "jiant-ui", "jiant-types", "
 
   function _bindTemplates(appRoot, root) {
     errString = "";
-    $.each(root, function(tmId, tmContent) {
+    jiant.each(root, function(tmId, tmContent) {
       bindTemplate(appRoot, tmId, tmContent, null, [errString]);
     });
     jiant.DEV_MODE && errString.length > 0 && alert("Some templates not bound to HTML properly, check console " + errString);
@@ -47,7 +47,7 @@ jiant.module("jiant-templates", ["jiant-uifactory", "jiant-ui", "jiant-types", "
     if ("_scan" in tmContent) {
       Ui.scanForSpec(prefix, tmContent, tm);
     }
-    $.each(tmContent, function (componentId, elemSpec) {
+    jiant.each(tmContent, function (componentId, elemSpec) {
       const predefined = componentId in {appPrefix: 1, impl: 1, _jiantType: 1, _scan: 1, jInit: 1, _j: 1, renderer: 1};
       if (! predefined) {
         elemSpec = tmContent[componentId] = jiant.wrapType(tmContent[componentId]);
@@ -70,7 +70,7 @@ jiant.module("jiant-templates", ["jiant-uifactory", "jiant-ui", "jiant-types", "
     });
     tmContent.onRender = (cb) => jiant.onRender({app: appRoot, templateId: tmId, cb});
     errArr[0] += UiFactory.ensureExists(tm, prefix + tmId);
-    tmContent.templateSource = function() {return tm.html().trim()};
+    tmContent.templateSource = function() {return jiant.html(tm).trim()};
     tmContent.parseTemplate = function(data, subscribeForUpdates, reverseBind, mapping) {
       const retVal = $("<!-- -->" + jiant._parseTemplate(tm, data, tmId, mapping)); // add comment to force jQuery to read it as HTML fragment
       retVal._j = {};
@@ -88,7 +88,7 @@ jiant.module("jiant-templates", ["jiant-uifactory", "jiant-ui", "jiant-types", "
             bindBy = appRoot.bindByTag;
         return !bindBy ? byCls : bindBy === 'after-class' ? (byCls || byTag) : bindBy === 'before-class' ? (byTag || byCls) : byTag;
       }
-      $.each(tmContent, function (componentId, elemSpec) {
+      jiant.each(tmContent, function (componentId, elemSpec) {
         if (Ui.isServiceName(componentId)) {
           return;
         }
@@ -117,7 +117,7 @@ jiant.module("jiant-templates", ["jiant-uifactory", "jiant-ui", "jiant-types", "
       }
       data && retVal.propagate(data, !!subscribeForUpdates, !!reverseBind, mapping);
       if ((!("ADD_TM_TAGS" in jiant)) || jiant.ADD_TM_TAGS) {
-        retVal.addClass("jianttm_" + tmId);
+        jiant.addClass(retVal, "jianttm_" + tmId);
       }
       return retVal;
     };

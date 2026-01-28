@@ -16,7 +16,7 @@ jiant.module("jiant-comp", ["jiant-render", "jiant-spec"],
       }
       const dataArr = Array.isArray(actualObj) ? actualObj : [actualObj];
       if (! singleMode) {
-        elem.empty();
+        jiant.empty(elem);
       }
       dataArr.forEach(function(actualObj, i) {
         if (actualObj) {
@@ -34,7 +34,7 @@ jiant.module("jiant-comp", ["jiant-render", "jiant-spec"],
             Render.callOnRender({app: appRoot, viewId, templateId, field, args});
           } else {
             el = appRoot.templates[componentId].parseTemplate(actualObj, settings.subscribeForUpdates, settings.reverseBind, mp);
-            $.each(Spec.templateSpec(appRoot, componentId), function(cId, cElem) {
+            jiant.each(Spec.templateSpec(appRoot, componentId), function(cId, cElem) {
               if (typeof el[cId] === "function") {
                 view[field][cId] = el[cId].bind(el);
               } else {

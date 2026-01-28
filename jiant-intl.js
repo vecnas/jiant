@@ -5,7 +5,7 @@ jiant.module("jiant-intl", ["jiant-logic"], function({$, app, jiant, params, "ji
   function translate(appRoot, val) {
     if (Array.isArray(val)) {
       const arr = [];
-      $.each(val, function(i, key) {
+      jiant.each(val, function(i, key) {
         arr.push(appRoot.logic.intl.t(key));
       });
       return arr.join(", ");
@@ -104,23 +104,23 @@ jiant.module("jiant-intl", ["jiant-logic"], function({$, app, jiant, params, "ji
         completeIntl();
       }
       function completeIntl() {
-        $.each(intlRoot, function(fname, fspec) {
+        jiant.each(intlRoot, function(fname, fspec) {
           if (fspec.spec) {
             implSpec[fname] = intlRoot.i18n ? implementIntlFunctionWithI18N(fname, fspec, data, intlRoot.javaSubst) : implementIntlFunction(fname, fspec, data);
           }
         });
         intlRoot.implement(implSpec);
         intlRoot.debugIntl = function(prefix) {
-          $.each(data, function(key, val) {
+          jiant.each(data, function(key, val) {
             key.startsWith(prefix) && jiant.infop("!! = !!", key, val);
           });
         };
         if (intlRoot.scanDoc) {
-          $("*[data-nlabel]").each(function(i, elem) {
+          jiant.each($("*[data-nlabel]"), function(i, elem) {
             elem = $(elem);
             const key = elem.attr("data-nlabel"),
                 translation = intlRoot.t(key);
-            elem.html(translation);
+            jiant.html(elem, translation);
           });
         }
       }
@@ -145,7 +145,7 @@ jiant.module("jiant-intl", ["jiant-logic"], function({$, app, jiant, params, "ji
         let args = {};
         if (arguments) {
           if (javaSubst) {
-            $.each(arguments, function(i, a) {i > 0 && (args["" + (i - 1)] = a)});
+            jiant.each(arguments, function(i, a) {i > 0 && (args["" + (i - 1)] = a)});
           } else {
             args = arguments[1];
           }
@@ -158,10 +158,10 @@ jiant.module("jiant-intl", ["jiant-logic"], function({$, app, jiant, params, "ji
         const args = {};
         if (arguments) {
           if (javaSubst) {
-            $.each(arguments, function(i, a) {args["" + i] = a});
+            jiant.each(arguments, function(i, a) {args["" + i] = a});
           } else {
             const paramNames = jiant.getParamNames(fspec);
-            $.each(arguments, function(i, a) {i > 0 && i < paramNames.length && (args[paramNames[i]] = a)});
+            jiant.each(arguments, function(i, a) {i > 0 && i < paramNames.length && (args[paramNames[i]] = a)});
           }
         }
         ensureIntlKey(data, fname);

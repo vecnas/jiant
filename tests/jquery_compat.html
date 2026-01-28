@@ -30,6 +30,70 @@
       });
     });
 
+    QUnit.test("jiant.each mirrors jQuery.each behavior", function(assert) {
+      const arr = [10, 20];
+      const arrSeen = [];
+      const arrRet = jiant.each(arr, function(i, val) {
+        arrSeen.push([i, val, this]);
+      });
+      assert.strictEqual(arrRet, arr, "returns original array");
+      assert.deepEqual(arrSeen, [[0, 10, 10], [1, 20, 20]], "iterates array with value as this");
+
+      const obj = {a: 1, b: 2};
+      const objSeen = {};
+      const objRet = jiant.each(obj, function(key, val) {
+        objSeen[key] = {val: val, self: this};
+      });
+      assert.strictEqual(objRet, obj, "returns original object");
+      assert.equal(objSeen.a.self, 1, "object callback this is value");
+      assert.equal(objSeen.b.self, 2, "object callback this is value");
+
+      $("#qunit-fixture").html("<div class='e1'></div><div class='e2'></div>");
+      const elems = $("#qunit-fixture").find("div");
+      const elemSeen = [];
+      const elemRet = jiant.each(elems, function(i, el) {
+        elemSeen.push([i, el, this]);
+      });
+      assert.strictEqual(elemRet, elems, "returns jQuery collection");
+      assert.ok(elemSeen.length === 2, "iterates jQuery collection");
+      assert.strictEqual(elemSeen[0][1], elemSeen[0][2], "jQuery callback this is element");
+      assert.strictEqual(elemSeen[1][1], elemSeen[1][2], "jQuery callback this is element");
+    });
+
+    QUnit.test("jiant html/empty/addClass wrappers", function(assert) {
+      $("#qunit-fixture").html("<div id='wrap1'>x</div>");
+      const el = $("#wrap1");
+
+      const retAdd = jiant.addClass(el, "foo");
+      assert.strictEqual(retAdd, el, "addClass returns original jQuery object");
+      assert.ok(el.hasClass("foo"), "addClass applied");
+
+      const retHtmlSet = jiant.html(el, "y");
+      assert.strictEqual(retHtmlSet, el, "html setter returns original jQuery object");
+      assert.equal(jiant.html(el), "y", "html getter returns content");
+
+      const retEmpty = jiant.empty(el);
+      assert.strictEqual(retEmpty, el, "empty returns original jQuery object");
+      assert.equal(jiant.html(el), "", "empty clears content");
+    });
+
+    QUnit.test("jiant hide/show/css wrappers", function(assert) {
+      $("#qunit-fixture").html("<div id='wrap2' style='display:block;'></div>");
+      const el = $("#wrap2");
+
+      const retCssSet = jiant.css(el, "display", "block");
+      assert.strictEqual(retCssSet, el, "css setter returns original jQuery object");
+      assert.equal(jiant.css(el, "display"), "block", "css getter returns value");
+
+      const retHide = jiant.hide(el);
+      assert.strictEqual(retHide, el, "hide returns original jQuery object");
+      assert.equal(jiant.css(el, "display"), "none", "hide sets display to none");
+
+      const retShow = jiant.show(el);
+      assert.strictEqual(retShow, el, "show returns original jQuery object");
+      assert.notEqual(jiant.css(el, "display"), "none", "show clears display none");
+    });
+
     QUnit.test("onApp provides jQuery and view/components are jQuery objects", function(assert) {
       assert.timeout(timeout);
       const done = assert.async();

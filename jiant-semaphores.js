@@ -3,7 +3,7 @@ jiant.module("jiant-semaphores", function({jiant}) {
   this.singleton();
 
   function _bindSemaphores(appRoot, semaphores) {
-    $.each(semaphores, function(name, spec) {
+    jiant.each(semaphores, function(name, spec) {
       bindSemaphore(spec);
     });
   }

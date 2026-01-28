@@ -7,7 +7,7 @@ jiant.module("jiant-load", function() {
     if (!Array.isArray(arr)) {
       arr = [arr];
     }
-    $.each(arr, function(idx, url) {
+    jiant.each(arr, function(idx, url) {
       const pseudoName = "ext" + new Date().getTime() + Math.random();
       pseudoDeps.push(pseudoName);
       jiant.declare(pseudoName, url);
@@ -35,7 +35,7 @@ jiant.module("jiant-load", function() {
     if (!Array.isArray(arr)) {
       arr = [arr];
     }
-    $.each(arr, function (idx, url) {
+    jiant.each(arr, function (idx, url) {
       jiant.info("Start loading CSS: " + url);
       loadedCss.push(handleCss(url));
     });

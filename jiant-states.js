@@ -26,7 +26,7 @@ jiant.module("jiant-states", function({jiant}) {
       }, reverseMap = {},
       eventBus = $({});
   let hashListenerBound = false;
-  $.each(replacementMap, function(key, val) {
+  jiant.each(replacementMap, function(key, val) {
     reverseMap[val] = key;
   });
 
@@ -74,7 +74,7 @@ jiant.module("jiant-states", function({jiant}) {
   }
 
   function triggerHashChange(enforce, runtimeAppId) {
-    $.each(hashListeners, function(appId, listener) {
+    jiant.each(hashListeners, function(appId, listener) {
       listener({}, enforce, runtimeAppId);
     });
   }
@@ -174,7 +174,7 @@ jiant.module("jiant-states", function({jiant}) {
       const appId = jiant.extractApplicationId(appOrId);
       _go(appId);
     } else {
-      $.each(getStates(), function(appId, state) {
+      jiant.each(getStates(), function(appId, state) {
         _go(appId);
       });
     }
@@ -184,7 +184,7 @@ jiant.module("jiant-states", function({jiant}) {
     let states = getStates(),
         result = "";
     const s = parsed.now + "|" + parsed.root;
-    $.each(states, function(stateAppId, state) {
+    jiant.each(states, function(stateAppId, state) {
       if (appId === stateAppId) {
         result += (stateAppId + "=" + s + "=");
       } else {
@@ -219,7 +219,7 @@ jiant.module("jiant-states", function({jiant}) {
       return s === undefined ? "" : s;
     } else {
       let retVal = "";
-      $.each(getStates(), function(key, val) {
+      jiant.each(getStates(), function(key, val) {
         retVal = val;
         return false;
       });
@@ -245,7 +245,7 @@ jiant.module("jiant-states", function({jiant}) {
   function pack(s) {
     if ($.isPlainObject(s)) {
       let retVal = "{";
-      $.each(s, function(key, val) {
+      jiant.each(s, function(key, val) {
         retVal += pack(key);
         retVal += ":";
         retVal += pack(val);
@@ -267,7 +267,7 @@ jiant.module("jiant-states", function({jiant}) {
     if (s && s[0] === "{") {
       const retVal = {};
       const arr = s.substring(1, s.length).split("}");
-      $.each(arr, function(idx, item) {
+      jiant.each(arr, function(idx, item) {
         const sub = item.split(":");
         (sub.length === 2) && (retVal[unpack(sub[0])] = unpack(sub[1]));
       });
@@ -287,7 +287,7 @@ jiant.module("jiant-states", function({jiant}) {
     if (! states[""]) {
       states[""] = {};
     }
-    $.each(states, function(name, stateSpec) {
+    jiant.each(states, function(name, stateSpec) {
       bindState(app, name, stateSpec);
     });
     lastStates[app.id] = parseState(app.id).now[0];

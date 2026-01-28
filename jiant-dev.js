@@ -40,7 +40,7 @@ jiant.module("jiant-dev", function({jiant}) {
       // array or object
       const json = [],
           arr = (obj && obj.constructor === Array);
-      $.each(obj, function (k, v) {
+      jiant.each(obj, function (k, v) {
         t = typeof(v);
         if (t === "string") {
           v = '"' + v + '"';

@@ -164,7 +164,9 @@
       addedLibs[url] = 1;
       if (module.cssLoaded[url]) {
         const css = module.cssLoaded[url] + "\r\n/*# sourceURL=" + url + " */\r\n";
-        $("<style>").html(css).appendTo("head");
+        const style = $("<style>");
+        jHtml(style, css);
+        style.appendTo("head");
       }
     });
     module.html && module.html.forEach(function(url) {
@@ -176,7 +178,7 @@
         const html = "<!-- sourceUrl = " + url + " -->" + module.htmlLoaded[url] + "<!-- end of source from " + url + " -->";
         const inj = arr[idx].injectTo ? $(arr[idx].injectTo) : $("body");
         if (arr[idx].replace) {
-          inj.html(html);
+          jHtml(inj, html);
         } else {
           inj.append($(html));
         }
@@ -284,6 +286,34 @@
     return val;
   }
 
+  function each(obj, cb) {
+    return $.each(obj, cb);
+  }
+
+  function empty(elem) {
+    return elem.empty();
+  }
+
+  function jHtml(elem, val) {
+    return arguments.length > 1 ? elem.html(val) : elem.html();
+  }
+
+  function addClass(elem, cls) {
+    return elem.addClass(cls);
+  }
+
+  function hide(elem) {
+    return elem.hide();
+  }
+
+  function show(elem) {
+    return elem.show();
+  }
+
+  function css(elem) {
+    return elem.css.apply(elem, Array.prototype.slice.call(arguments, 1));
+  }
+
   function addIfNeed(modules2load, depModule) {
     let found = false;
     modules2load.some(function(moduleSpec) {
@@ -336,7 +366,7 @@
         if (typeof dep === "string") {
           loadedModules[moduleName].parsedDeps.push(loadDep("", dep, moduleSpec))
         } else {
-          $.each(dep, function(path, arr) {
+          each(dep, function(path, arr) {
             if (! Array.isArray(arr)) {
               arr = [arr];
             }
@@ -433,7 +463,7 @@
       if (typeof module === "string") {
         ret.push(parseObjModule(module, {path: module}, appId, j));
       } else {
-        $.each(module, function(key, val) {
+        each(module, function(key, val) {
           if (typeof val === "string") {
             ret.push(parseObjModule(val, {path: key + "/" + val}, appId, j));
           } else if (Array.isArray(val)) {
@@ -441,7 +471,7 @@
               if (typeof subval === "string") {
                 ret.push(parseObjModule(subval, {path: key + "/" + subval}, appId, j));
               } else {
-                $.each(subval, function(k, v) {
+                each(subval, function(k, v) {
                   v.path = v.path || (key + "/" + k);
                   ret.push(parseObjModule(k, v, appId, j));
                   j++;
@@ -462,7 +492,7 @@
 
   function parseObjectModules(root, appId) {
     let ret = [], i = 0;
-    $.each(root, function(name, module) {
+    each(root, function(name, module) {
       if (typeof module === "string") {
         ret.push(parseObjModule(name, {path: module}, appId, i));
       } else {
@@ -645,7 +675,7 @@
     _loadModules(root, tree.modules, appId, true, function() {
       // intlPresent && _bindIntl(root, root.intl, appId);
       // views after intl because of nlabel proxies
-      appLoader && $.each(appLoader.modules, function(i, module) {
+      appLoader && each(appLoader.modules, function(i, module) {
         if ("apply" in module) {
           module.apply(root, tree);
         }
@@ -864,6 +894,13 @@
 
     version: version,
     nvl: nvl,
+    each: each,
+    empty: empty,
+    html: jHtml,
+    addClass: addClass,
+    hide: hide,
+    show: show,
+    css: css,
 
     getApps: function() {return boundApps},
 
