@@ -16,10 +16,15 @@ jiant.module("jiant-models", ["jiant-util"], function({app, jiant, params, "jian
       on: function(eventName, handler) {
         listeners[eventName] = listeners[eventName] || [];
         listeners[eventName].push(handler);
+        return handler;
       },
       off: function(eventName, handler) {
         const list = listeners[eventName];
         if (!list) {
+          return;
+        }
+        if (!handler) {
+          listeners[eventName] = [];
           return;
         }
         const idx = list.indexOf(handler);
@@ -33,19 +38,26 @@ jiant.module("jiant-models", ["jiant-util"], function({app, jiant, params, "jian
           handler.apply(null, arguments);
         }.bind(this);
         this.on(eventName, onceHandler);
+        return onceHandler;
       },
-      trigger: function(eventName, args) {
+      trigger: function(eventName) {
         const list = listeners[eventName];
         if (!list || list.length === 0) {
           return;
         }
+        const extraArgs = [];
+        for (let i = 1; i < arguments.length; i++) {
+          extraArgs.push(arguments[i]);
+        }
+        const spreadArgs = (extraArgs.length === 1 && Array.isArray(extraArgs[0])) ? extraArgs[0] : extraArgs;
         const evt = {
           _stopped: false,
           stopImmediatePropagation: function() { this._stopped = true; }
         };
-        const callArgs = [evt].concat(args || []);
-        for (let i = 0; i < list.length; i++) {
-          list[i].apply(null, callArgs);
+        const callArgs = [evt].concat(spreadArgs);
+        const callList = list.slice();
+        for (let i = 0; i < callList.length; i++) {
+          callList[i].apply(this, callArgs);
           if (evt._stopped) {
             break;
           }
@@ -381,7 +393,7 @@ jiant.module("jiant-models", ["jiant-util"], function({app, jiant, params, "jian
           }
         };
         bus.handlers = bus.handlers || {};
-        bus.handlers[eventName] = bus.handlers[field] || [];
+        bus.handlers[eventName] = bus.handlers[eventName] || [];
         bus.handlers[eventName].push(cb);
         bus[eventName] = (bus[eventName] || 0) + 1;
         bus.on(eventName, handler);

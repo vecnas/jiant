@@ -359,6 +359,55 @@
       });
     });
 
+    QUnit.test("models event bus supports stopImmediatePropagation and handler removal", function(assert) {
+      assert.timeout(timeout);
+      const done = assert.async();
+      $("#qunit-fixture").empty();
+
+      jiant.app(() => ({
+        id: "JQAppModelEvents",
+        models: {
+          item: {
+            id: function(val) {},
+            name: function(val) {},
+            jRepo: {}
+          }
+        }
+      }));
+
+      jiant.onApp("JQAppModelEvents", function($, app) {
+        const repo = app.models.item.jRepo;
+        repo.add({id: 1, name: "a"});
+        const obj = repo.all()[0];
+
+        const calls = [];
+        const h1 = obj.on("name", function(model, val, oldVal) {
+          calls.push(["h1", val, oldVal]);
+          return false;
+        });
+        const h2 = obj.on("name", function(model, val, oldVal) {
+          calls.push(["h2", val, oldVal]);
+        });
+
+        assert.ok(h1 && typeof h1.off === "function", "on returns handler with off()");
+        assert.equal(obj.subscribers("name").length, 2, "subscribers tracked per event");
+
+        obj.name("b");
+        assert.equal(calls.length, 1, "stopImmediatePropagation prevents later handlers");
+        assert.equal(calls[0][0], "h1", "first handler fired");
+        assert.equal(calls[0][1], "b", "new value passed");
+        assert.equal(calls[0][2], "a", "old value passed");
+
+        h1.off();
+        calls.length = 0;
+        obj.name("c");
+        assert.equal(calls.length, 1, "removed handler not called");
+        assert.equal(calls[0][0], "h2", "remaining handler fired");
+
+        done();
+      });
+    });
+
     QUnit.test("jiant ajax parses JSON response", function(assert) {
       assert.timeout(timeout);
       const done = assert.async();
