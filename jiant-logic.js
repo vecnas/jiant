@@ -59,16 +59,10 @@ jiant.module("jiant-logic", ["jiant-util"], function({$, app, jiant, params, "ji
     }
 
     lib && jiant.infop("Start loading external library !!", objOrUrlorFn);
-    lib ? $.ajax({
-      url: objOrUrlorFn,
-      cache: true,
-      crossDomain: true,
-      timeout: 500,
-      dataType: "text"
-    }).done(function(data) {
+    lib ? jiant.fetchText(objOrUrlorFn, {timeout: 500, crossDomain: true}).then(function(data) {
       data += "\r\n//# sourceURL= " + objOrUrlorFn;
-      $.globalEval(data);
-    }).always(handle) : handle();
+      jiant.globalEval(data);
+    }).finally(handle) : handle();
   }
 
   function implement(logic, impl) {

@@ -219,29 +219,62 @@ jiant.module("jiant-types", ["jiant-jtype", "jiant-comp"],
         url = url ? url : elem.attr("action");
         url = jiant.isCouldBePrefixed(url) ? ((appRoot.ajaxPrefix ? appRoot.ajaxPrefix : jiant.AJAX_PREFIX ? jiant.AJAX_PREFIX : "") + url) : url;
         url = jiant.isCouldBePrefixed(url) ? (url + (appRoot.ajaxSuffix ? appRoot.ajaxSuffix : jiant.AJAX_SUFFIX ? jiant.AJAX_SUFFIX : "")) : url;
-        const data = {
-          type: "POST",
+        const settings = {
+          method: "POST",
           url: url,
-          data: elem.serialize(),
-          success: cb,
-          error: function (jqXHR, textStatus, errorText) {
-            if (appRoot.handleErrorFn) {
-              appRoot.handleErrorFn(jqXHR.responseText);
-            } else {
-              jiant.handleErrorFn(jqXHR.responseText);
-            }
-          }
+          data: elem.serialize()
         };
         if (appRoot.crossDomain) {
-          data.crossDomain = true;
+          settings.crossDomain = true;
           if (appRoot.withCredentials) {
-            data.xhrFields = {withCredentials: true};
+            settings.xhrFields = {withCredentials: true};
           }
         }
-        return $.ajax(data);
+        return fetchForm(settings).then(function(text) {
+          cb && cb(text);
+          return text;
+        }).catch(function(err) {
+          const responseText = err && typeof err.responseText === "string" ? err.responseText : "";
+          if (appRoot.handleErrorFn) {
+            appRoot.handleErrorFn(responseText);
+          } else {
+            jiant.handleErrorFn(responseText);
+          }
+          return;
+        });
       };
     }),
     renderProducer: visualRenderProducer});
+
+  function fetchForm(settings) {
+    const headers = {};
+    if (!settings.data) {
+      settings.data = "";
+    }
+    const fetchOpts = {
+      method: settings.method || "POST",
+      headers: headers,
+      body: settings.data,
+      mode: settings.crossDomain ? "cors" : "same-origin",
+      credentials: settings.crossDomain ? (settings.xhrFields && settings.xhrFields.withCredentials ? "include" : "omit") : "same-origin"
+    };
+    if (!("Content-Type" in headers) && !("content-type" in headers)) {
+      headers["Content-Type"] = "application/x-www-form-urlencoded; charset=UTF-8";
+    }
+    return fetch(settings.url, fetchOpts).then(function(res) {
+      return res.text().then(function(text) {
+        if (res.ok) {
+          return text;
+        }
+        throw {status: res.status, statusText: res.statusText || "", responseText: text};
+      });
+    }).catch(function(err) {
+      if (err && err.status !== undefined) {
+        throw err;
+      }
+      throw {status: 0, statusText: err && err.name ? err.name : "error", responseText: ""};
+    });
+  }
 
   const containerPaged = initType({clz: class containerPaged extends JType {},
     componentProducer: visualComponentProducer.and(({elem: uiElem}) => {

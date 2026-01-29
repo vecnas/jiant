@@ -53,6 +53,14 @@ jiant.module("jiant-intl", ["jiant-logic"], function({$, app, jiant, params, "ji
     return (typeof i18n !== "undefined") ? i18n : i18next;
   }
 
+  function isCrossDomainUrl(url) {
+    try {
+      return new URL(url, window.location.href).origin !== window.location.origin;
+    } catch (e) {
+      return false;
+    }
+  }
+
   function loadIntl(intlRoot, appRoot) {
     jiant.infop("Loading intl for app !!", appRoot.id);
     if (! intlRoot.url) {
@@ -67,7 +75,9 @@ jiant.module("jiant-intl", ["jiant-logic"], function({$, app, jiant, params, "ji
     intlRoot.t = function(val) {};
     intlRoot.t.spec = true;
     intlRoot.t.empty = true;
-    $.getJSON(url, function(data) {
+    const crossDomain = isCrossDomainUrl(url);
+    const fetchOpts = crossDomain ? {crossDomain: true, withCredentials: !!appRoot.withCredentials} : {};
+    jiant.fetchJson(url, fetchOpts).then(function(data) {
       const implSpec = {}, option = intlRoot["i18nOptions"] || {debug: jiant.DEV_MODE};
       if (intlRoot.i18n) {
         if (isI18n()) {
@@ -124,6 +134,9 @@ jiant.module("jiant-intl", ["jiant-logic"], function({$, app, jiant, params, "ji
           });
         }
       }
+    }).catch(function(err) {
+      jiant.error("Intl data load failed: " + url);
+      err && err.message && jiant.error(err.message);
     });
   }
 

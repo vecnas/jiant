@@ -287,7 +287,71 @@
   }
 
   function each(obj, cb) {
-    return $.each(obj, cb);
+    if (!obj) {
+      return obj;
+    }
+    if (Array.isArray(obj) || typeof obj.length === "number") {
+      const len = obj.length;
+      for (let i = 0; i < len; i++) {
+        if (cb.call(obj[i], i, obj[i]) === false) {
+          break;
+        }
+      }
+      return obj;
+    }
+    for (const key in obj) {
+      if (cb.call(obj[key], key, obj[key]) === false) {
+        break;
+      }
+    }
+    return obj;
+  }
+
+  function globalEval(code) {
+    (0, eval)(code);
+  }
+
+  function fetchRequest(url, options) {
+    const opts = options || {};
+    const controller = (typeof AbortController !== "undefined") ? new AbortController() : null;
+    const crossDomain = !!opts.crossDomain;
+    const fetchOpts = {
+      method: "GET",
+      mode: crossDomain ? "cors" : "same-origin",
+      cache: "default",
+      credentials: opts.withCredentials ? "include" : (crossDomain ? "omit" : "same-origin")
+    };
+    if (controller) {
+      fetchOpts.signal = controller.signal;
+    }
+    let timer;
+    if (controller && opts.timeout) {
+      timer = setTimeout(function() { controller.abort(); }, opts.timeout);
+    }
+    return fetch(url, fetchOpts).then(function(res) {
+      if (timer) {
+        clearTimeout(timer);
+      }
+      if (!res.ok) {
+        const err = new Error("HTTP " + res.status);
+        err.status = res.status;
+        throw err;
+      }
+      return res;
+    }).catch(function(err) {
+      if (timer) {
+        clearTimeout(timer);
+      }
+      throw err;
+    });
+  }
+
+  function fetchText(url, options) {
+    return fetchRequest(url, options).then(function(res) { return res.text(); });
+  }
+
+  function fetchJson(url, options) {
+    return fetchRequest(url, options).then(function(res) { return res.json(); });
   }
 
   function empty(elem) {
@@ -415,25 +479,18 @@
             url = url + ".js" + (appRoot.modulesSuffix || "");
           }
           jiant.DEV_MODE && console.info("           module url: " + url);
-          $.ajax({
-            url: url,
-            method: "GET",
-            timeout: appRoot.modulesTimeout || 15000,
-            cache: true,
-            crossDomain: true,
-            dataType: "text"
-          }).done(function(data) {
+          fetchText(url, {timeout: appRoot.modulesTimeout || 15000, crossDomain: true}).then(function(data) {
             data += "\r\n//# sourceURL= " + url;
-            $.globalEval(data);
+            globalEval(data);
             if (isCacheInStorage(appRoot)) {
               localStorage.setItem(cacheKey(appRoot, moduleName), data);
             }
             if (loadedModules[moduleName]) {
               preprocessLoadedModule(moduleSpec, loadedModules[moduleName]);
             }
-          }).fail(function() {
+          }).catch(function() {
             console.error("Application " + appId + ". Not loaded module " + moduleName);
-          }).always(function() {
+          }).finally(function() {
             if (loading[moduleName]) {
               delete loading[moduleName];
               cbIf0();
@@ -541,14 +598,7 @@
           })
         } else {
           loadingLibs[url] = [];
-          $.ajax({
-            url: url,
-            timeout: jiant.LIB_LOAD_TIMEOUT,
-            method: "GET",
-            cache: true,
-            crossDomain: true,
-            dataType: "text"
-          }).done(function(data) {
+          fetchText(url, {timeout: jiant.LIB_LOAD_TIMEOUT, crossDomain: true}).then(function(data) {
             module[path + "Loaded"][url] = data;
             loadedLibs[url] = data;
             const waiters = loadingLibs[url];
@@ -556,7 +606,7 @@
             waiters.forEach(function(w) {
               w();
             });
-          }).always(function() {
+          }).finally(function() {
             module[path + "Count"]--;
             if (!module.cssCount && !module.jsCount && !module.htmlCount) {
               cbIf0();
@@ -901,6 +951,9 @@
     hide: hide,
     show: show,
     css: css,
+    globalEval: globalEval,
+    fetchText: fetchText,
+    fetchJson: fetchJson,
 
     getApps: function() {return boundApps},
 

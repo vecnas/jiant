@@ -4,6 +4,7 @@
   <meta charset="utf-8">
   <title>Jiant jQuery compatibility tests</title>
   <link rel="stylesheet" href="https://code.jquery.com/qunit/qunit-2.22.0.css">
+  <link rel="icon" href="data:,">
 </head>
 <body>
 <div id="qunit"></div>
@@ -455,18 +456,17 @@
       assert.timeout(timeout);
       const done = assert.async();
       $("#qunit-fixture").empty();
-      const origAjax = $.ajax;
+      const origFetch = window.fetch;
       let call;
 
-      $.ajax = function(urlOrSettings, settings) {
-        const isString = typeof urlOrSettings === "string";
-        call = {
-          url: isString ? urlOrSettings : urlOrSettings.url,
-          settings: isString ? settings : urlOrSettings
-        };
-        const d = $.Deferred();
-        d.resolve("{}");
-        return d.promise();
+      window.fetch = function(url, opts) {
+        call = {url: url, opts: opts || {}};
+        return Promise.resolve({
+          ok: true,
+          status: 200,
+          statusText: "OK",
+          text: function() { return Promise.resolve("{}"); }
+        });
       };
 
       jiant.app(() => ({
@@ -482,11 +482,10 @@
       jiant.onApp("JQAppAjaxCorsSettings", function($, app) {
         app.ajax.ping(function() {});
         assert.ok(call, "ajax called");
-        assert.ok(call.settings.crossDomain, "crossDomain flag set");
-        assert.ok(call.settings.dataType === undefined, "dataType not forced to jsonp");
-        assert.ok(call.settings.contentType === undefined, "contentType not forced");
-        assert.ok(!call.settings.xhrFields, "xhrFields absent without withCredentials");
-        $.ajax = origAjax;
+        assert.equal(call.opts.mode, "cors", "cors mode set");
+        assert.equal(call.opts.credentials, "omit", "credentials omitted without withCredentials");
+        assert.ok(!call.opts.headers || !("Content-Type" in call.opts.headers), "contentType not forced");
+        window.fetch = origFetch;
         done();
       });
     });
@@ -521,14 +520,17 @@
       assert.timeout(timeout);
       const done = assert.async();
       $("#qunit-fixture").html("<div id='vf'><form class='frm' action='http://example.com/api'></form></div>");
-      const origAjax = $.ajax;
+      const origFetch = window.fetch;
       let call;
 
-      $.ajax = function(settings) {
-        call = {settings: settings};
-        const d = $.Deferred();
-        d.resolve("{}");
-        return d.promise();
+      window.fetch = function(url, opts) {
+        call = {url: url, opts: opts || {}};
+        return Promise.resolve({
+          ok: true,
+          status: 200,
+          statusText: "OK",
+          text: function() { return Promise.resolve("{}"); }
+        });
       };
 
       jiant.app(() => ({
@@ -544,14 +546,14 @@
 
       jiant.onApp("JQAppFormCors", function($, app) {
         app.views.vf.frm.submitForm();
-        assert.ok(call, "ajax called");
-        assert.ok(call.settings.crossDomain, "crossDomain flag set");
-        assert.ok(call.settings.dataType === undefined, "dataType not forced to jsonp");
-        assert.ok(call.settings.contentType === undefined, "contentType not forced");
-        assert.ok(call.settings.xhrFields && call.settings.xhrFields.withCredentials === true,
-            "withCredentials enables xhrFields");
-        $.ajax = origAjax;
-        done();
+        setTimeout(function() {
+          assert.ok(call, "ajax called");
+          assert.equal(call.opts.mode, "cors", "cors mode set");
+          assert.equal(call.opts.credentials, "include", "credentials included with withCredentials");
+          assert.ok(call.opts.headers && call.opts.headers["Content-Type"], "contentType set for form submit");
+          window.fetch = origFetch;
+          done();
+        }, 0);
       });
     });
 

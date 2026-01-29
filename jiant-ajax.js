@@ -18,20 +18,28 @@ jiant.module("jiant-ajax", function({}) {
     });
   }
 
+  function isPlainObject(obj) {
+    if (!obj || Object.prototype.toString.call(obj) !== "[object Object]") {
+      return false;
+    }
+    const proto = Object.getPrototypeOf(obj);
+    return proto === Object.prototype || proto === null;
+  }
+
   function parseForAjaxCall(root, path, actual, traverse) {
     if (path === null) {
       return;
     }
-    if ($.isArray(actual) || (actual && actual.jCollection)) {
+    if (Array.isArray(actual) || (actual && actual.jCollection)) {
       let compound = false;
       actual.forEach(function(obj) {
-        compound = compound || $.isPlainObject(obj) || (obj && obj.jModelName);
+        compound = compound || isPlainObject(obj) || (obj && obj.jModelName);
         return compound;
       });
       actual.forEach(function(obj, i) {
         parseForAjaxCall(root, path + (compound ? ("[" + i + "]") : ""), obj, true);
       });
-    } else if ($.isPlainObject(actual) || (actual && actual.jModelName)) {
+    } else if (isPlainObject(actual) || (actual && actual.jModelName)) {
       jiant.each(actual, function(key, value) {
         if (key === jiant.flags.ajaxSubmitAsMap) {
           return;
@@ -142,29 +150,9 @@ jiant.module("jiant-ajax", function({}) {
       });
       url = replaceSubsInUrl(url, subs);
       const settings = {
-        data: callData, traditional: true, method: callSpec.method, headers: headers, success: function (data) {
-          // each(listeners, function(i, l) {l.ajaxCallCompleted && l.ajaxCallCompleted(appRoot, uri, url, callData, new Date().getTime() - time)});
-          if (callback) {
-            try {
-              data = $.parseJSON(data);
-            } catch (ex) {
-            }
-            // each(listeners, function(i, l) {l.ajaxCallResults && l.ajaxCallResults(appRoot, uri, url, callData, data)});
-            callback(data);
-          }
-        }, error: function (jqXHR, textStatus, errorText) {
-          if (0 === jqXHR.status && ('abort' === jqXHR.statusText || 'error' === jqXHR.statusText)) {
-            return;
-          }
-          if (errHandler) {
-            errHandler(jqXHR.responseText);
-          } else if (appRoot.handleErrorFn) {
-            appRoot.handleErrorFn(jqXHR.responseText);
-          } else {
-            jiant.handleErrorFn(jqXHR.responseText);
-          }
-          // each(listeners, function(i, l) {l.ajaxCallError && l.ajaxCallError(appRoot, uri, url, callData, new Date().getTime() - time, jqXHR.responseText, jqXHR)});
-        }
+        data: callData,
+        method: callSpec.method || "GET",
+        headers: headers
       };
       if (crossDomain) {
         settings.crossDomain = true;
@@ -172,8 +160,98 @@ jiant.module("jiant-ajax", function({}) {
           settings.xhrFields = {withCredentials: true};
         }
       }
-      return $.ajax(url, settings);
+      return ajaxFetch(url, settings).then(function(text) {
+        // each(listeners, function(i, l) {l.ajaxCallCompleted && l.ajaxCallCompleted(appRoot, uri, url, callData, new Date().getTime() - time)});
+        if (callback) {
+          let data = text;
+          try {
+            data = JSON.parse(text);
+          } catch (ex) {
+          }
+          // each(listeners, function(i, l) {l.ajaxCallResults && l.ajaxCallResults(appRoot, uri, url, callData, data)});
+          callback(data);
+        }
+        return text;
+      }).catch(function(err) {
+        if (err && err.status === 0 && (err.statusText === "abort" || err.statusText === "error")) {
+          return;
+        }
+        const responseText = err && typeof err.responseText === "string" ? err.responseText : "";
+        if (errHandler) {
+          errHandler(responseText);
+        } else if (appRoot.handleErrorFn) {
+          appRoot.handleErrorFn(responseText);
+        } else {
+          jiant.handleErrorFn(responseText);
+        }
+        // each(listeners, function(i, l) {l.ajaxCallError && l.ajaxCallError(appRoot, uri, url, callData, new Date().getTime() - time, responseText, err)});
+        return;
+      });
     };
+  }
+
+  function buildQuery(data) {
+    const parts = [];
+    jiant.each(data, function(key, val) {
+      if (val === undefined) {
+        return;
+      }
+      if (Array.isArray(val)) {
+        val.forEach(function(v) {
+          parts.push(encodeURIComponent(key) + "=" + encodeURIComponent(v == null ? "" : v));
+        });
+      } else {
+        parts.push(encodeURIComponent(key) + "=" + encodeURIComponent(val == null ? "" : val));
+      }
+    });
+    return parts.join("&");
+  }
+
+  function ajaxFetch(url, settings) {
+    const method = (settings.method || "GET").toUpperCase();
+    const headers = settings.headers || {};
+    const params = buildQuery(settings.data || {});
+    let finalUrl = url;
+    let body;
+    if ((method === "GET" || method === "HEAD") && params) {
+      finalUrl += (finalUrl.indexOf("?") >= 0 ? "&" : "?") + params;
+    } else if (params) {
+      body = params;
+      if (!("Content-Type" in headers) && !("content-type" in headers)) {
+        headers["Content-Type"] = "application/x-www-form-urlencoded; charset=UTF-8";
+      }
+    }
+    const fetchOpts = {
+      method: method,
+      headers: headers,
+      mode: settings.crossDomain ? "cors" : "same-origin",
+      credentials: settings.crossDomain ? (settings.xhrFields && settings.xhrFields.withCredentials ? "include" : "omit") : "same-origin"
+    };
+    if (body !== undefined && method !== "GET" && method !== "HEAD") {
+      fetchOpts.body = body;
+    }
+    return fetch(finalUrl, fetchOpts).then(function(res) {
+      return res.text().then(function(text) {
+        if (res.ok) {
+          return text;
+        }
+        const err = {
+          status: res.status,
+          statusText: res.statusText || "",
+          responseText: text
+        };
+        throw err;
+      });
+    }).catch(function(err) {
+      if (err && err.status !== undefined) {
+        throw err;
+      }
+      throw {
+        status: 0,
+        statusText: err && err.name ? err.name : "error",
+        responseText: ""
+      };
+    });
   }
 
   function defaultAjaxErrorsHandle(errorDetails) {
