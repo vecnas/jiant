@@ -503,7 +503,7 @@
   });
 
   if ( typeof define === "function" && define.amd ) {
-    define(["jquery", "jiant"], function ({$, jiant}) {
+    define(["jiant"], function (jiant) {
       window.jiant.xl = tmpJiantXl;
       jiant.xl = tmpJiantXl;
       return tmpJiantXl;

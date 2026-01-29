@@ -3,7 +3,141 @@ jiant.module("jiant-xl2", ["jiant-util"], function({app, jiant, params, "jiant-u
     const fluent = util.fluent;
 
     this.singleton();
-    const $ = window.jQuery;
+
+    function firstElem(elem) {
+        return elem && elem.jquery ? elem[0] : elem;
+    }
+
+    function forEachElem(elem, cb) {
+        if (!elem) {
+            return;
+        }
+        if (elem.jquery) {
+            for (let i = 0; i < elem.length; i++) {
+                cb(elem[i]);
+            }
+        } else {
+            cb(elem);
+        }
+    }
+
+    function on(elem, eventName, handler) {
+        forEachElem(elem, function(el) {
+            el.addEventListener(eventName, function(evt) {
+                handler(evt, evt.detail);
+            });
+        });
+    }
+
+    function trigger(elem, eventName, detail) {
+        forEachElem(elem, function(el) {
+            let evt;
+            if (typeof CustomEvent === "function") {
+                evt = new CustomEvent(eventName, {detail: detail});
+            } else {
+                evt = document.createEvent("CustomEvent");
+                evt.initCustomEvent(eventName, false, false, detail);
+            }
+            el.dispatchEvent(evt);
+        });
+    }
+
+    function addClass(elem, cls) {
+        forEachElem(elem, function(el) {
+            el.classList && el.classList.add(cls);
+        });
+    }
+
+    function removeClass(elem, cls) {
+        forEachElem(elem, function(el) {
+            el.classList && el.classList.remove(cls);
+        });
+    }
+
+    function toggleClass(elem, cls) {
+        forEachElem(elem, function(el) {
+            el.classList && el.classList.toggle(cls);
+        });
+    }
+
+    function setChecked(elem, val) {
+        forEachElem(elem, function(el) {
+            el.checked = !!val;
+        });
+    }
+
+    function getChecked(elem) {
+        const el = firstElem(elem);
+        return el ? !!el.checked : false;
+    }
+
+    function getData(elem, key) {
+        const el = firstElem(elem);
+        if (!el) {
+            return undefined;
+        }
+        if (el.dataset && key in el.dataset) {
+            return el.dataset[key];
+        }
+        return el.getAttribute ? el.getAttribute("data-" + key) : undefined;
+    }
+
+    function setDisabled(elem, disabled) {
+        forEachElem(elem, function(el) {
+            el.disabled = !!disabled;
+        });
+    }
+
+    function appendElem(parent, child) {
+        const p = firstElem(parent);
+        if (!p || !child) {
+            return;
+        }
+        if (child.jquery) {
+            for (let i = 0; i < child.length; i++) {
+                p.appendChild(child[i]);
+            }
+        } else if (child.nodeType) {
+            p.appendChild(child);
+        }
+    }
+
+    function insertBeforeElem(elem, ref) {
+        const node = firstElem(elem);
+        const refNode = firstElem(ref);
+        if (!node || !refNode || !refNode.parentNode) {
+            return;
+        }
+        refNode.parentNode.insertBefore(node, refNode);
+    }
+
+    function removeElem(elem) {
+        forEachElem(elem, function(el) {
+            if (el.remove) {
+                el.remove();
+            } else if (el.parentNode) {
+                el.parentNode.removeChild(el);
+            }
+        });
+    }
+
+    function setHtml(elem, html) {
+        forEachElem(elem, function(el) {
+            el.innerHTML = html;
+        });
+    }
+
+    function hideElem(elem) {
+        forEachElem(elem, function(el) {
+            el.style.display = "none";
+        });
+    }
+
+    function showElem(elem) {
+        forEachElem(elem, function(el) {
+            el.style.display = "";
+        });
+    }
 
     const StatefulViews = function() {this.data = {}};
     StatefulViews.prototype.states = fluent("states");
@@ -45,14 +179,14 @@ jiant.module("jiant-xl2", ["jiant-util"], function({app, jiant, params, "jiant-u
     Ctl2state.prototype.goProxy = fluent("goProxy");
     Ctl2state.prototype.apply = function() {
         const {ctl, state, selectedCssClass, goProxy} = this.data;
-        ctl.click(function() {
+        on(ctl, "click", function() {
             goProxy ? goProxy(state) : state.go();
         });
         selectedCssClass && state.start(function() {
             jiant.addClass(ctl, selectedCssClass);
         });
         selectedCssClass && state.end(function() {
-            ctl.removeClass(selectedCssClass);
+            removeClass(ctl, selectedCssClass);
         });
     };
 
@@ -94,7 +228,7 @@ jiant.module("jiant-xl2", ["jiant-util"], function({app, jiant, params, "jiant-u
                 noItemsLabel && (data.content.length ? jiant.hide(noItemsLabel) : jiant.show(noItemsLabel));
                 jiant.each(data.content, function(idx, item) {
                     const row = template.parseTemplate(item, undefined, undefined, mapping);
-                    container.append(row);
+                    appendElem(container, row);
                     perItemCb && perItemCb(item, row, idx);
                 });
                 pager && pager.updatePager(data);
@@ -117,12 +251,12 @@ jiant.module("jiant-xl2", ["jiant-util"], function({app, jiant, params, "jiant-u
         let {ctl, saveFn, markerElem, markerText} = this.data;
         markerElem = markerElem ? markerElem : ctl;
         markerText = markerText ? markerText : "saving";
-        ctl.click(function(event) {
+        on(ctl, "click", function(event) {
             const prevLabel = jiant.html(markerElem);
-            ctl.attr("disabled", "disabled");
+            setDisabled(ctl, true);
             jiant.html(markerElem, markerText);
             saveFn(function () {
-                ctl.attr("disabled", null);
+                setDisabled(ctl, false);
                 jiant.html(markerElem, prevLabel);
             }, event);
         });
@@ -137,12 +271,12 @@ jiant.module("jiant-xl2", ["jiant-util"], function({app, jiant, params, "jiant-u
     ConfirmedActionBs.prototype.apply = function() {
         const {ctl, confirmDialogView, dialogOkCtl, actionFn, preCb} = this.data;
         let confirmedActionBsSelectedFn;
-        ctl.click(function() {
+        on(ctl, "click", function() {
             preCb && preCb();
             confirmDialogView.modal("show");
             confirmedActionBsSelectedFn = actionFn;
         });
-        !confirmDialogView.firstTimeConfirmation && dialogOkCtl.click(function() {
+        !confirmDialogView.firstTimeConfirmation && on(dialogOkCtl, "click", function() {
             confirmDialogView.modal("hide");
             confirmedActionBsSelectedFn && confirmedActionBsSelectedFn();
         });
@@ -161,12 +295,12 @@ jiant.module("jiant-xl2", ["jiant-util"], function({app, jiant, params, "jiant-u
     ConfirmedAction.prototype.preCb = fluent("preCb");
     ConfirmedAction.prototype.apply = function() {
         const {ctl, confirmDialogView, dialogOkCtl, actionFn, preCb} = this.data;
-        ctl.click(function() {
+        on(ctl, "click", function() {
             preCb && preCb();
             rememberedActionFn = actionFn;
             jiant.show(confirmDialogView);
         });
-        dialogOkCtl.click(function() {
+        on(dialogOkCtl, "click", function() {
             jiant.hide(confirmDialogView);
             rememberedActionFn && rememberedActionFn();
             rememberedActionFn = null;
@@ -223,7 +357,7 @@ jiant.module("jiant-xl2", ["jiant-util"], function({app, jiant, params, "jiant-u
                 jiant.each(sorted, function(i, item) {
                     const order = sortFn(obj, item);
                     if (item[viewFieldSetterName] && item[viewFieldSetterName]() && order < 0) {
-                        useTm && view.insertBefore(item[viewFieldSetterName]()[0]);
+                        useTm && insertBeforeElem(view, item[viewFieldSetterName]()[0]);
                         sorted.splice(i, 0, obj);
                         appended = true;
                         return false;
@@ -231,7 +365,7 @@ jiant.module("jiant-xl2", ["jiant-util"], function({app, jiant, params, "jiant-u
                 });
             }
             if (!appended) {
-                useTm && cont.append(view);
+                useTm && appendElem(cont, view);
                 sorted.push(obj);
             }
             jiant.isFunction(obj[viewFieldSetterName]) && view && obj[viewFieldSetterName](view);
@@ -243,7 +377,7 @@ jiant.module("jiant-xl2", ["jiant-util"], function({app, jiant, params, "jiant-u
             });
         });
         this._remHnd = m.remove && m.remove.on(function (obj) {
-            obj[viewFieldSetterName] && (elemFactory ? elemFactory.remove(obj[viewFieldSetterName]()) : obj[viewFieldSetterName]().remove());
+            obj[viewFieldSetterName] && (elemFactory ? elemFactory.remove(obj[viewFieldSetterName]()) : removeElem(obj[viewFieldSetterName]()));
             sorted = jiant.grep(sorted, function(elem, i) {return elem != obj});
         });
         jiant.each(model.jRepo.all(), function(i, obj) {
@@ -318,7 +452,7 @@ jiant.module("jiant-xl2", ["jiant-util"], function({app, jiant, params, "jiant-u
         !appendMode && jiant.empty(container);
         jiant.each(list, function(idx, item) {
             const elem = tm.parseTemplate(item, subscribeForUpdates, false, mapping);
-            container.append(elem);
+            appendElem(container, elem);
             perItemCb && perItemCb(item, elem, idx);
         });
     };
@@ -358,7 +492,7 @@ jiant.module("jiant-xl2", ["jiant-util"], function({app, jiant, params, "jiant-u
                 noItemsLabel && (data.content.length ? jiant.hide(noItemsLabel) : jiant.show(noItemsLabel));
                 jiant.each(data.content, function(idx, item) {
                     const row = template.parseTemplate(item);
-                    container.append(row);
+                    appendElem(container, row);
                     perItemCb && perItemCb(item, row);
                 });
                 pager && pager.updatePager(data);
@@ -377,33 +511,32 @@ jiant.module("jiant-xl2", ["jiant-util"], function({app, jiant, params, "jiant-u
             function sync() {
                 let arr = [], allUnchecked = true, allChecked = true;
                 jiant.each(options, function(idx, elem) {
-                    elem = $(elem);
-                    if (elem.prop("checked")) {
-                        arr.push(elem.data("val"));
+                    if (getChecked(elem)) {
+                        arr.push(getData(elem, "val"));
                         allUnchecked = false;
                     } else {
                         allChecked = false;
                     }
                 });
-                allSelector.prop("checked", allChecked);
+                setChecked(allSelector, allChecked);
                 if (allChecked || allUnchecked) {
-                    allSelector.removeClass("middle-check");
+                    removeClass(allSelector, "middle-check");
                 } else {
                     jiant.addClass(allSelector, "middle-check");
                 }
                 filterFn && filterFn(arr);
             }
-            allSelector.change(function() {
+            on(allSelector, "change", function() {
                 jiant.each(options, function(idx, option) {
-                    const val = allSelector.prop("checked");
-                    $(option).prop("checked", val);
+                    const val = getChecked(allSelector);
+                    setChecked(option, val);
                 });
                 sync();
             });
             return {
                 add: function(elem) {
                     options.push(elem);
-                    elem.change(sync);
+                    on(elem, "change", sync);
                 },
                 sync: sync
             }
@@ -420,33 +553,33 @@ jiant.module("jiant-xl2", ["jiant-util"], function({app, jiant, params, "jiant-u
     PseudoDropdown.prototype.apply = function() {
         const {ctl, label, dropPanel, dropContainer, optionTm} = this.data;
         let selectedVal;
-        ctl.click(function() {
-            ctl.toggleClass("pseudoDropped");
-            dropPanel.toggleClass("pseudoDropped");
+        on(ctl, "click", function() {
+            toggleClass(ctl, "pseudoDropped");
+            toggleClass(dropPanel, "pseudoDropped");
         });
         function val(_val, title) {
             if (arguments.length === 0) {
                 return selectedVal;
             } else {
                 selectedVal = _val;
-                label && jiant.html(label, title);
-                ctl.trigger("change", selectedVal);
+                label && setHtml(label, title);
+                trigger(ctl, "change", selectedVal);
             }
         }
         return {
             add: function(_val, title, selected) {
                 const elem = optionTm.parseTemplate(_val);
                 if (Object.prototype.toString.call(_val) === "[object String]" && title) {
-                    jiant.html(elem, title);
+                    setHtml(elem, title);
                 }
-                dropContainer.append(elem);
-                elem.click(function() {
+                appendElem(dropContainer, elem);
+                on(elem, "click", function() {
                     val(_val, title);
                 });
                 selected && val(_val, title);
             },
             change: function(arg) {
-                ctl.change(arg);
+                trigger(ctl, "change", arg);
             },
             empty: function() {
                 jiant.empty(dropContainer);
@@ -468,19 +601,18 @@ jiant.module("jiant-xl2", ["jiant-util"], function({app, jiant, params, "jiant-u
             let selectedElem, selectedVal, selectedClass, defaultCb = cb;
             return {
                 add: function(elem, val, cb, selected) {
-                    elem = $(elem);
                     cb = cb || defaultCb;
-                    elem.click(function() {
+                    on(elem, "click", function() {
                         const prevElem = selectedElem, prevVal = selectedVal;
                         selectedVal = val;
                         if (selectedClass) {
-                            selectedElem && selectedElem.removeClass(selectedClass);
-                            jiant.addClass(elem, selectedClass);
+                            selectedElem && removeClass(selectedElem, selectedClass);
+                            addClass(elem, selectedClass);
                         }
                         selectedElem = elem;
                         cb && cb(selectedElem, selectedVal, prevElem, prevVal);
                     });
-                    selected && elem.click();
+                    selected && trigger(elem, "click");
                 },
                 selected: function() {
                     if (arguments.length > 0) {
@@ -495,14 +627,14 @@ jiant.module("jiant-xl2", ["jiant-util"], function({app, jiant, params, "jiant-u
         }
         if (! cb) {
             cb = function(selectedElem, selectedVal, prevElem, prevVal) {
-                prevVal && jiant.hide($(prevVal));
-                selectedVal && jiant.show($(selectedVal));
+                prevVal && hideElem(prevVal);
+                selectedVal && showElem(selectedVal);
             };
         }
         const impl = new Impl();
         impl.setSelectedClass(selectedClass);
         arrElems && jiant.each(arrElems, function(idx, elem) {
-            impl.add($(elem), arrVals && arrVals.length > idx ? arrVals[idx] : null, cb, selectedIdx === idx);
+            impl.add(elem, arrVals && arrVals.length > idx ? arrVals[idx] : null, cb, selectedIdx === idx);
         });
         return impl;
     };
