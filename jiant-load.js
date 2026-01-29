@@ -21,8 +21,7 @@ jiant.module("jiant-load", function() {
   }
 
   function loadCss(arr, cb) {
-    let all_loaded = $.Deferred(),
-        loadedCss = [],
+    let loadedCss = [],
         link,
         style,
         interval,
@@ -40,22 +39,15 @@ jiant.module("jiant-load", function() {
       loadedCss.push(handleCss(url));
     });
 
-    if (all_loaded.state() !== 'resolved') {
-      // How to load multiple CSS files before callback
-      $.when.apply(loadedCss).done(function () {
-        all_loaded.resolve();
-      });
-    }
-
     if (cb) {
-      // Perform JS
-      all_loaded.done(cb);
+      Promise.all(loadedCss).then(function() { cb(); });
     } else {
       return loadedCss;
     }
 
     function handleCss(url) {
-      const promise = $.Deferred();
+      let resolve, reject;
+      const promise = new Promise(function(res, rej) { resolve = res; reject = rej; });
       // IE 8 & 9 it is best to use 'onload'. style[0].sheet.cssRules has problems.
       if (navigator.appVersion.indexOf("MSIE") !== -1) {
         link = document.createElement('link');
@@ -63,23 +55,24 @@ jiant.module("jiant-load", function() {
         link.rel = "stylesheet";
         link.href = url;
         link.onload = function () {
-          promise.resolve();
+          resolve();
         };
         document.getElementsByTagName('head')[0].appendChild(link);
       }
       // Support for FF, Chrome, Safari, and Opera
       else {
-        style = $('<style>').text('@import "' + url + '"').attr({
-          // Adding this attribute allows the file to still be identified as an external
-          // resource in developer tools.
-          'data-uri': url
-        }).appendTo('body');
+        style = document.createElement('style');
+        style.textContent = '@import "' + url + '"';
+        // Adding this attribute allows the file to still be identified as an external
+        // resource in developer tools.
+        style.setAttribute('data-uri', url);
+        document.body.appendChild(style);
         // This setInterval will detect when style rules for our stylesheet have loaded.
         interval = setInterval(function () {
           try {
             // This will fail in Firefox (and kick us to the catch statement) if there are no
             // style rules.
-            style[0].sheet.cssRules;
+            style.sheet.cssRules;
             // The above statement will succeed in Chrome even if the file isn't loaded yet
             // but Chrome won't increment the styleSheet length until the file is loaded.
             if (ssCount === docStyles.length) {
@@ -105,14 +98,14 @@ jiant.module("jiant-load", function() {
               }
             }
             // If an error wasn't thrown by now, the stylesheet is loaded, proceed.
-            promise.resolve();
+            resolve();
             clearInterval(interval);
           } catch (e) {
             counter += step;
             if (counter > timeout) {
               // Time out so that the interval doesn't run indefinitely.
               clearInterval(interval);
-              promise.reject();
+              reject();
             }
           }
         }, step);

@@ -22,7 +22,7 @@ jiant.module("jiant-comp", ["jiant-render", "jiant-spec"],
         if (actualObj) {
           const param = compSpec.params();
           if (param) {
-            actualObj = $.extend({}, actualObj, param);
+            actualObj = jiant.extend({}, actualObj, param);
           }
           if ((typeof actualObj == "object") && !("index" in actualObj)) {
             actualObj.index = i;

@@ -197,7 +197,7 @@
                 });
             remHnd = m.remove && m.remove.on(function (obj) {
                   obj[viewFieldSetterName] && (elemFactory ? elemFactory.remove(obj[viewFieldSetterName]()) : obj[viewFieldSetterName]().remove());
-                  sorted = $.grep(sorted, function(elem, i) {return elem != obj});
+                  sorted = jiant.grep(sorted, function(elem, i) {return elem != obj});
                 });
             jiant.each(jiant.getRepo(model).all(), function(i, obj) {
               renderObj(obj);

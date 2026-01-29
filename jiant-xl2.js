@@ -243,7 +243,7 @@ jiant.module("jiant-xl2", ["jiant-util"], function({$, app, jiant, params, "jian
         });
         this._remHnd = m.remove && m.remove.on(function (obj) {
             obj[viewFieldSetterName] && (elemFactory ? elemFactory.remove(obj[viewFieldSetterName]()) : obj[viewFieldSetterName]().remove());
-            sorted = $.grep(sorted, function(elem, i) {return elem != obj});
+            sorted = jiant.grep(sorted, function(elem, i) {return elem != obj});
         });
         jiant.each(model.jRepo.all(), function(i, obj) {
             renderObj(obj);

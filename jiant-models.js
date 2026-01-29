@@ -86,7 +86,7 @@ jiant.module("jiant-models", ["jiant-util"], function({$, app, jiant, params, "j
     Model.prototype.remove = function() {repoRoot.remove(this)};
     repoRoot.remove = function(obj) {
       const prevLen = storage.length;
-      storage = $.grep(storage, function(value) {return value !== obj});
+      storage = jiant.grep(storage, function(value) {return value !== obj});
       removeIndexes(obj);
       if (storage.length !== prevLen) {
         obj[objectBus].trigger(evt("remove"), [obj]);
@@ -107,7 +107,7 @@ jiant.module("jiant-models", ["jiant-util"], function({$, app, jiant, params, "j
         arr = Array.isArray(arr) ? arr : [arr];
         if (arr.length !== 0) {
           jiant.each(arr, function(idx, item) {
-            const newItem = $.extend({}, spec[defaultsName], item),
+            const newItem = jiant.extend({}, spec[defaultsName], item),
                 newObj = new Model();
             storage.push(newObj);
             newArr.push(newObj);

@@ -79,7 +79,7 @@ jiant.module("jiant-views", ["jiant-uifactory", "jiant-ui", "jiant-types", "jian
     const viewSpec = Spec.viewSpec(appRoot, viewId);
     Ui.makePropagationFunction({app: appRoot, viewId: viewId, content: viewContent,
       spec: viewSpec, viewOrTm: viewContent});
-    $.extend(viewContent, viewImpl);
+    jiant.extend(viewContent, viewImpl);
     if (viewContent.jInit && typeof viewContent.jInit === "function") {
       viewContent.jInit.call(viewContent, appRoot);
     }

@@ -9,7 +9,7 @@ jiant.module("jiant-logic", ["jiant-util"], function({$, app, jiant, params, "ji
 
   function override(spec, implFn) {
     if (spec._jAppId) {
-      const superImpl = $.extend(true, {}, spec),
+      const superImpl = jiant.extend(true, {}, spec),
           newImpl = implFn($, jiant.getApps()[spec._jAppId], superImpl);
       jiant.each(newImpl, function(fname, fbody) {
         spec[fname] = fbody;
@@ -121,7 +121,7 @@ jiant.module("jiant-logic", ["jiant-util"], function({$, app, jiant, params, "ji
             }
           });
           spec._jOverrides && spec._jOverrides.length && jiant.each(spec._jOverrides, function(i, implFn) {
-            const superImpl = $.extend(true, {}, spec),
+            const superImpl = jiant.extend(true, {}, spec),
                 newImpl = implFn($, jiant.getApps()[spec._jAppId], superImpl);
             jiant.each(newImpl, function(fname, fbody) {
               spec[fname] = fbody;

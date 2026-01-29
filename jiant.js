@@ -191,7 +191,7 @@
       addedLibs[url] = 1;
       if (module.jsLoaded[url]) {
         const js = module.jsLoaded[url] + "\r\n//# sourceURL=" + url + " \r\n";
-        $.globalEval(js);
+        globalEval(js);
       }
     });
     executeModule(appRoot, cb, arr, idx + 1);
@@ -341,6 +341,70 @@
       return Number.isFinite(Number(s));
     }
     return false;
+  }
+
+  function deepClone(val) {
+    if (Array.isArray(val)) {
+      return val.map(deepClone);
+    }
+    if (isPlainObject(val)) {
+      const out = {};
+      for (const key in val) {
+        if (Object.prototype.hasOwnProperty.call(val, key)) {
+          out[key] = deepClone(val[key]);
+        }
+      }
+      return out;
+    }
+    return val;
+  }
+
+  function extend() {
+    let deep = false;
+    let idx = 0;
+    if (typeof arguments[0] === "boolean") {
+      deep = arguments[0];
+      idx = 1;
+    }
+    let target = arguments[idx] || {};
+    for (idx = idx + 1; idx < arguments.length; idx++) {
+      const src = arguments[idx];
+      if (!src) {
+        continue;
+      }
+      for (const key in src) {
+        const val = src[key];
+        target[key] = deep ? deepClone(val) : val;
+      }
+    }
+    return target;
+  }
+
+  function merge(first, second) {
+    if (!first) {
+      first = [];
+    }
+    if (!second) {
+      return first;
+    }
+    for (let i = 0; i < second.length; i++) {
+      first.push(second[i]);
+    }
+    return first;
+  }
+
+  function grep(arr, cb, invert) {
+    const out = [];
+    if (!arr) {
+      return out;
+    }
+    for (let i = 0; i < arr.length; i++) {
+      const match = !!cb(arr[i], i);
+      if (invert ? !match : match) {
+        out.push(arr[i]);
+      }
+    }
+    return out;
   }
 
   function globalEval(code) {
@@ -504,7 +568,7 @@
         if (isCacheInStorage(appRoot) && isPresentInCache(appRoot, moduleName)) {
           jiant.DEV_MODE && console.info("           using module cache: " + cacheKey(appRoot, moduleName));
           let moduleContent = localStorage.getItem(cacheKey(appRoot, moduleName));
-          $.globalEval(moduleContent);
+          globalEval(moduleContent);
           preprocessLoadedModule(moduleSpec, loadedModules[moduleName]);
           cbIf0();
         } else {
@@ -985,6 +1049,9 @@
     isPlainObject: isPlainObject,
     inArray: inArray,
     isNumeric: isNumeric,
+    extend: extend,
+    merge: merge,
+    grep: grep,
     empty: empty,
     html: jHtml,
     addClass: addClass,

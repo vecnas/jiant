@@ -9,7 +9,7 @@ jiant.module("jiant-templates", ["jiant-uifactory", "jiant-ui", "jiant-types", "
 
   function fillClassMappings(elem, classMapping) {
     const childs = elem.find("*"), selfs = elem.filter("*");
-    jiant.each($.merge(selfs, childs), function(i, item) {
+    jiant.each(jiant.merge(selfs, childs), function(i, item) {
       if (typeof item.className.split === "function" && item.className.length > 0) {
         const clss = item.className.split(" ");
         clss.forEach(function(cls) {
@@ -22,7 +22,7 @@ jiant.module("jiant-templates", ["jiant-uifactory", "jiant-ui", "jiant-types", "
 
   function fillTagMappings(elem, tagMapping) {
     const childs = elem.find("*"), selfs = elem.filter("*");
-    jiant.each($.merge(selfs, childs), function(i, item) {
+    jiant.each(jiant.merge(selfs, childs), function(i, item) {
       const tag = item.tagName.toLowerCase();
       tagMapping[tag] = tagMapping[tag] || [];
       tagMapping[tag].push(item);

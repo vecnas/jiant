@@ -127,7 +127,7 @@ jiant.module("jiant-util", ["jiant-log"], function({jiant}) {
   function parseTemplate(that, data, tmId, mapping) {
     data = data || {};
     if (mapping) {
-      data = $.extend({}, data);
+      data = jiant.extend({}, data);
       jiant.each(mapping, function(key, val) {
         data[key] = data[val];
       });
