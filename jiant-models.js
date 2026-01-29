@@ -1,7 +1,6 @@
 jiant.module("jiant-models", ["jiant-util"], function({app, jiant, params, "jiant-util": Util}) {
 
   this.singleton();
-  const $ = window.jQuery;
 
   //todo: inner module with helper fns, via jiant. search
   //todo: replace map by app id by direct app due to module per app
@@ -10,6 +9,50 @@ jiant.module("jiant-models", ["jiant-util"], function({app, jiant, params, "jian
 
   const objectBus = "jModelObjectBus",
       repoName = "jRepo";
+
+  function createEventBus() {
+    const listeners = {};
+    return {
+      on: function(eventName, handler) {
+        listeners[eventName] = listeners[eventName] || [];
+        listeners[eventName].push(handler);
+      },
+      off: function(eventName, handler) {
+        const list = listeners[eventName];
+        if (!list) {
+          return;
+        }
+        const idx = list.indexOf(handler);
+        if (idx >= 0) {
+          list.splice(idx, 1);
+        }
+      },
+      one: function(eventName, handler) {
+        const onceHandler = function(evt) {
+          this.off(eventName, onceHandler);
+          handler.apply(null, arguments);
+        }.bind(this);
+        this.on(eventName, onceHandler);
+      },
+      trigger: function(eventName, args) {
+        const list = listeners[eventName];
+        if (!list || list.length === 0) {
+          return;
+        }
+        const evt = {
+          _stopped: false,
+          stopImmediatePropagation: function() { this._stopped = true; }
+        };
+        const callArgs = [evt].concat(args || []);
+        for (let i = 0; i < list.length; i++) {
+          list[i].apply(null, callArgs);
+          if (evt._stopped) {
+            break;
+          }
+        }
+      }
+    };
+  }
 
   function getRepo(spec) {
     return (spec[repoName] && jiant.isPlainObject(spec[repoName])) ? spec[repoName] : spec;
@@ -27,7 +70,7 @@ jiant.module("jiant-models", ["jiant-util"], function({app, jiant, params, "jian
         repoRoot = getRepo(spec),
         Model = function () {
           this[modelStorage] = {};
-          this[objectBus] = $({});
+          this[objectBus] = createEventBus();
           this[reverseIndexes] = [];
         },
         Collection = function (data) {
@@ -38,7 +81,7 @@ jiant.module("jiant-models", ["jiant-util"], function({app, jiant, params, "jian
             });
           }
         },
-        specBus = $({}),
+        specBus = createEventBus(),
         singleton = new Model(),
         objFunctions = ["on", "once", "off", "update", "reset", "remove", "asMap"],
         repoFunctions = ["updateAll", "add", "all", "remove", "filter", "toCollection"];
