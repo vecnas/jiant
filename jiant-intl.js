@@ -1,8 +1,6 @@
 jiant.module("jiant-intl", ["jiant-logic"], function({app, jiant, params, "jiant-logic": Logic}) {
 
   this.singleton();
-  const $ = window.jQuery;
-
   function translate(appRoot, val) {
     if (Array.isArray(val)) {
       const arr = [];
@@ -127,11 +125,10 @@ jiant.module("jiant-intl", ["jiant-logic"], function({app, jiant, params, "jiant
           });
         };
         if (intlRoot.scanDoc) {
-          jiant.each($("*[data-nlabel]"), function(i, elem) {
-            elem = $(elem);
-            const key = elem.attr("data-nlabel"),
+          Array.prototype.forEach.call(document.querySelectorAll("*[data-nlabel]"), function(elem) {
+            const key = elem.getAttribute("data-nlabel"),
                 translation = intlRoot.t(key);
-            jiant.html(elem, translation);
+            elem.innerHTML = translation;
           });
         }
       }
