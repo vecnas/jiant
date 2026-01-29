@@ -4,7 +4,6 @@ jiant.module("jiant-models", ["jiant-util"], function({$, app, jiant, params, "j
 
   //todo: inner module with helper fns, via jiant. search
   //todo: replace map by app id by direct app due to module per app
-  //todo: Array.isArray check, $.each
   //todo: move check fns to models-aware module
   //todo: final review/cleanup
 
@@ -12,7 +11,7 @@ jiant.module("jiant-models", ["jiant-util"], function({$, app, jiant, params, "j
       repoName = "jRepo";
 
   function getRepo(spec) {
-    return (spec[repoName] && $.isPlainObject(spec[repoName])) ? spec[repoName] : spec;
+    return (spec[repoName] && jiant.isPlainObject(spec[repoName])) ? spec[repoName] : spec;
   }
 
   function bindModel(modelName, spec) {
@@ -23,7 +22,7 @@ jiant.module("jiant-models", ["jiant-util"], function({$, app, jiant, params, "j
         defaultsName = "jDefaults",
         indexesSpec = [],
         indexes = {},
-        repoMode = spec[repoName] && $.isPlainObject(spec[repoName]),
+        repoMode = spec[repoName] && jiant.isPlainObject(spec[repoName]),
         repoRoot = getRepo(spec),
         Model = function () {
           this[modelStorage] = {};
@@ -379,8 +378,8 @@ jiant.module("jiant-models", ["jiant-util"], function({$, app, jiant, params, "j
     function bindFn(fnRoot, fname, funcSpec) {
       let arr;
       const objMode = repoMode && fnRoot !== spec[repoName];
-      if (fname === defaultsName && $.isPlainObject(funcSpec)) {
-      } else if (fname === repoName && $.isPlainObject(funcSpec)) {
+      if (fname === defaultsName && jiant.isPlainObject(funcSpec)) {
+      } else if (fname === repoName && jiant.isPlainObject(funcSpec)) {
       } else if (fname === "addAll") {
         alert("JIANT: Model function 'addAll' removed since 1.37, use previous versions or replace it by 'add'");
       } else if (!objMode && fname in {"updateAll": 1, "add": 1, "toCollection": 1, "all": 1}) {
@@ -510,7 +509,7 @@ jiant.module("jiant-models", ["jiant-util"], function({$, app, jiant, params, "j
             const ret = [];
             jiant.each(nodes, function(i, node) {
               jiant.each(node.content, function(j, item) {
-                if ($.inArray(ret, item) < 0) {
+                if (jiant.inArray(ret, item) < 0) {
                   ret.push(item);
                 }
               });
@@ -551,7 +550,7 @@ jiant.module("jiant-models", ["jiant-util"], function({$, app, jiant, params, "j
           function val2map(ret, val, actualKey) {
             if (isModel(val)) {
               ret[actualKey] = val.asMap(null, deep);
-            } else if ($.isPlainObject(val)) {
+            } else if (jiant.isPlainObject(val)) {
               ret[actualKey] = obj2map(val);
             } else {
               val !== undefined && (ret[actualKey] = val);

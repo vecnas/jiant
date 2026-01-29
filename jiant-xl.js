@@ -108,7 +108,7 @@
       return function() {
         function bind2state(state) {
           state.start(function() {
-            if ($.isArray(views)) {
+            if (Array.isArray(views)) {
               jiant.each(views, function(idx, view) {
                 jiant.show(view);
               });
@@ -117,14 +117,14 @@
             }
           });
           state.end(function() {
-            if ($.isArray(views)) {
+            if (Array.isArray(views)) {
               jiant.each(views, function(idx, view) {jiant.hide(view);});
             } else {
               jiant.hide(views);
             }
           });
         }
-        if ($.isArray(states)) {
+        if (Array.isArray(states)) {
           jiant.each(states, function(idx, state) {
             bind2state(state);
           })
@@ -148,8 +148,8 @@
     bindList: function(model, container, template, viewFieldSetterName, sortFn, subscribeForUpdates, reversePropagate, elemFactory, mapping) {
       var addHnd, remHnd, sorted = [];
       function renderObj(obj) {
-        var tm = $.isFunction(template) ? template(obj) : template,
-            cont = $.isFunction(container) ? container(obj) : container,
+        var tm = jiant.isFunction(template) ? template(obj) : template,
+            cont = jiant.isFunction(container) ? container(obj) : container,
             appended = false,
             useTm = !!tm,
             view;
@@ -157,7 +157,7 @@
           if (jiant.intro.isTemplate(elemFactory.create)) {
             tm = elemFactory.create;
             useTm = true;
-          } else if ($.isFunction(elemFactory.create)) {
+          } else if (jiant.isFunction(elemFactory.create)) {
             view =  elemFactory.create(obj, subscribeForUpdates, reversePropagate);
             if (jiant.intro.isTemplate(view)) {
               tm = view;
@@ -170,7 +170,7 @@
         if (useTm) {
           view = tm.parseTemplate(obj, subscribeForUpdates, reversePropagate, mapping);
         }
-        if (sortFn && $.isFunction(sortFn) && jiant.getRepo(model).all) {
+        if (sortFn && jiant.isFunction(sortFn) && jiant.getRepo(model).all) {
           jiant.each(sorted, function(i, item) {
             var order = sortFn(obj, item);
             if (item[viewFieldSetterName] && item[viewFieldSetterName]() && order < 0) {
@@ -185,7 +185,7 @@
           useTm && cont.append(view);
           sorted.push(obj);
         }
-        $.isFunction(obj[viewFieldSetterName]) && view && obj[viewFieldSetterName](view);
+        jiant.isFunction(obj[viewFieldSetterName]) && view && obj[viewFieldSetterName](view);
       }
 
       var m = jiant.getRepo(model),
@@ -207,7 +207,7 @@
         addHnd && m.add.off(addHnd);
         remHnd && m.remove.off(remHnd);
         jiant.each(jiant.getRepo(model).all(), function (i, obj) {
-          $.isFunction(obj[viewFieldSetterName]) && obj[viewFieldSetterName]() && $.isFunction(obj[viewFieldSetterName]().off) && obj[viewFieldSetterName]().off();
+          jiant.isFunction(obj[viewFieldSetterName]) && obj[viewFieldSetterName]() && jiant.isFunction(obj[viewFieldSetterName]().off) && obj[viewFieldSetterName]().off();
         });
       };
       ret.sortFn = function(fn) {

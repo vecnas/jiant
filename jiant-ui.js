@@ -73,7 +73,7 @@ jiant.module("jiant-ui", ["jiant-auto", "jiant-render", "jiant-types", "jiant-sp
           on = typeof data[item.fld] === "function" ? data[item.fld]() : data[item.fld];
         }
         if ("exactVal" in item) {
-          on = Array.isArray(item.exactVal) ? $.inArray(on, item.exactVal) >= 0 : on === item.exactVal;
+          on = Array.isArray(item.exactVal) ? jiant.inArray(on, item.exactVal) >= 0 : on === item.exactVal;
         }
         on = item.dir ? on : !on;
         item.el[on ? "show" : "hide"]();
@@ -86,7 +86,7 @@ jiant.module("jiant-ui", ["jiant-auto", "jiant-render", "jiant-types", "jiant-sp
           on = typeof data[item.fld] === "function" ? data[item.fld]() : data[item.fld];
         }
         if ("exactVal" in item) {
-          on = Array.isArray(item.exactVal) ? $.inArray(on, item.exactVal) >= 0 : on === item.exactVal;
+          on = Array.isArray(item.exactVal) ? jiant.inArray(on, item.exactVal) >= 0 : on === item.exactVal;
         }
         on = item.dir ? on : !on;
         item.el[on ? "addClass" : "removeClass"](item.cls);

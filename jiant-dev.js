@@ -8,7 +8,7 @@ jiant.module("jiant-dev", function({jiant}) {
         let message = key + (elem ? ("." + elem) : "");
         if (event.ctrlKey) {
           message += "\r\n------------\r\n";
-          message += pseudoserializeJSON($._data(uiElem[0], "events"));
+          // message += pseudoserializeJSON($._data(uiElem[0], "events"));
         }
         jiant.info(message);
         if (viewOrTm._jiantPropagationInfo) {

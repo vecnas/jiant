@@ -188,16 +188,16 @@ jiant.module("jiant-xl2", ["jiant-util"], function({$, app, jiant, params, "jian
         this._addHnd && m.add.off(this._addHnd);
         this._remHnd && m.remove.off(this._remHnd);
         jiant.each(m.jRepo.all(), function (i, obj) {
-            $.isFunction(obj[viewFieldSetterName]) && obj[viewFieldSetterName]()
-            && $.isFunction(obj[viewFieldSetterName]().off) && obj[viewFieldSetterName]().off();
+            jiant.isFunction(obj[viewFieldSetterName]) && obj[viewFieldSetterName]()
+            && jiant.isFunction(obj[viewFieldSetterName]().off) && obj[viewFieldSetterName]().off();
         });
     };
     BindList.prototype.apply = function({model, container, template, viewFieldSetterName, sortFn, subscribeForUpdates,
                                             reversePropagate, elemFactory, mapping} = this.data) {
         let sorted = [];
         function renderObj(obj) {
-            let tm = $.isFunction(template) ? template(obj) : template,
-                cont = $.isFunction(container) ? container(obj) : container,
+            let tm = jiant.isFunction(template) ? template(obj) : template,
+                cont = jiant.isFunction(container) ? container(obj) : container,
                 appended = false,
                 useTm = !!tm,
                 view;
@@ -205,7 +205,7 @@ jiant.module("jiant-xl2", ["jiant-util"], function({$, app, jiant, params, "jian
                 if (jiant.intro.isTemplate(elemFactory.create)) {
                     tm = elemFactory.create;
                     useTm = true;
-                } else if ($.isFunction(elemFactory.create)) {
+                } else if (jiant.isFunction(elemFactory.create)) {
                     view =  elemFactory.create(obj, subscribeForUpdates, reversePropagate);
                     if (jiant.intro.isTemplate(view)) {
                         tm = view;
@@ -218,7 +218,7 @@ jiant.module("jiant-xl2", ["jiant-util"], function({$, app, jiant, params, "jian
             if (useTm) {
                 view = tm.parseTemplate(obj, subscribeForUpdates, reversePropagate, mapping);
             }
-            if (sortFn && $.isFunction(sortFn) && jiant.getRepo(model).all) {
+            if (sortFn && jiant.isFunction(sortFn) && jiant.getRepo(model).all) {
                 jiant.each(sorted, function(i, item) {
                     const order = sortFn(obj, item);
                     if (item[viewFieldSetterName] && item[viewFieldSetterName]() && order < 0) {
@@ -233,7 +233,7 @@ jiant.module("jiant-xl2", ["jiant-util"], function({$, app, jiant, params, "jian
                 useTm && cont.append(view);
                 sorted.push(obj);
             }
-            $.isFunction(obj[viewFieldSetterName]) && view && obj[viewFieldSetterName](view);
+            jiant.isFunction(obj[viewFieldSetterName]) && view && obj[viewFieldSetterName](view);
         }
         const m = model.jRepo;
         this._addHnd = m.add && m.add.on(function (arr) {

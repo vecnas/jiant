@@ -132,7 +132,7 @@
   function _loadModules(appRoot, modules, appId, initial, cb, replace, injectTo) {
     let modules2load = [];
     cb = cb || function() {};
-    if ($.isPlainObject(modules)) {
+    if (isPlainObject(modules)) {
       modules2load = parseObjectModules(modules, appId);
     } else if (Array.isArray(modules)) {
       modules2load = parseArrayModules(modules, appId);
@@ -224,7 +224,7 @@
         appRoot.modules[mname] = singletones[mname];
       }
       executeModule(appRoot, cb, arr, idx + 1);
-    } else if ($.isPlainObject(module)) {
+    } else if (isPlainObject(module)) {
       executeExternal(appRoot, cb, arr, idx, module);
     } else {
       jiant.errorp("Application !!. Not loaded module !!. " +
@@ -305,6 +305,42 @@
       }
     }
     return obj;
+  }
+
+  function isFunction(val) {
+    return typeof val === "function";
+  }
+
+  function isPlainObject(obj) {
+    if (!obj || Object.prototype.toString.call(obj) !== "[object Object]") {
+      return false;
+    }
+    const proto = Object.getPrototypeOf(obj);
+    return proto === Object.prototype || proto === null;
+  }
+
+  function inArray(val, arr) {
+    if (!arr) {
+      return -1;
+    }
+    return arr.indexOf ? arr.indexOf(val) : Array.prototype.indexOf.call(arr, val);
+  }
+
+  function isNumeric(val) {
+    if (val === null || val === undefined) {
+      return false;
+    }
+    if (typeof val === "number") {
+      return Number.isFinite(val);
+    }
+    if (typeof val === "string") {
+      const s = val.trim();
+      if (!s) {
+        return false;
+      }
+      return Number.isFinite(Number(s));
+    }
+    return false;
   }
 
   function globalEval(code) {
@@ -443,7 +479,7 @@
     }
     function preprocessLoadedModule(moduleSpec, moduleObj) {
       handleModuleDeps(moduleSpec.name, moduleSpec);
-      if ($.isPlainObject(moduleObj)) {
+      if (isPlainObject(moduleObj)) {
         preparePath(moduleObj, "css");
         preparePath(moduleObj, "js");
         preparePath(moduleObj, "html");
@@ -786,7 +822,7 @@
   }
 
   function extractApplicationId(appId) {
-    return $.isPlainObject(appId) ? appId.id : appId
+    return isPlainObject(appId) ? appId.id : appId
   }
 
   // onApp(cb);
@@ -822,7 +858,7 @@
     appIdArr.forEach(function(appId, idx) {
       if (appId === undefined || appId === null) {
         jiant.logError("Called onApp with undefined application, apps array is ", appIdArr);
-      } else if ($.isPlainObject(appId)) {
+      } else if (isPlainObject(appId)) {
         appId = appId.id;
         appIdArr[idx] = appId;
       }
@@ -945,6 +981,10 @@
     version: version,
     nvl: nvl,
     each: each,
+    isFunction: isFunction,
+    isPlainObject: isPlainObject,
+    inArray: inArray,
+    isNumeric: isNumeric,
     empty: empty,
     html: jHtml,
     addClass: addClass,

@@ -81,7 +81,7 @@ jiant.module("jiant-types", ["jiant-jtype", "jiant-comp"],
   const inputSetAsString = initType({clz: class slider extends JType {},
       componentProducer: visualComponentProducer, renderProducer: () => ({data, elem, val, isUpdate, view}) => {
       updateInputSet({data, elem, isUpdate, view,
-        val: !val ? [val] : Array.isArray(val) ? val : $.isNumeric(val) ? [val] : ("" + val).split(",")});
+        val: !val ? [val] : Array.isArray(val) ? val : jiant.isNumeric(val) ? [val] : ("" + val).split(",")});
     }});
   const inputSet = initType({clz: class slider extends JType {},
       componentProducer: visualComponentProducer, renderProducer: () => updateInputSet});

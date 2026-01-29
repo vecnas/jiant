@@ -27,7 +27,7 @@ jiant.module("jiant-comp", ["jiant-render", "jiant-spec"],
           if ((typeof actualObj == "object") && !("index" in actualObj)) {
             actualObj.index = i;
           }
-          const mp = $.isPlainObject(mapping[field]) ? mapping[field] : mapping;
+          const mp = jiant.isPlainObject(mapping[field]) ? mapping[field] : mapping;
           if (singleMode && ("propagate" in view[field])) {
             view[field].propagate(actualObj, settings.subscribeForUpdates, settings.reverseBind, mp);
             const args = {data: actualObj, val, view,  elem: view[field], isUpdate, settings};

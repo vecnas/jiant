@@ -45,7 +45,7 @@
     this._to = to;
     this._fromBase = {};
     for (var key in from) {
-      if (from.hasOwnProperty(key) && to.hasOwnProperty(key) && $.isNumeric(from[key]) && $.isNumeric(to[key])) {
+      if (from.hasOwnProperty(key) && to.hasOwnProperty(key) && jiant.isNumeric(from[key]) && jiant.isNumeric(to[key])) {
         this._fromBase[key] = from[key];
       }
     }
@@ -138,7 +138,7 @@
           progressFromTo(evt, progress);
           evt.trigger("update", progress);
           if (progress == 1) {
-            if (evt._data && $.isFunction(evt._data)) {
+            if (evt._data && typeof evt._data === "function") {
               evt._data();
             }
             evt.trigger("complete");

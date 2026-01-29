@@ -201,7 +201,7 @@ jiant.module("jiant-util", ["jiant-log"], function({jiant}) {
   }
 
   function toArray(arr) {
-    return $.isArray(arr) ? arr : [arr];
+    return Array.isArray(arr) ? arr : [arr];
   }
 
   function fluent(name) {

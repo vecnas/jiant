@@ -31,7 +31,7 @@ jiant.module("jiant-states", function({jiant}) {
   });
 
   function getCurrentState(appId) {
-    if ($.isPlainObject(appId)) {
+    if (jiant.isPlainObject(appId)) {
       appId = appId.id;
     }
     const parsed = parseState(appId);
@@ -243,7 +243,7 @@ jiant.module("jiant-states", function({jiant}) {
   }
 
   function pack(s) {
-    if ($.isPlainObject(s)) {
+    if (jiant.isPlainObject(s)) {
       let retVal = "{";
       jiant.each(s, function(key, val) {
         retVal += pack(key);
