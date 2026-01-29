@@ -14,11 +14,12 @@
 "use strict";
 (function(factory) {
   if (typeof define === 'function' && define.amd) {
-    define(['jquery'], factory);
+    define([], factory);
   } else {
-    factory(jQuery);
+    factory();
   }
-}(function($) {
+}(function() {
+  const $ = window.jQuery;
 
   /**
    * Temp variables just to parse jiantPath

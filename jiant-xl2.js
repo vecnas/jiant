@@ -1,8 +1,9 @@
-jiant.module("jiant-xl2", ["jiant-util"], function({$, app, jiant, params, "jiant-util": util}) {
+jiant.module("jiant-xl2", ["jiant-util"], function({app, jiant, params, "jiant-util": util}) {
 
     const fluent = util.fluent;
 
     this.singleton();
+    const $ = window.jQuery;
 
     const StatefulViews = function() {this.data = {}};
     StatefulViews.prototype.states = fluent("states");

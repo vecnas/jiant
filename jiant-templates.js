@@ -1,8 +1,9 @@
 jiant.module("jiant-templates", ["jiant-uifactory", "jiant-ui", "jiant-types", "jiant-spec"],
-    function({$, app, jiant, params, "jiant-uifactory": UiFactory, "jiant-ui": Ui,
+    function({app, jiant, params, "jiant-uifactory": UiFactory, "jiant-ui": Ui,
                "jiant-types": Types, "jiant-spec": Spec}) {
 
       this.singleton();
+      const $ = window.jQuery;
 
   const jTypeTemplate = {};
   let errString;

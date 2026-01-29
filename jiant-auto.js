@@ -1,4 +1,4 @@
-jiant.module("jiant-auto", [], function({$, app, jiant, params}) {
+jiant.module("jiant-auto", [], function({app, jiant, params}) {
 
   this.singleton();
 /*

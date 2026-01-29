@@ -1,6 +1,7 @@
-jiant.module("jiant-models", ["jiant-util"], function({$, app, jiant, params, "jiant-util": Util}) {
+jiant.module("jiant-models", ["jiant-util"], function({app, jiant, params, "jiant-util": Util}) {
 
   this.singleton();
+  const $ = window.jQuery;
 
   //todo: inner module with helper fns, via jiant. search
   //todo: replace map by app id by direct app due to module per app

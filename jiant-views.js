@@ -1,5 +1,5 @@
 jiant.module("jiant-views", ["jiant-uifactory", "jiant-ui", "jiant-types", "jiant-render", "jiant-spec"],
-    function({$, app, jiant, params, "jiant-uifactory": UiFactory, "jiant-ui": Ui, "jiant-types": Types,
+    function({app, jiant, params, "jiant-uifactory": UiFactory, "jiant-ui": Ui, "jiant-types": Types,
                "jiant-spec": Spec}) {
 
   this.singleton();

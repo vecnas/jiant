@@ -1,6 +1,7 @@
-jiant.module("jiant-fields", [], function({$, app, jiant, params}) {
+jiant.module("jiant-fields", [], function({app, jiant, params}) {
 
   this.singleton();
+  const $ = window.jQuery;
 
   const customElementTypes = {};
 

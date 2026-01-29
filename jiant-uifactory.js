@@ -1,6 +1,7 @@
-jiant.module("jiant-uifactory", function({$, jiant}) {
+jiant.module("jiant-uifactory", function({jiant}) {
 
   this.singleton();
+  const $ = window.jQuery;
 
   function view(prefix, viewId, viewContent, byTags) {
     const id = "#" + prefix + viewId;

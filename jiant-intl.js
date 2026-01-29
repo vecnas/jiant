@@ -1,6 +1,7 @@
-jiant.module("jiant-intl", ["jiant-logic"], function({$, app, jiant, params, "jiant-logic": Logic}) {
+jiant.module("jiant-intl", ["jiant-logic"], function({app, jiant, params, "jiant-logic": Logic}) {
 
   this.singleton();
+  const $ = window.jQuery;
 
   function translate(appRoot, val) {
     if (Array.isArray(val)) {

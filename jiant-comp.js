@@ -1,5 +1,5 @@
 jiant.module("jiant-comp", ["jiant-render", "jiant-spec"],
-  function({$, jiant, "jiant-render": Render, "jiant-spec": Spec}) {
+  function({jiant, "jiant-render": Render, "jiant-spec": Spec}) {
 
   this.singleton();
 

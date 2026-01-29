@@ -1,6 +1,7 @@
-jiant.module("jiant-logic", ["jiant-util"], function({$, app, jiant, params, "jiant-util": Util}) {
+jiant.module("jiant-logic", ["jiant-util"], function({app, jiant, params, "jiant-util": Util}) {
 
   this.singleton();
+  const $ = window.jQuery;
 
   const eventBus = $({}),
       loadedLogics = {},
