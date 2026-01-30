@@ -74,140 +74,22 @@
 
   var confirmedActionBsSelectedFn;
 
-  function firstElem(elem) {
-    return elem && elem.jquery ? elem[0] : elem;
-  }
-
-  function forEachElem(elem, cb) {
-    if (!elem) {
-      return;
-    }
-    if (elem.jquery) {
-      for (var i = 0; i < elem.length; i++) {
-        cb(elem[i]);
-      }
-    } else {
-      cb(elem);
-    }
-  }
-
-  function on(elem, eventName, handler) {
-    forEachElem(elem, function(el) {
-      el.addEventListener(eventName, function(evt) {
-        handler(evt, evt.detail);
-      });
-    });
-  }
-
-  function trigger(elem, eventName, detail) {
-    forEachElem(elem, function(el) {
-      var evt;
-      if (typeof CustomEvent === "function") {
-        evt = new CustomEvent(eventName, {detail: detail});
-      } else {
-        evt = document.createEvent("CustomEvent");
-        evt.initCustomEvent(eventName, false, false, detail);
-      }
-      el.dispatchEvent(evt);
-    });
-  }
-
-  function addClass(elem, cls) {
-    forEachElem(elem, function(el) {
-      el.classList && el.classList.add(cls);
-    });
-  }
-
-  function removeClass(elem, cls) {
-    forEachElem(elem, function(el) {
-      el.classList && el.classList.remove(cls);
-    });
-  }
-
-  function toggleClass(elem, cls) {
-    forEachElem(elem, function(el) {
-      el.classList && el.classList.toggle(cls);
-    });
-  }
-
-  function setChecked(elem, val) {
-    forEachElem(elem, function(el) {
-      el.checked = !!val;
-    });
-  }
-
-  function getChecked(elem) {
-    var el = firstElem(elem);
-    return el ? !!el.checked : false;
-  }
-
-  function getData(elem, key) {
-    var el = firstElem(elem);
-    if (!el) {
-      return undefined;
-    }
-    if (el.dataset && key in el.dataset) {
-      return el.dataset[key];
-    }
-    return el.getAttribute ? el.getAttribute("data-" + key) : undefined;
-  }
-
-  function setDisabled(elem, disabled) {
-    forEachElem(elem, function(el) {
-      el.disabled = !!disabled;
-    });
-  }
-
-  function appendElem(parent, child) {
-    var p = firstElem(parent);
-    if (!p || !child) {
-      return;
-    }
-    if (child.jquery) {
-      for (var i = 0; i < child.length; i++) {
-        p.appendChild(child[i]);
-      }
-    } else if (child.nodeType) {
-      p.appendChild(child);
-    }
-  }
-
-  function insertBeforeElem(elem, ref) {
-    var node = firstElem(elem);
-    var refNode = firstElem(ref);
-    if (!node || !refNode || !refNode.parentNode) {
-      return;
-    }
-    refNode.parentNode.insertBefore(node, refNode);
-  }
-
-  function removeElem(elem) {
-    forEachElem(elem, function(el) {
-      if (el.remove) {
-        el.remove();
-      } else if (el.parentNode) {
-        el.parentNode.removeChild(el);
-      }
-    });
-  }
-
-  function setHtml(elem, html) {
-    forEachElem(elem, function(el) {
-      el.innerHTML = html;
-    });
-  }
-
-  function hideElem(elem) {
-    forEachElem(elem, function(el) {
-      el.style.display = "none";
-    });
-  }
-
-  function showElem(elem) {
-    forEachElem(elem, function(el) {
-      el.style.display = "";
-    });
-  }
+  var dom = jiant.dom;
+  var on = dom.on;
+  var trigger = dom.trigger;
+  var removeClass = dom.removeClass;
+  var addClass = dom.addClass;
+  var toggleClass = dom.toggleClass;
+  var getChecked = dom.getChecked;
+  var getData = dom.getData;
+  var setChecked = dom.setChecked;
+  var appendElem = dom.append;
+  var insertBeforeElem = dom.insertBefore;
+  var removeElem = dom.remove;
+  var setHtml = dom.html;
+  var hideElem = dom.hide;
+  var showElem = dom.show;
+  var setDisabled = dom.setDisabled;
 
   var tmpJiantXl = {
 

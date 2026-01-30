@@ -60,42 +60,7 @@ jiant.module("jiant-ui", ["jiant-auto", "jiant-render", "jiant-types", "jiant-sp
       }
     });
 
-    function isJQueryObj(val) {
-      return !!val && val.jquery;
-    }
-
-    function forEachElem(elem, cb) {
-      if (!elem) {
-        return;
-      }
-      if (elem.jquery) {
-        for (let i = 0; i < elem.length; i++) {
-          cb(elem[i]);
-        }
-      } else {
-        cb(elem);
-      }
-    }
-
-    function getChecked(elem) {
-      if (!elem) {
-        return false;
-      }
-      if (elem.jquery) {
-        return !!elem.prop("checked");
-      }
-      return !!elem.checked;
-    }
-
-    function getVal(elem) {
-      if (!elem) {
-        return undefined;
-      }
-      if (elem.jquery) {
-        return elem.val();
-      }
-      return "value" in elem ? elem.value : undefined;
-    }
+    const dom = jiant.dom;
 
     function getComponentType(spec) {
       return JType.is(spec) ? spec.tp() : (typeof spec === "object" && "tp" in spec) ? spec.tp : spec;
@@ -141,7 +106,7 @@ jiant.module("jiant-ui", ["jiant-auto", "jiant-render", "jiant-types", "jiant-sp
           mappedKey = (mapping && (fieldKey in mapping)) ? mapping[fieldKey] : fieldKey;
           val = typeof mappedKey === "function" ? mappedKey.apply(data) : data[mappedKey];
           if (elemType?.alwaysUpdatable || Render.isOnRenderPresent({app, viewId, templateId, field: fieldKey})
-            || (data && val !== undefined && val !== null && !isServiceName(fieldKey) && !isJQueryObj(val))) {
+            || (data && val !== undefined && val !== null && !isServiceName(fieldKey) && !dom.isJq(val))) {
 
             const actualVal = typeof val === "function" ? val.apply(data) : val;
             const actualElement = viewOrTm[componentKey],
@@ -192,7 +157,7 @@ jiant.module("jiant-ui", ["jiant-auto", "jiant-render", "jiant-types", "jiant-sp
                 function elem2arr(elem) {
                   const arr = [];
                   jiant.each(elem, function (i, item) {
-                    getChecked(item) && arr.push(convert(getVal(item)));
+                    dom.getChecked(item) && arr.push(convert(dom.getVal(item)));
                   });
                   return arr;
                 }
@@ -208,11 +173,11 @@ jiant.module("jiant-ui", ["jiant-auto", "jiant-render", "jiant-types", "jiant-sp
                     val.call(data, joinOrUndef(elem2arr(actualElement)));
                   } else {
                     if (tagName === "input" && tp === "checkbox") {
-                      val.call(data, getChecked(actualElement));
+                      val.call(data, dom.getChecked(actualElement));
                     } else if (tagName === "input" && tp === "radio") {
                       val.call(data, joinOrUndef(elem2arr(actualElement)));
                     } else if (tagName in {"input": 1, "select": 1, "textarea": 1}) {
-                      val.call(data, getVal(actualElement)); // don't convert due to user may input "undefined" as string
+                      val.call(data, dom.getVal(actualElement)); // don't convert due to user may input "undefined" as string
                     } else if (tagName === "img") {
                       val.call(data, actualElement.attr("src"));
                       // no actual event for changing html, manual 'change' trigger supported by this code

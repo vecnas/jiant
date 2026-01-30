@@ -10,61 +10,7 @@ jiant.module("jiant-models", ["jiant-util"], function({app, jiant, params, "jian
   const objectBus = "jModelObjectBus",
       repoName = "jRepo";
 
-  function createEventBus() {
-    const listeners = {};
-    return {
-      on: function(eventName, handler) {
-        listeners[eventName] = listeners[eventName] || [];
-        listeners[eventName].push(handler);
-        return handler;
-      },
-      off: function(eventName, handler) {
-        const list = listeners[eventName];
-        if (!list) {
-          return;
-        }
-        if (!handler) {
-          listeners[eventName] = [];
-          return;
-        }
-        const idx = list.indexOf(handler);
-        if (idx >= 0) {
-          list.splice(idx, 1);
-        }
-      },
-      one: function(eventName, handler) {
-        const onceHandler = function(evt) {
-          this.off(eventName, onceHandler);
-          handler.apply(null, arguments);
-        }.bind(this);
-        this.on(eventName, onceHandler);
-        return onceHandler;
-      },
-      trigger: function(eventName) {
-        const list = listeners[eventName];
-        if (!list || list.length === 0) {
-          return;
-        }
-        const extraArgs = [];
-        for (let i = 1; i < arguments.length; i++) {
-          extraArgs.push(arguments[i]);
-        }
-        const spreadArgs = (extraArgs.length === 1 && Array.isArray(extraArgs[0])) ? extraArgs[0] : extraArgs;
-        const evt = {
-          _stopped: false,
-          stopImmediatePropagation: function() { this._stopped = true; }
-        };
-        const callArgs = [evt].concat(spreadArgs);
-        const callList = list.slice();
-        for (let i = 0; i < callList.length; i++) {
-          callList[i].apply(this, callArgs);
-          if (evt._stopped) {
-            break;
-          }
-        }
-      }
-    };
-  }
+  const createEventBus = jiant.createEventBus;
 
   function getRepo(spec) {
     return (spec[repoName] && jiant.isPlainObject(spec[repoName])) ? spec[repoName] : spec;

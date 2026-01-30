@@ -21,6 +21,78 @@
 }(function() {
   const $ = window.jQuery;
 
+  function createEventBus() {
+    const listeners = {};
+    return {
+      on: function(eventName, handler) {
+        listeners[eventName] = listeners[eventName] || [];
+        listeners[eventName].push(handler);
+        return handler;
+      },
+      off: function(eventName, handler) {
+        const list = listeners[eventName];
+        if (!list) {
+          return;
+        }
+        if (!handler) {
+          listeners[eventName] = [];
+          return;
+        }
+        const idx = list.indexOf(handler);
+        if (idx >= 0) {
+          list.splice(idx, 1);
+        }
+      },
+      one: function(eventName, handler) {
+        const onceHandler = function(evt) {
+          this.off(eventName, onceHandler);
+          handler.apply(null, arguments);
+        }.bind(this);
+        this.on(eventName, onceHandler);
+        return onceHandler;
+      },
+      trigger: function(eventName) {
+        const list = listeners[eventName];
+        if (!list || list.length === 0) {
+          return;
+        }
+        const extraArgs = [];
+        for (let i = 1; i < arguments.length; i++) {
+          extraArgs.push(arguments[i]);
+        }
+        const spreadArgs = (extraArgs.length === 1 && Array.isArray(extraArgs[0])) ? extraArgs[0] : extraArgs;
+        const evt = {
+          _stopped: false,
+          stopImmediatePropagation: function() { this._stopped = true; }
+        };
+        const callArgs = [evt].concat(spreadArgs);
+        const callList = list.slice();
+        for (let i = 0; i < callList.length; i++) {
+          callList[i].apply(this, callArgs);
+          if (evt._stopped) {
+            break;
+          }
+        }
+      }
+    };
+  }
+
+  function resolveInjectTarget(injectTo) {
+    if (!injectTo) {
+      return document.body;
+    }
+    if (injectTo.jquery) {
+      return injectTo[0];
+    }
+    if (injectTo.nodeType) {
+      return injectTo;
+    }
+    if (typeof injectTo === "string") {
+      return document.querySelector(injectTo) || document.body;
+    }
+    return document.body;
+  }
+
   /**
    * Temp variables just to parse jiantPath
    * @type {string}
@@ -70,7 +142,7 @@
        * Event bus for application bound events, events identified by application id
        * @type {jQuery|HTMLElement|*}
        */
-      appBoundEventBus = $({}),
+      appBoundEventBus = createEventBus(),
       /**
        * List of application ids, on a stage of pre-app - code that should be executed before application binding.
        * Possible use is inter-application integration. Key - application id, value - application definition tree.
@@ -165,9 +237,9 @@
       addedLibs[url] = 1;
       if (module.cssLoaded[url]) {
         const css = module.cssLoaded[url] + "\r\n/*# sourceURL=" + url + " */\r\n";
-        const style = $("<style>");
-        jHtml(style, css);
-        style.appendTo("head");
+        const style = document.createElement("style");
+        style.textContent = css;
+        document.head.appendChild(style);
       }
     });
     module.html && module.html.forEach(function(url) {
@@ -177,11 +249,11 @@
       addedLibs[url] = 1;
       if (module.htmlLoaded[url]) {
         const html = "<!-- sourceUrl = " + url + " -->" + module.htmlLoaded[url] + "<!-- end of source from " + url + " -->";
-        const inj = arr[idx].injectTo ? $(arr[idx].injectTo) : $("body");
+        const inj = resolveInjectTarget(arr[idx].injectTo);
         if (arr[idx].replace) {
-          jHtml(inj, html);
+          inj.innerHTML = html;
         } else {
-          inj.append($(html));
+          inj.insertAdjacentHTML("beforeend", html);
         }
       }
     });
@@ -870,15 +942,18 @@
     if ("viewsUrl" in app) {
       let injectionPoint;
       if ("injectId" in app) {
-        injectionPoint = $("#" + app.injectId);
-        if (!injectionPoint[0]) {
-          injectionPoint = $("<div id='" + app.injectId + "' style='display:none'></div>");
-          $("body").append(injectionPoint);
+        injectionPoint = document.getElementById(app.injectId);
+        if (!injectionPoint) {
+          injectionPoint = document.createElement("div");
+          injectionPoint.id = app.injectId;
+          injectionPoint.style.display = "none";
+          document.body.appendChild(injectionPoint);
         }
       } else {
-        injectionPoint = $("body");
+        injectionPoint = document.body;
       }
-      injectionPoint.load(app.viewsUrl, null, function () {
+      fetchText(app.viewsUrl, {timeout: app.modulesTimeout || 15000}).then(function(html) {
+        injectionPoint.innerHTML = html;
         startAppLoader(app, app);
       });
     } else {
