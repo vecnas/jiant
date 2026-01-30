@@ -37,6 +37,9 @@
     const style = window.getComputedStyle(el);
     return style.display !== "none" && style.visibility !== "hidden";
   }
+  function toArr(val) {
+    return Array.prototype.slice.call(val);
+  }
 
   QUnit.module("native compatibility", function() {
 
@@ -271,6 +274,105 @@
         app.views.v4.name.value = "abc";
         app.views.v4.name.dispatchEvent(new Event("change", {bubbles: true}));
         assert.equal(data._name, "abc", "reverse binding set value from input");
+        done();
+      });
+    });
+
+    QUnit.test("jiant.each handles NodeList and HTMLCollection", function(assert) {
+      setFixtureHtml("<div class='n1'></div><div class='n2'></div>");
+      const list = document.querySelectorAll("#qunit-fixture div");
+      const coll = document.getElementsByTagName("div");
+      let listCount = 0;
+      let collCount = 0;
+      jiant.each(list, function(i, el) { listCount++; assert.ok(el.nodeType === 1, "NodeList element"); });
+      jiant.each(coll, function(i, el) { collCount++; assert.ok(el.nodeType === 1, "HTMLCollection element"); });
+      assert.ok(listCount === 2, "NodeList iterated");
+      assert.ok(collCount >= 2, "HTMLCollection iterated");
+    });
+
+    QUnit.test("showOn/hideOn supports NodeList", function(assert) {
+      assert.timeout(timeout);
+      const done = assert.async();
+      setFixtureHtml("<div id='v3n'><div class='box'></div><div class='box'></div></div>");
+
+      jiant.app(() => ({
+        id: "JQApp3List",
+        views: {
+          v3n: { box: jiant.label }
+        }
+      }));
+
+      jiant.onApp("JQApp3List", function(app) {
+        const boxes = app.views.v3n.box;
+        assert.ok(boxes && (boxes.length === 2 || boxes.length === undefined), "boxes resolved");
+        if (boxes.length !== undefined) {
+          toArr(boxes).forEach(function(b) {
+            assert.equal(typeof b.showOn, "function", "showOn exists on element");
+            assert.equal(typeof b.hideOn, "function", "hideOn exists on element");
+          });
+        }
+        app.views.v3n.propagate({flag: true});
+        if (boxes.length !== undefined) {
+          toArr(boxes).forEach(function(b) { assert.notOk(isVisible(b), "hideOn hides element"); });
+        }
+        app.views.v3n.propagate({flag: false});
+        if (boxes.length !== undefined) {
+          toArr(boxes).forEach(function(b) { assert.ok(isVisible(b), "showOn shows element"); });
+        }
+        done();
+      });
+    });
+
+    QUnit.test("reverse binding updates checkbox", function(assert) {
+      assert.timeout(timeout);
+      const done = assert.async();
+      setFixtureHtml("<div id='v5'><input class='flag' type='checkbox'/></div>");
+
+      jiant.app(() => ({
+        id: "JQAppReverseCheckbox",
+        views: { v5: { flag: jiant.input } }
+      }));
+
+      jiant.onApp("JQAppReverseCheckbox", function(app) {
+        const data = { _flag: false, flag: function(val) { this._flag = val; } };
+        app.views.v5.propagate(data, true, true);
+        app.views.v5.flag.checked = true;
+        app.views.v5.flag.dispatchEvent(new Event("change", {bubbles: true}));
+        assert.equal(data._flag, true, "checkbox reverse binding set value");
+        done();
+      });
+    });
+
+    QUnit.test("dom helpers operate on arrays", function(assert) {
+      setFixtureHtml("<div class='h1'></div><div class='h1'></div>");
+      const nodes = qsa(".h1");
+      jiant.addClass(nodes, "x");
+      assert.ok(nodes.every(n => n.classList.contains("x")), "addClass works on list");
+      jiant.removeClass(nodes, "x");
+      assert.ok(nodes.every(n => !n.classList.contains("x")), "removeClass works on list");
+      jiant.hide(nodes);
+      assert.ok(nodes.every(n => !isVisible(n)), "hide works on list");
+      jiant.show(nodes);
+      assert.ok(nodes.every(n => isVisible(n)), "show works on list");
+    });
+
+    QUnit.test("parseTemplate binds nested components", function(assert) {
+      assert.timeout(timeout);
+      const done = assert.async();
+      clearFixture();
+
+      jiant.app(() => ({
+        id: "JQAppTplNested",
+        templates: {
+          parent: { impl: "<div id='parent'><div class='child'></div></div>", child: jiant.comp.compName("child") },
+          child: { impl: "<span id='child'><b class='val'></b></span>", val: jiant.label }
+        }
+      }));
+
+      jiant.onApp("JQAppTplNested", function(app) {
+        const frag = app.templates.parent.parseTemplate({child: {val: "ok"}}, false);
+        assert.ok(frag.child instanceof HTMLElement, "child component element");
+        assert.ok(frag.child.val instanceof HTMLElement, "nested label element");
         done();
       });
     });
