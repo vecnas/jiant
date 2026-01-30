@@ -20,8 +20,8 @@
   function byId(id) {
     return document.getElementById(id);
   }
-  function bySel(sel) {
-    return document.querySelectorAll(sel);
+  function bySel(sel, root) {
+    return (root || document).querySelectorAll(sel);
   }
 
   QUnit.module("jiant modules", function() {
@@ -120,10 +120,10 @@
 
       jiant.onApp("ModulesAppHtml", function(app) {
         jiant.loadModule(app, "t5_html", function() {
-          assert.equal(byId("inject").textContent.trim(), "FRAG", "html injected with replace");
-          assert.equal(bySel("#inject #frag").length, 1, "injected fragment present");
+          assert.equal(fixture.textContent.trim(), "FRAG", "html injected with replace");
+          assert.equal(bySel("#frag", fixture).length, 1, "injected fragment present");
           done();
-        }, true, "#inject");
+        }, true, fixture);
       });
     });
 

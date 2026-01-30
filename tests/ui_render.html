@@ -179,7 +179,7 @@
           t2: { impl: "<b id='t2'><b class='tdt2'></b></b>", tdt2: jiant.data }
         }
       }));
-      jiant.onApp("JQAppTypes", function($, app) {
+      jiant.onApp("JQAppTypes", function(app) {
         assert.ok(typeof app.views.typesView.tdv !== "undefined", "data field bound on view");
         done();
       });

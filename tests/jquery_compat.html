@@ -109,7 +109,7 @@
         }
       }));
 
-      jiant.onApp("JQApp1", function($, app) {
+      jiant.onApp("JQApp1", function(app) {
         assert.ok(typeof $ === "function" && $.fn && $.fn.jquery, "onApp passes jQuery function");
         assert.ok(!!app.views.v1.jquery, "view is a jQuery object");
         assert.ok(!!app.views.v1.fld.jquery, "component is a jQuery object");
@@ -125,7 +125,7 @@
       jiant.app(() => ({id: "JQAppMulti1", views: {a1: {}}}));
       jiant.app(() => ({id: "JQAppMulti2", views: {a2: {}}}));
 
-      jiant.onApp(["JQAppMulti1", "JQAppMulti2"], function($, app1, app2) {
+      jiant.onApp(["JQAppMulti1", "JQAppMulti2"], function(app1, app2) {
         assert.equal(app1.id, "JQAppMulti1", "first app provided");
         assert.equal(app2.id, "JQAppMulti2", "second app provided");
         done();
@@ -147,7 +147,7 @@
         }
       }));
 
-      jiant.onApp("JQApp2", function($, app) {
+      jiant.onApp("JQApp2", function(app) {
         const frag = app.templates.t1.parseTemplate({fld: "x"}, false);
         assert.ok(!!frag.jquery, "parseTemplate returns jQuery");
         assert.ok(!!frag.fld.jquery, "template component is jQuery");
@@ -166,7 +166,7 @@
         views: { vbt1: { item: jiant.label } }
       }));
 
-      jiant.onApp("JQAppBindAfter", function($, app) {
+      jiant.onApp("JQAppBindAfter", function(app) {
         assert.equal(app.views.vbt1.item.attr("data-src"), "class", "class element selected");
         done();
       });
@@ -183,7 +183,7 @@
         views: { vbt2: { item: jiant.label } }
       }));
 
-      jiant.onApp("JQAppBindBefore", function($, app) {
+      jiant.onApp("JQAppBindBefore", function(app) {
         assert.equal(app.views.vbt2.item.attr("data-src"), "tag", "tag element selected");
         done();
       });
@@ -200,7 +200,7 @@
         views: { vbt3: { item: jiant.label } }
       }));
 
-      jiant.onApp("JQAppBindTag", function($, app) {
+      jiant.onApp("JQAppBindTag", function(app) {
         assert.equal(app.views.vbt3.item.attr("data-src"), "tag", "tag element selected");
         done();
       });
@@ -220,7 +220,7 @@
         }
       }));
 
-      jiant.onApp("JQApp3", function($, app) {
+      jiant.onApp("JQApp3", function(app) {
         const box = app.views.v3.box;
         assert.equal(typeof $.fn.showOn, "function", "showOn exists on jQuery prototype");
         assert.equal(typeof $.fn.hideOn, "function", "hideOn exists on jQuery prototype");
@@ -245,7 +245,7 @@
         views: { v4: { name: jiant.input } }
       }));
 
-      jiant.onApp("JQAppReverseBind", function($, app) {
+      jiant.onApp("JQAppReverseBind", function(app) {
         const data = { _name: "", name: function(val) { this._name = val; } };
         app.views.v4.propagate(data, true, true);
         app.views.v4.name.val("abc").change();
@@ -272,8 +272,8 @@
         }
       }));
 
-      jiant.onApp("JQAppIntl", function($, app) {
-        jiant.onApp("JQAppIntl", ["intl"], function($, app2) {
+      jiant.onApp("JQAppIntl", function(app) {
+        jiant.onApp("JQAppIntl", ["intl"], function(app2) {
           assert.equal(app2.logic.intl.t("someKey"), "Some key for t()", "intl.t returns translation");
           assert.equal(app2.logic.intl.someText(), "Me some text", "intl function implemented");
           setTimeout(function() {
@@ -295,7 +295,7 @@
         modules: []
       }));
 
-      jiant.onApp("JQAppLoadCss", function($, app) {
+      jiant.onApp("JQAppLoadCss", function(app) {
         jiant.loadModule(app, "jiant-load", function() {
           jiant.loadCss("/tests/fixtures/test.css", function() {
             const styleTag = $("style[data-uri='/tests/fixtures/test.css']");
@@ -319,7 +319,7 @@
         }
       }));
 
-      jiant.onApp("JQAppStates", function($, app) {
+      jiant.onApp("JQAppStates", function(app) {
         app.states.s1.start(function(id) {
           assert.equal(id, 5, "state param passed");
           done();
@@ -344,7 +344,7 @@
         }
       }));
 
-      jiant.onApp("JQAppModels", function($, app) {
+      jiant.onApp("JQAppModels", function(app) {
         const repo = app.models.item.jRepo;
         repo.add({id: 1, name: "a"});
         const all = repo.all();
@@ -375,7 +375,7 @@
         }
       }));
 
-      jiant.onApp("JQAppModelEvents", function($, app) {
+      jiant.onApp("JQAppModelEvents", function(app) {
         const repo = app.models.item.jRepo;
         repo.add({id: 1, name: "a"});
         const obj = repo.all()[0];
@@ -422,7 +422,7 @@
         }
       }));
 
-      jiant.onApp("JQAppAjaxOk", function($, app) {
+      jiant.onApp("JQAppAjaxOk", function(app) {
         app.ajax.getData(5, function(data) {
           assert.equal(data.status, "ok", "ajax callback receives parsed JSON");
           assert.equal(data.value, 123, "ajax callback receives numeric field");
@@ -445,7 +445,7 @@
         }
       }));
 
-      jiant.onApp("JQAppAjaxEcho", function($, app) {
+      jiant.onApp("JQAppAjaxEcho", function(app) {
         app.ajax.echo({foo: "bar", nested: {x: 7}}, function(data) {
           assert.equal(data.foo, "bar", "top-level value passed");
           assert.equal(data["nested.x"], "7", "nested value flattened with dot notation");
@@ -468,7 +468,7 @@
         }
       }));
 
-      jiant.onApp("JQAppAjaxRest", function($, app) {
+      jiant.onApp("JQAppAjaxRest", function(app) {
         app.ajax.byId(7, function(data) {
           assert.equal(data.id, "7", "path param substituted in url");
           done();
@@ -490,7 +490,7 @@
         }
       }));
 
-      jiant.onApp("JQAppAjaxErr", function($, app) {
+      jiant.onApp("JQAppAjaxErr", function(app) {
         app.ajax.getMissing(1, function() {
           assert.ok(false, "success callback should not be called");
         }, function(errText) {
@@ -528,7 +528,7 @@
         }
       }));
 
-      jiant.onApp("JQAppAjaxCorsSettings", function($, app) {
+      jiant.onApp("JQAppAjaxCorsSettings", function(app) {
         app.ajax.ping(function() {});
         assert.ok(call, "ajax called");
         assert.equal(call.opts.mode, "cors", "cors mode set");
@@ -557,7 +557,7 @@
         }
       }));
 
-      jiant.onApp("JQAppAjaxCorsLive", function($, app) {
+      jiant.onApp("JQAppAjaxCorsLive", function(app) {
         app.ajax.echo({foo: "bar"}, function(data) {
           assert.equal(data.foo, "bar", "CORS request succeeds across hostnames");
           done();
@@ -593,7 +593,7 @@
         }
       }));
 
-      jiant.onApp("JQAppFormCors", function($, app) {
+      jiant.onApp("JQAppFormCors", function(app) {
         app.views.vf.frm.submitForm();
         setTimeout(function() {
           assert.ok(call, "ajax called");
@@ -655,7 +655,7 @@
 
       jiant.onUiBound(app1, function() { count++; });
       jiant.onUiBound(app1.id, function() { count++; });
-      jiant.onUiBound([app1, app2], function($, a1, a2) {
+      jiant.onUiBound([app1, app2], function(a1, a2) {
         assert.equal(a1.id, "JQAppUiBound1", "array first app");
         assert.equal(a2.id, "JQAppUiBound2", "array second app");
         count++;
@@ -678,7 +678,7 @@
         states: {"": {go: function() {}, start: function() {}, end: function() {}}}
       }));
 
-      jiant.onApp("JQAppStateRefresh", function($, app) {
+      jiant.onApp("JQAppStateRefresh", function(app) {
         app.states[""].start(function() {
           if (doneCalled) {
             return;
@@ -704,7 +704,7 @@
         }
       }));
 
-      jiant.onApp("JQAppStateParams", function($, app) {
+      jiant.onApp("JQAppStateParams", function(app) {
         app.states.s1.start(function(p1, p2) {
           calls++;
           if (calls === 1) {
@@ -735,7 +735,7 @@
         }
       }));
 
-      jiant.onApp("JQAppStateEnd", function($, app) {
+      jiant.onApp("JQAppStateEnd", function(app) {
         app.states.s1.end(function() {
           endCalled++;
         });
@@ -763,7 +763,7 @@
         }
       }));
 
-      jiant.onApp("JQAppStateGroup", function($, app) {
+      jiant.onApp("JQAppStateGroup", function(app) {
         app.states.s2.start(function(p1, p2) {
           assert.equal(p1, "a", "first param preserved from group");
           assert.equal(p2, "c", "second param updated");
@@ -788,7 +788,7 @@
         }
       }));
 
-      jiant.onApp("JQAppStateDefaults", function($, app) {
+      jiant.onApp("JQAppStateDefaults", function(app) {
         app.states.s1.start(function(p1, p2) {
           assert.equal(p1, "d1", "default param 1 applied");
           assert.equal(p2, "d2", "default param 2 applied");
@@ -847,7 +847,7 @@
         states: {"": {go: function() {}, start: function() {}, end: function() {}}}
       }));
 
-      jiant.onApp(["JQAppRefreshA", "JQAppRefreshB"], function($, appA, appB) {
+      jiant.onApp(["JQAppRefreshA", "JQAppRefreshB"], function(appA, appB) {
         appA.states[""].start(function() { a1Calls++; });
         appB.states[""].start(function() { a2Calls++; });
         jiant.refreshState(appA);
@@ -872,7 +872,7 @@
         }
       }));
 
-      jiant.onApp("JQAppGoRoot", function($, app) {
+      jiant.onApp("JQAppGoRoot", function(app) {
         app.states.root1.start(function() {
           rootStarts++;
           if (rootStarts === 1) {
@@ -904,7 +904,7 @@
         states: {s1: {go: function() {}, start: function() {}, end: function() {}}}
       }));
 
-      jiant.onApp("JQAppNoHashchange", function($, app) {
+      jiant.onApp("JQAppNoHashchange", function(app) {
         app.states.s1.start(function() {
           $.fn.hashchange = prevHashchange;
           assert.ok(true, "states still functional without plugin");
@@ -928,7 +928,7 @@
         }
       }));
 
-      jiant.onApp("JQAppHistory", function($, app) {
+      jiant.onApp("JQAppHistory", function(app) {
         app.states.s1.start(function() {
           sawS1++;
           if (sawS1 === 1) {
@@ -962,7 +962,7 @@
         }
       }));
 
-      jiant.onApp("JQAppReplace", function($, app) {
+      jiant.onApp("JQAppReplace", function(app) {
         app.states.s1.start(function() {
           if (s1Started) {
             return;
@@ -989,7 +989,7 @@
       const app1 = {id: "JQAppMultiBind1"};
       const app2 = {id: "JQAppMultiBind2"};
 
-      jiant.onUiBound([app1, app2], function($, a1, a2) {
+      jiant.onUiBound([app1, app2], function(a1, a2) {
         assert.equal(a1.id, "JQAppMultiBind1", "first app id ok");
         assert.equal(a2.id, "JQAppMultiBind2", "second app id ok");
         done();
@@ -1012,7 +1012,7 @@
         }
       }));
 
-      jiant.onApp("JQAppEmptyState", function($, app) {
+      jiant.onApp("JQAppEmptyState", function(app) {
         let rootStarted = false;
         app.states.root1.start(function() {
           if (rootStarted) {

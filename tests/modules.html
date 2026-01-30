@@ -30,7 +30,7 @@
         modulesPrefix: "./modules/"
       }));
 
-      jiant.onApp("ModulesAppDep", function($, app) {
+      jiant.onApp("ModulesAppDep", function(app) {
         assert.deepEqual(window.__jiantTestState.order, ["B", "A"], "dependency executes before parent");
         assert.equal(app.modules.t1_depA.dep, app.modules.t1_depB, "parent module receives dependency instance");
         done();
@@ -49,7 +49,7 @@
         modulesPrefix: "./modules/"
       }));
 
-      jiant.onApp("ModulesAppPre", function($, app) {
+      jiant.onApp("ModulesAppPre", function(app) {
         assert.equal(window.__jiantTestState.count, 1, "queued module executed during app bind");
         assert.ok(app.modules.t2_pre, "module attached to app.modules");
         done();
@@ -67,7 +67,7 @@
         modulesPrefix: "./modules/"
       }));
 
-      jiant.onApp("ModulesAppAfter", function($, app) {
+      jiant.onApp("ModulesAppAfter", function(app) {
         jiant.loadModule(app, "t3_after", function() {
           assert.equal(window.__jiantTestState.afterCount, 1, "module executed once");
           assert.ok(app.modules.t3_after, "module attached to app.modules after load");
@@ -93,7 +93,7 @@
         modulesPrefix: "./modules/"
       }));
 
-      jiant.onApp(["ModulesAppSingleton1", "ModulesAppSingleton2"], function($, app1, app2) {
+      jiant.onApp(["ModulesAppSingleton1", "ModulesAppSingleton2"], function(app1, app2) {
         assert.equal(window.__jiantTestState.singleCount, 1, "singleton executed once");
         assert.strictEqual(app1.modules.t4_single, app2.modules.t4_single, "singleton instance shared across apps");
         done();
@@ -111,7 +111,7 @@
         modulesPrefix: "./modules/"
       }));
 
-      jiant.onApp("ModulesAppHtml", function($, app) {
+      jiant.onApp("ModulesAppHtml", function(app) {
         jiant.loadModule(app, "t5_html", function() {
           assert.equal($("#inject").text().trim(), "FRAG", "html injected with replace");
           assert.equal($("#inject #frag").length, 1, "injected fragment present");
