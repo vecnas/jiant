@@ -70,13 +70,13 @@ jiant.module("jiant-fields", [], function({app, jiant, params}) {
   }
 
   function setupPager(uiElem) {
-    const pagerBus = $({}),
+    const pagerBus = jiant.createEventBus(),
         roots = [];
     let lastPage = 0, lastTotalCls;
     jiant.each(uiElem, function(i, elem) {
       const root = $("<ul></ul>");
       jiant.addClass(root, "pagination");
-      $(elem).append(root);
+      jiant.dom.append(elem, root);
       roots.push(root);
     });
     uiElem.onValueChange = function(callback) {
@@ -96,7 +96,7 @@ jiant.module("jiant-fields", [], function({app, jiant, params}) {
     uiElem.updatePager = function(page) {
       jiant.each(roots, function(idx, root) {
         jiant.empty(root);
-        lastTotalCls && root.removeClass(lastTotalCls);
+        lastTotalCls && jiant.dom.removeClass(root, lastTotalCls);
         lastTotalCls = "totalPages_" + page.totalPages;
         jiant.addClass(root, lastTotalCls);
         const from = Math.max(0, page.number - Math.round(jiant.PAGER_RADIUS / 2)),
@@ -125,7 +125,7 @@ jiant.module("jiant-fields", [], function({app, jiant, params}) {
     function addPageCtl(root, value, ctlClass) {
       const ctl = $(jiant.parseTemplate($("<b><li class='!!ctlClass!!' style='cursor: pointer;'><a>!!label!!</a></li></b>"),
           {label: value !== -1 ? value : "...", ctlClass: ctlClass}));
-      root.append(ctl);
+      jiant.dom.append(root, ctl);
       value !== -1 && ctl.click(function() {
         lastPage = value;
         uiElem.refreshPage();
