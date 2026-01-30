@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Jiant module loader tests</title>
+  <link rel="stylesheet" href="https://code.jquery.com/qunit/qunit-2.22.0.css">
+  <link rel="icon" href="data:,">
+</head>
+<body>
+<div id="qunit"></div>
+<div id="qunit-fixture"></div>
+<script src="https://code.jquery.com/qunit/qunit-2.22.0.js"></script>
+<script src="../jiant.js"></script>
+<script>
+  const timeout = 2000;
+  const fixture = document.getElementById("qunit-fixture");
+  function setFixtureHtml(html) {
+    fixture.innerHTML = html;
+  }
+  function byId(id) {
+    return document.getElementById(id);
+  }
+  function bySel(sel) {
+    return document.querySelectorAll(sel);
+  }
+
+  QUnit.module("jiant modules", function() {
+
+    QUnit.test("module dependencies load before parent module", function(assert) {
+      assert.timeout(timeout);
+      const done = assert.async();
+      window.__jiantTestState = {order: []};
+
+      jiant.app(() => ({
+        id: "ModulesAppDep",
+        modules: ["t1_depA"],
+        modulesPrefix: "./modules/"
+      }));
+
+      jiant.onApp("ModulesAppDep", function(app) {
+        assert.deepEqual(window.__jiantTestState.order, ["B", "A"], "dependency executes before parent");
+        assert.equal(app.modules.t1_depA.dep, app.modules.t1_depB, "parent module receives dependency instance");
+        done();
+      });
+    });
+
+    QUnit.test("loadModule before app queues module", function(assert) {
+      assert.timeout(timeout);
+      const done = assert.async();
+      window.__jiantTestState = {count: 0};
+
+      jiant.loadModule("ModulesAppPre", "t2_pre");
+      jiant.app(() => ({
+        id: "ModulesAppPre",
+        modules: [],
+        modulesPrefix: "./modules/"
+      }));
+
+      jiant.onApp("ModulesAppPre", function(app) {
+        assert.equal(window.__jiantTestState.count, 1, "queued module executed during app bind");
+        assert.ok(app.modules.t2_pre, "module attached to app.modules");
+        done();
+      });
+    });
+
+    QUnit.test("loadModule after app executes immediately and calls callback", function(assert) {
+      assert.timeout(timeout);
+      const done = assert.async();
+      window.__jiantTestState = {afterCount: 0};
+
+      jiant.app(() => ({
+        id: "ModulesAppAfter",
+        modules: [],
+        modulesPrefix: "./modules/"
+      }));
+
+      jiant.onApp("ModulesAppAfter", function(app) {
+        jiant.loadModule(app, "t3_after", function() {
+          assert.equal(window.__jiantTestState.afterCount, 1, "module executed once");
+          assert.ok(app.modules.t3_after, "module attached to app.modules after load");
+          done();
+        });
+      });
+    });
+
+    QUnit.test("singleton module executes only once across apps", function(assert) {
+      assert.timeout(timeout);
+      const done = assert.async();
+      window.__jiantTestState = {singleCount: 0};
+
+      jiant.app(() => ({
+        id: "ModulesAppSingleton1",
+        modules: ["t4_single"],
+        modulesPrefix: "./modules/"
+      }));
+
+      jiant.app(() => ({
+        id: "ModulesAppSingleton2",
+        modules: ["t4_single"],
+        modulesPrefix: "./modules/"
+      }));
+
+      jiant.onApp(["ModulesAppSingleton1", "ModulesAppSingleton2"], function(app1, app2) {
+        assert.equal(window.__jiantTestState.singleCount, 1, "singleton executed once");
+        assert.strictEqual(app1.modules.t4_single, app2.modules.t4_single, "singleton instance shared across apps");
+        done();
+      });
+    });
+
+    QUnit.test("external module html injects into target with replace", function(assert) {
+      assert.timeout(timeout);
+      const done = assert.async();
+      setFixtureHtml("<div id='inject'><b>OLD</b></div>");
+
+      jiant.app(() => ({
+        id: "ModulesAppHtml",
+        modules: [],
+        modulesPrefix: "./modules/"
+      }));
+
+      jiant.onApp("ModulesAppHtml", function(app) {
+        jiant.loadModule(app, "t5_html", function() {
+          assert.equal(byId("inject").textContent.trim(), "FRAG", "html injected with replace");
+          assert.equal(bySel("#inject #frag").length, 1, "injected fragment present");
+          done();
+        }, true, "#inject");
+      });
+    });
+
+  });
+</script>
+</body>
+</html>
