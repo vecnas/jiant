@@ -147,8 +147,11 @@ jiant.module("jiant-types", ["jiant-jtype", "jiant-comp", "jiant-util"],
   const nlabel = initType({clz: class nlabel extends JType {},
     componentProducer: visualComponentProducer.and(({elem, app}) => {
       jiant.loadModule(app, "jiant-intl", function() {
-        jiant.intlProxy(app, elem, "html");
-        jiant.intlProxy(app, elem, "text");
+        dom.forEach(elem, function(el) {
+          ensureHtmlApi(el);
+          jiant.intlProxy(app, el, "html");
+          jiant.intlProxy(app, el, "text");
+        });
       });
     }),
     renderProducer: visualRenderProducer});
