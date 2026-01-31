@@ -169,15 +169,30 @@ jiant.module("jiant-util", ["jiant-log"], function({jiant}) {
     return ms >= threshold ? ms : 0;
   }
 
-  function msieDom2Html(elem) {
-    jiant.each(elem.find("*"), function(idx, child) {
-      jiant.each(child.attributes, function(i, attr) {
-        if (attr.value.indexOf(" ") < 0 && attr.value.indexOf("!!") >= 0) {
-          $(child).attr(attr.name, attr.value.replace(/!!/g, "e2013e03e11eee "));
-        }
-      });
-    });
-    return jiant.html($(elem)).trim().replace(/!!/g, "!! ").replace(/e2013e03e11eee /g, "!! ");
+  function templateToHtml(that) {
+    if (typeof that === "string") {
+      return that;
+    }
+    if (that instanceof DocumentFragment) {
+      const wrap = document.createElement("div");
+      wrap.appendChild(that.cloneNode(true));
+      return wrap.innerHTML || "";
+    }
+    if (that && that.nodeType) {
+      return that.innerHTML || "";
+    }
+    return "";
+  }
+
+  function htmlToFragment(html) {
+    const tpl = document.createElement("template");
+    tpl.innerHTML = html;
+    return tpl.content;
+  }
+
+  function fragmentOrElem(html) {
+    const frag = htmlToFragment(html);
+    return frag.children.length === 1 ? frag.children[0] : frag;
   }
 
   function parseTemplate(that, data, tmId, mapping) {
@@ -192,14 +207,8 @@ jiant.module("jiant-util", ["jiant-log"], function({jiant}) {
     try {
       let func = tmId ? _tmplCache[tmId] : null;
       if (!func) {
-        const tmp = $("<i></i>");
-        typeof that === "string" && jiant.html(tmp, that);
-        let str = jiant.html(typeof that === "string" ? tmp : $(that)).trim();
-        if (!jiant.isMSIE) {
-          str = str.replace(/!!/g, "!! ");
-        } else {
-          str = msieDom2Html($(that));
-        }
+        let str = templateToHtml(that).trim();
+        str = str.replace(/!!/g, "!! ");
         const strFunc =
             "var p=[],print=function(){p.push.apply(p,arguments);};" +
             "with(obj){p.push('" +
@@ -273,7 +282,7 @@ jiant.module("jiant-util", ["jiant-log"], function({jiant}) {
       .toLowerCase();
 
   const exp = {
-    parseTemplate: function(text, data) {return $(parseTemplate(text, data));},
+    parseTemplate: function(text, data) {return fragmentOrElem(parseTemplate(text, data));},
     parseTemplate2Text: parseTemplate2Text,
     _parseTemplate: parseTemplate,
     getFunctionParamNames : getParamNames,
@@ -299,17 +308,38 @@ jiant.module("jiant-util", ["jiant-log"], function({jiant}) {
     toKebabCase: toKebabCase,
     createEventBus: createEventBus,
     dom: {
-      isJq: function(val) { return !!val && val.jquery; },
-      first: function(elem) { return elem && elem.jquery ? elem[0] : elem; },
+      isElem: function(val) { return !!val && val.nodeType === 1; },
+      isNode: function(val) { return !!val && typeof val.nodeType === "number"; },
+      first: function(elem) {
+        if (!elem) { return null; }
+        if (elem._el) { elem = elem._el; }
+        if (elem.nodeType) {
+          if (elem.nodeType === 11) {
+            return elem.children && elem.children.length ? elem.children[0] : null;
+          }
+          return elem;
+        }
+        if (elem instanceof NodeList || elem instanceof HTMLCollection || Array.isArray(elem)) { return elem[0] || null; }
+        return elem;
+      },
       forEach: function(elem, cb) {
         if (!elem) { return; }
-        if (elem.jquery) {
+        if (elem._el) { elem = elem._el; }
+        if (elem instanceof DocumentFragment) {
+          const children = elem.children || [];
+          for (let i = 0; i < children.length; i++) { cb(children[i]); }
+        } else if (elem instanceof NodeList || elem instanceof HTMLCollection || Array.isArray(elem)) {
           for (let i = 0; i < elem.length; i++) { cb(elem[i]); }
         } else { cb(elem); }
       },
       on: function(elem, eventName, handler) {
         exp.dom.forEach(elem, function(el) {
           el.addEventListener(eventName, function(evt) { handler(evt, evt.detail); });
+        });
+      },
+      off: function(elem, eventName, handler) {
+        exp.dom.forEach(elem, function(el) {
+          el.removeEventListener(eventName, handler);
         });
       },
       trigger: function(elem, eventName, detail) {
@@ -346,21 +376,35 @@ jiant.module("jiant-util", ["jiant-log"], function({jiant}) {
         if (el.dataset && key in el.dataset) { return el.dataset[key]; }
         return el.getAttribute ? el.getAttribute("data-" + key) : undefined;
       },
+      attr: function(elem, key, val) {
+        const el = exp.dom.first(elem);
+        if (!el || !el.getAttribute) { return undefined; }
+        if (arguments.length < 3) {
+          return el.getAttribute(key);
+        }
+        exp.dom.forEach(elem, function(node) { node.setAttribute && node.setAttribute(key, val); });
+        return val;
+      },
       setDisabled: function(elem, disabled) {
         exp.dom.forEach(elem, function(el) { el.disabled = !!disabled; });
       },
       append: function(parent, child) {
-        const p = exp.dom.first(parent);
+        const rawParent = parent && parent._el ? parent._el : parent;
+        const p = rawParent instanceof DocumentFragment ? rawParent : exp.dom.first(rawParent);
         if (!p || !child) { return; }
-        if (child.jquery) {
+        if (child instanceof DocumentFragment) {
+          p.appendChild(child);
+        } else if (child instanceof NodeList || child instanceof HTMLCollection || Array.isArray(child)) {
           for (let i = 0; i < child.length; i++) { p.appendChild(child[i]); }
         } else if (child.nodeType) {
           p.appendChild(child);
         }
       },
       insertBefore: function(elem, ref) {
-        const node = exp.dom.first(elem);
-        const refNode = exp.dom.first(ref);
+        const rawElem = elem && elem._el ? elem._el : elem;
+        const rawRef = ref && ref._el ? ref._el : ref;
+        const node = rawElem instanceof DocumentFragment ? rawElem : exp.dom.first(rawElem);
+        const refNode = exp.dom.first(rawRef);
         if (!node || !refNode || !refNode.parentNode) { return; }
         refNode.parentNode.insertBefore(node, refNode);
       },
@@ -371,6 +415,17 @@ jiant.module("jiant-util", ["jiant-log"], function({jiant}) {
         });
       },
       html: function(elem, html) {
+        if (arguments.length < 2) {
+          const el = exp.dom.first(elem);
+          if (!el) { return undefined; }
+          if ("innerHTML" in el) { return el.innerHTML; }
+          if (el.nodeType === 11) {
+            const wrap = document.createElement("div");
+            wrap.appendChild(el.cloneNode(true));
+            return wrap.innerHTML;
+          }
+          return undefined;
+        }
         exp.dom.forEach(elem, function(el) { el.innerHTML = html; });
       },
       hide: function(elem) {
@@ -379,10 +434,35 @@ jiant.module("jiant-util", ["jiant-log"], function({jiant}) {
       show: function(elem) {
         exp.dom.forEach(elem, function(el) { el.style.display = ""; });
       },
+      empty: function(elem) {
+        exp.dom.forEach(elem, function(el) {
+          if ("innerHTML" in el) {
+            el.innerHTML = "";
+          } else {
+            while (el.firstChild) {
+              el.removeChild(el.firstChild);
+            }
+          }
+        });
+      },
+      css: function(elem, prop, val) {
+        const el = exp.dom.first(elem);
+        if (!el || !el.style) { return undefined; }
+        if (arguments.length < 3) {
+          return el.style[prop];
+        }
+        exp.dom.forEach(elem, function(node) { node.style[prop] = val; });
+        return val;
+      },
       getVal: function(elem) {
         if (!elem) { return undefined; }
-        if (elem.jquery) { return elem.val(); }
-        return "value" in elem ? elem.value : undefined;
+        const el = exp.dom.first(elem);
+        return el && "value" in el ? el.value : undefined;
+      },
+      setVal: function(elem, val) {
+        exp.dom.forEach(elem, function(el) {
+          if ("value" in el) { el.value = val; }
+        });
       }
     }
   };

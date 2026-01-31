@@ -1,4 +1,4 @@
-jiant.module("initMain", function($, app) {
+jiant.module("initMain", function({app}) {
 
   jiant.onApp(app, function() {
     app.views.main.propagate({

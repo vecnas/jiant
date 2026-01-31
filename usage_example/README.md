@@ -14,5 +14,5 @@ Index
 - tutorial/: module basics tutorial
 
 Notes
-- Examples use jQuery 3.7.1 via CDN.
+- Examples use native DOM APIs.
 - Most examples now use jiant.app instead of the legacy bindUi.

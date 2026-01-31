@@ -1,22 +1,43 @@
 jiant.module("jiant-uifactory", function({jiant}) {
 
   this.singleton();
-  const $ = window.jQuery;
+  function htmlToFragment(html) {
+    const tpl = document.createElement("template");
+    tpl.innerHTML = html;
+    return tpl.content;
+  }
+
+  function selectOne(root, selector) {
+    const scope = root || document;
+    return scope.querySelector(selector);
+  }
+
+  function selectAll(root, selector) {
+    const scope = root || document;
+    return scope.querySelectorAll(selector);
+  }
+
+  function matchesSelector(elem, selector) {
+    return elem && elem.nodeType && elem.matches && elem.matches(selector);
+  }
 
   function view(prefix, viewId, viewContent, byTags) {
-    const id = "#" + prefix + viewId;
+    const idSel = "#" + prefix + viewId;
     if (viewContent.impl) {
-      return $(viewContent.impl);
+      if (typeof viewContent.impl === "string") {
+        return htmlToFragment(viewContent.impl);
+      }
+      return viewContent.impl;
     } else if (byTags === "after-class") {
-      const byCls = $(id);
-      return byCls[0] ? byCls : $(viewId);
+      const byCls = selectOne(null, idSel);
+      return byCls || selectOne(null, viewId);
     } else if (byTags === "before-class") {
-      const byTag = $(viewId);
-      return byTag[0] ? byTag : $(id);
+      const byTag = selectOne(null, viewId);
+      return byTag || selectOne(null, idSel);
     } else if (!!byTags) {
-      return $(viewId);
+      return selectOne(null, viewId);
     } else {
-      return $(id);
+      return selectOne(null, idSel);
     }
   }
 
@@ -24,18 +45,18 @@ jiant.module("jiant-uifactory", function({jiant}) {
     const path = "." + prefix + componentId;
     let result;
     if (byTags === "after-class") {
-      const byCls = viewElem.find(path);
-      result = byCls[0] ? byCls : viewElem.find(componentId);
+      const byCls = selectAll(viewElem, path);
+      result = byCls.length ? byCls : selectAll(viewElem, componentId);
     } else if (byTags === "before-class") {
-      const byTag = viewElem.find(componentId);
-      result = byTag[0] ? byTag : viewElem.find(path);
+      const byTag = selectAll(viewElem, componentId);
+      result = byTag.length ? byTag : selectAll(viewElem, path);
     } else if (!!byTags) {
-      result = viewElem.find(componentId);
+      result = selectAll(viewElem, componentId);
     } else {
-      result = viewElem.find(path);
+      result = selectAll(viewElem, path);
     }
-    if (!result.length) {
-      result = viewElem.filter(path);
+    if (!result.length && matchesSelector(viewElem, path)) {
+      result = [viewElem];
     }
     if (!optional) {
       bindLogger && bindLogger.result(ensureExists(result, prefix + viewId, prefix + componentId, optional));
@@ -44,7 +65,7 @@ jiant.module("jiant-uifactory", function({jiant}) {
   }
 
   function ensureExists(obj, idName, className, optional) {
-    if (obj && obj.length) {
+    if (obj && (obj.length || obj.nodeType)) {
       return "";
     }
     if (optional) {

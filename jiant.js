@@ -19,7 +19,33 @@
     factory();
   }
 }(function() {
-  const $ = window.jQuery;
+  function firstElem(elem) {
+    if (!elem) { return null; }
+    if (elem._el) { elem = elem._el; }
+    if (elem.nodeType) {
+      if (elem.nodeType === 11) {
+        return elem.children && elem.children.length ? elem.children[0] : null;
+      }
+      return elem;
+    }
+    if (elem instanceof NodeList || elem instanceof HTMLCollection || Array.isArray(elem)) {
+      return elem[0] || null;
+    }
+    return elem;
+  }
+
+  function forEachElem(elem, cb) {
+    if (!elem) { return; }
+    if (elem._el) { elem = elem._el; }
+    if (elem instanceof DocumentFragment) {
+      const children = elem.children || [];
+      for (let i = 0; i < children.length; i++) { cb(children[i]); }
+    } else if (elem instanceof NodeList || elem instanceof HTMLCollection || Array.isArray(elem)) {
+      for (let i = 0; i < elem.length; i++) { cb(elem[i]); }
+    } else {
+      cb(elem);
+    }
+  }
 
   function createEventBus() {
     const listeners = {};
@@ -81,9 +107,6 @@
     if (!injectTo) {
       return document.body;
     }
-    if (injectTo.jquery) {
-      return injectTo[0];
-    }
     if (injectTo.nodeType) {
       return injectTo;
     }
@@ -140,7 +163,7 @@
       singletones = {},
       /**
        * Event bus for application bound events, events identified by application id
-       * @type {jQuery|HTMLElement|*}
+       * @type {*}
        */
       appBoundEventBus = createEventBus(),
       /**
@@ -279,7 +302,7 @@
         mname = moduleSpec.name,
         module = loadedModules[mname];
     if (typeof module === "function") {
-      const args = {$, app: appRoot, jiant, params: moduleSpec};
+      const args = {app: appRoot, jiant, params: moduleSpec};
       module.parsedDeps && module.parsedDeps.forEach(function(name) {
         args[name] = appRoot.modules[name];
         // args.push(appRoot.modules[name]);
@@ -528,27 +551,58 @@
   }
 
   function empty(elem) {
-    return elem.empty();
+    forEachElem(elem, function(el) {
+      if ("innerHTML" in el) {
+        el.innerHTML = "";
+      } else {
+        while (el.firstChild) {
+          el.removeChild(el.firstChild);
+        }
+      }
+    });
   }
 
   function jHtml(elem, val) {
-    return arguments.length > 1 ? elem.html(val) : elem.html();
+    if (arguments.length > 1) {
+      forEachElem(elem, function(el) { el.innerHTML = val; });
+      return val;
+    }
+    const el = firstElem(elem);
+    if (!el) {
+      return undefined;
+    }
+    if ("innerHTML" in el) {
+      return el.innerHTML;
+    }
+    if (el.nodeType === 11) {
+      const wrap = document.createElement("div");
+      wrap.appendChild(el.cloneNode(true));
+      return wrap.innerHTML;
+    }
+    return undefined;
   }
 
   function addClass(elem, cls) {
-    return elem.addClass(cls);
+    forEachElem(elem, function(el) { el.classList && el.classList.add(cls); });
   }
 
   function hide(elem) {
-    return elem.hide();
+    forEachElem(elem, function(el) { el.style.display = "none"; });
   }
 
   function show(elem) {
-    return elem.show();
+    forEachElem(elem, function(el) { el.style.display = ""; });
   }
 
   function css(elem) {
-    return elem.css.apply(elem, Array.prototype.slice.call(arguments, 1));
+    const args = Array.prototype.slice.call(arguments, 1);
+    const el = firstElem(elem);
+    if (!el || !el.style) { return undefined; }
+    if (args.length < 2) {
+      return el.style[args[0]];
+    }
+    forEachElem(elem, function(node) { node.style[args[0]] = args[1]; });
+    return args[1];
   }
 
   function addIfNeed(modules2load, depModule) {

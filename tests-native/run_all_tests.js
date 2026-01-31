@@ -9,7 +9,6 @@ const serverArgs = process.env.TEST_SERVER_ARGS
 
 const runners = [
   ["node", ["tests-native/run_modules_tests.js"]],
-  ["node", ["tests-native/run_jquery_compat.js"]],
   ["node", ["tests-native/run_ui_render_tests.js"]]
 ];
 

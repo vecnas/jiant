@@ -1,7 +1,20 @@
-jiant.module("jiant-comp", ["jiant-render", "jiant-spec"],
-  function({jiant, "jiant-render": Render, "jiant-spec": Spec}) {
+jiant.module("jiant-comp", ["jiant-render", "jiant-spec", "jiant-util"],
+  function({jiant, "jiant-render": Render, "jiant-spec": Spec, "jiant-util": util}) {
 
   this.singleton();
+  const dom = (util && util.dom) ? util.dom : jiant.dom;
+
+  function appendToTargets(targets, node) {
+    if (!targets || !node) {
+      return;
+    }
+    let first = true;
+    dom.forEach(targets, function(target) {
+      const toAppend = first ? node : (node.cloneNode ? node.cloneNode(true) : node);
+      first = false;
+      dom.append(target, toAppend);
+    });
+  }
 
   function getCompRenderer({app: appRoot, componentId, templateId, viewId, field, spec: compSpec}) {
     return function({data, val, view, elem, isUpdate, settings}) {
@@ -42,7 +55,7 @@ jiant.module("jiant-comp", ["jiant-render", "jiant-spec"],
               }
             });
             view[field].propagate = function() {el.propagate.apply(el, arguments)};
-            elem.append(el);
+            appendToTargets(elem, el);
             const args = {data: actualObj, val, view, elem: el, isUpdate, settings};
             Render.callOnRender({app: appRoot, viewId, templateId, field, args});
           }

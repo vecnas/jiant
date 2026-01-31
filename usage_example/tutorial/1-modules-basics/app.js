@@ -2,9 +2,11 @@
 
   jiant.DEV_MODE = true;
 
-  jiant.module("m1", ["m0"], function($, app, jiant, params, m0) {
-    $("body").append("<h1>M1 text</h1>");
-    $(document).click(() => m0.setColor("lime"));
+  jiant.module("m1", ["m0"], function({app, jiant, params, m0}) {
+    const h1 = document.createElement("h1");
+    h1.textContent = "M1 text";
+    jiant.dom.append(document.body, h1);
+    document.addEventListener("click", () => m0.setColor("lime"));
   });
 
   const app = {

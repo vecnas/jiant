@@ -2,7 +2,6 @@
 <html>
 <head>
     <title></title>
-    <script type="text/javascript" src="https://code.jquery.com/jquery-3.7.1.min.js"
             integrity="sha256-/JqT3SQfawRcv/BIHPThkBvs0OEvtFFmqPF/lYI/Cxo="
             crossorigin="anonymous"></script>
     <script src="../jiant.js"></script>
@@ -52,14 +51,14 @@
             }
         }
     };
-    $(function() {
+    document.addEventListener("DOMContentLoaded", function() {
         jiant.DEV_MODE = true;
         jiant.app(app);
         jiant.onApp(app, function() {
-            app.views.main.ctl.click(function() {
+            jiant.dom.on(app.views.main.ctl, "click", function() {
                 var tm = app.templates.tmTest.parseTemplate({v1: "with spaces here", v2: "and value with spaces"});
-                app.views.main.container.append(tm);
-                tm.ctl.click(function() {
+                jiant.dom.append(app.views.main.container, tm);
+                jiant.dom.on(tm.ctl, "click", function() {
                     alert(1);
                 });
                 app.views.main.propagate({field1: "ASTA!", field2: "LA VISTA!", ctl: "MAMBA"});
@@ -71,7 +70,7 @@
             };
             var myT = jiant.bindTemplate(app, "myT", tSpec);
             jiant.logInfo(myT);
-            $("body").append(myT.parseTemplate());
+            jiant.dom.append(document.body, myT.parseTemplate());
         });
     });
 </script>

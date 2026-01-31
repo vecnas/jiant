@@ -17,6 +17,9 @@
     if (!node) {
       return;
     }
+    if (node._el) {
+      node = node._el;
+    }
     if (node.nodeType) {
       document.body.appendChild(node);
       return;
@@ -124,7 +127,7 @@
           tR: {
             impl: "<b id='tR'><span>Component</span></b>",
             renderer: function({view}) {
-              view.html("wow");
+              jiant.dom.html(view, "wow");
               assert.ok(true, "renderer called for component");
               done();
             }
@@ -158,7 +161,7 @@
           ttCC: {
             impl: "<b id='ttCC'><span>TT Component</span></b>",
             renderer: function({view}) {
-              view.html("comp inside comp");
+              jiant.dom.html(view, "comp inside comp");
               assert.ok(true, "renderer called for component inside component");
               done();
             }

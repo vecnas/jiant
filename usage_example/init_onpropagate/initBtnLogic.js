@@ -1,4 +1,4 @@
-jiant.module("initBtnLogic", function($, app) {
+jiant.module("initBtnLogic", function({app}) {
 
   app.templates.btnTm = {
     impl: "<i><div><button class='_title'></button>-<button class='_currentTitle'></button>-<button class='_initialTitle'></button></div></i>",
@@ -14,7 +14,7 @@ jiant.module("initBtnLogic", function($, app) {
     jiant.logInfo("Called init with this and first arg: ", this, elem);
 
     // elem.initialTitle.click(()=>alert(data.value));
-    this.title.click(()=>alert(this.data("value")));
+    jiant.dom.on(this.title, "click", () => alert(this.value()));
     // elem.currentTitle.click(()=>alert(latestValue));
   };
 

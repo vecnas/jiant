@@ -1,7 +1,44 @@
 jiant.module("jiant-fields", [], function({app, jiant, params}) {
 
   this.singleton();
-  const $ = window.jQuery;
+  const dom = jiant.dom;
+
+  function ensureValueApi(elem) {
+    if (!elem || elem.val) {
+      return;
+    }
+    elem.val = function(val) {
+      if (arguments.length === 0) {
+        return dom.getVal(elem);
+      }
+      dom.setVal(elem, val);
+      return val;
+    };
+  }
+
+  function ensureAttrApi(elem) {
+    if (!elem || elem.attr) {
+      return;
+    }
+    elem.attr = function(key, val) {
+      if (arguments.length < 2) {
+        return dom.attr(elem, key);
+      }
+      return dom.attr(elem, key, val);
+    };
+  }
+
+  function ensureHtmlApi(elem) {
+    if (!elem || elem.html) {
+      return;
+    }
+    elem.html = function(val) {
+      if (arguments.length === 0) {
+        return dom.html(elem);
+      }
+      return dom.html(elem, val);
+    };
+  }
 
   const customElementTypes = {};
 
@@ -31,7 +68,7 @@ jiant.module("jiant-fields", [], function({app, jiant, params}) {
     viewRoot[componentId].renderer = ({data, val, view, elem, isUpdate}) => {
       if (view[markerName]) {
         jiant.each(view[markerName], function (i, cls) {
-          cls && view.removeClass(cls);
+          cls && dom.removeClass(view, cls);
         });
       }
       view[markerName] = [];
@@ -62,9 +99,9 @@ jiant.module("jiant-fields", [], function({app, jiant, params}) {
     dataName = dataName || componentId;
     viewRoot[componentId] = function(val) {
       if (arguments.length === 0) {
-        return viewRoot.attr("data-" + dataName);
+        return dom.attr(viewRoot, "data-" + dataName);
       } else {
-        return viewRoot.attr("data-" + dataName, val);
+        return dom.attr(viewRoot, "data-" + dataName, val);
       }
     };
   }
@@ -73,12 +110,12 @@ jiant.module("jiant-fields", [], function({app, jiant, params}) {
     const pagerBus = jiant.createEventBus(),
         roots = [];
     let lastPage = 0, lastTotalCls;
-    jiant.each(uiElem, function(i, elem) {
-      const root = $("<ul></ul>");
-      jiant.addClass(root, "pagination");
-      jiant.dom.append(elem, root);
-      roots.push(root);
-    });
+      dom.forEach(uiElem, function(elem) {
+        const root = document.createElement("ul");
+        jiant.addClass(root, "pagination");
+        jiant.dom.append(elem, root);
+        roots.push(root);
+      });
     uiElem.onValueChange = function(callback) {
       pagerBus.on("ValueChange", callback);
     };
@@ -123,10 +160,10 @@ jiant.module("jiant-fields", [], function({app, jiant, params}) {
       });
     };
     function addPageCtl(root, value, ctlClass) {
-      const ctl = $(jiant.parseTemplate($("<b><li class='!!ctlClass!!' style='cursor: pointer;'><a>!!label!!</a></li></b>"),
-          {label: value !== -1 ? value : "...", ctlClass: ctlClass}));
+      const ctl = jiant.parseTemplate("<li class='!!ctlClass!!' style='cursor: pointer;'><a>!!label!!</a></li>",
+          {label: value !== -1 ? value : "...", ctlClass: ctlClass});
       jiant.dom.append(root, ctl);
-      value !== -1 && ctl.click(function() {
+      value !== -1 && dom.on(ctl, "click", function() {
         lastPage = value;
         uiElem.refreshPage();
       });
@@ -135,28 +172,30 @@ jiant.module("jiant-fields", [], function({app, jiant, params}) {
   }
 
   function setupContainerPaged(uiElem) {
-    let prev = $("<div>&laquo;</div>"),
-        next = $("<div>&raquo;</div>"),
-        container = $("<div></div>"),
+    let prev = document.createElement("div"),
+        next = document.createElement("div"),
+        container = document.createElement("div"),
         pageSize = 8,
         offset = 0;
+    prev.innerHTML = "&laquo;";
+    next.innerHTML = "&raquo;";
     jiant.addClass(prev, "paged-prev");
     jiant.addClass(next, "paged-next");
     jiant.addClass(container, "paged-container");
     jiant.empty(uiElem);
-    uiElem.append(prev);
-    uiElem.append(container);
-    uiElem.append(next);
-    prev.click(function() {
+    dom.append(uiElem, prev);
+    dom.append(uiElem, container);
+    dom.append(uiElem, next);
+    dom.on(prev, "click", function() {
       offset -= pageSize;
       sync();
     });
-    next.click(function() {
+    dom.on(next, "click", function() {
       offset += pageSize;
       sync();
     });
     uiElem.append = function(elem) {
-      container.append(elem);
+      dom.append(container, elem);
       sync();
     };
     uiElem.empty = function() {
@@ -177,11 +216,11 @@ jiant.module("jiant-fields", [], function({app, jiant, params}) {
 
     function sync() {
       offset = Math.max(offset, 0);
-      offset = Math.min(offset, container.children().length - 1);
+      offset = Math.min(offset, container.children.length - 1);
       jiant.css(prev, "visibility", offset > 0 ? "visible" : "hidden");
-      jiant.css(next, "visibility", offset < container.children().length - pageSize ? "visible" : "hidden");
-      jiant.each(container.children(), function(idx, domElem) {
-        let elem = $(domElem);
+      jiant.css(next, "visibility", offset < container.children.length - pageSize ? "visible" : "hidden");
+      jiant.each(container.children, function(idx, domElem) {
+        let elem = domElem;
 //        logInfo("comparing " + idx + " vs " + offset + " - " + (offset+pageSize));
         if (idx >= offset && idx < offset + pageSize) {
 //          logInfo("showing");
@@ -195,29 +234,29 @@ jiant.module("jiant-fields", [], function({app, jiant, params}) {
 
   function setupImage(uiElem) {
     uiElem.reload = function (url) {
-      url = url || this.attr("src");
+      url = url || dom.attr(uiElem, "src");
       url = (url.indexOf("?") > -1) ? url : url + "?";
       const antiCache = "&_=" + new Date().getTime();
       url = (url.indexOf("&_=") > -1) ? url.replace(/&_=[0-9]{13}/, antiCache) : url + antiCache;
-      this.attr("src", url);
+      dom.attr(uiElem, "src", url);
     }
   }
 
   function setupCtlHide(viewOrTm, elem) {
-    elem.click(function() {jiant.hide(viewOrTm)})
+    dom.on(elem, "click", function() {jiant.hide(viewOrTm)})
   }
 
   function setupCtlBack(viewOrTm, elem) {
-    elem.click(function() {window.history.back()})
+    dom.on(elem, "click", function() {window.history.back()})
   }
 
   function setupCtl2root(app, elem) {
-    elem.click(function() {jiant.goRoot(app)})
+    dom.on(elem, "click", function() {jiant.goRoot(app)})
   }
 
   function setupCtl2state(viewOrTm, elem, app, name) {
     const stateName = name.endsWith("Ctl") ? name.substring(0, name.length - 3) : name;
-    elem.click(function() {app.states[stateName].go()})
+    dom.on(elem, "click", function() {app.states[stateName].go()})
   }
 
   function fit(val, min, max) {
@@ -227,14 +266,16 @@ jiant.module("jiant-fields", [], function({app, jiant, params}) {
   }
 
   function setupInputInt(input) {
-    input.keydown(function(event) {
+    ensureValueApi(input);
+    ensureAttrApi(input);
+    dom.on(input, "keydown", function(event) {
       if (event.keyCode === jiant.key.down && input.val() > 0) {
         input.val(fit(input.valInt() - 1, input.j_valMin, input.j_valMax));
-        input.trigger("change");
+        dom.trigger(input, "change");
         return false;
       } else if (event.keyCode === jiant.key.up) {
         input.val(fit(input.valInt() + 1, input.j_valMin, input.j_valMax));
-        input.trigger("change");
+        dom.trigger(input, "change");
         return false;
       } else if ( event.keyCode === jiant.key.end || event.keyCode === jiant.key.home || event.keyCode === jiant.key.tab || event.keyCode === jiant.key.enter) {
         input.val(fit(input.valInt(), input.j_valMin, input.j_valMax));
@@ -263,14 +304,16 @@ jiant.module("jiant-fields", [], function({app, jiant, params}) {
   }
 
   function setupInputFloat(input) {
-    input.keydown(function(event) {
+    ensureValueApi(input);
+    ensureAttrApi(input);
+    dom.on(input, "keydown", function(event) {
       if (event.keyCode === jiant.key.down && input.val() > 0) {
         input.val(fit(input.valFloat() - 1, input.j_valMin, input.j_valMax));
-        input.trigger("change");
+        dom.trigger(input, "change");
         return false;
       } else if (event.keyCode === jiant.key.up) {
         input.val(fit(input.valFloat() + 1, input.j_valMin, input.j_valMax));
-        input.trigger("change");
+        dom.trigger(input, "change");
         return false;
       } else if (event.keyCode === jiant.key.dot || event.keyCode === jiant.key.dotExtra) {
         return (input.val().indexOf(".") < 0) && input.val().length > 0;
@@ -301,22 +344,23 @@ jiant.module("jiant-fields", [], function({app, jiant, params}) {
   }
 
   function setupForm(appRoot, elem, key, name) {
-    if (! elem[0]) {
+    const formEl = dom.first(elem);
+    if (!formEl) {
       return;
     }
-    const tagName = elem[0].tagName.toLowerCase();
+    const tagName = formEl.tagName.toLowerCase();
     if (tagName !== "form") {
       jiant.logError(key + "." + name + " form element assigned to non-form: " + tagName);
       jiant.DEV_MODE && alert(key + "." + name + " form element assigned to non-form: " + tagName);
     }
     elem.submitForm = function(url, cb) {
-      url = url ? url : elem.attr("action");
-      url = isCouldBePrefixed(url) ? ((appRoot.ajaxPrefix ? appRoot.ajaxPrefix : jiant.AJAX_PREFIX ? jiant.AJAX_PREFIX : "") + url) : url;
-      url = isCouldBePrefixed(url) ? (url + (appRoot.ajaxSuffix ? appRoot.ajaxSuffix : jiant.AJAX_SUFFIX ? jiant.AJAX_SUFFIX : "")) : url;
+      url = url ? url : dom.attr(elem, "action");
+      url = jiant.isCouldBePrefixed(url) ? ((appRoot.ajaxPrefix ? appRoot.ajaxPrefix : jiant.AJAX_PREFIX ? jiant.AJAX_PREFIX : "") + url) : url;
+      url = jiant.isCouldBePrefixed(url) ? (url + (appRoot.ajaxSuffix ? appRoot.ajaxSuffix : jiant.AJAX_SUFFIX ? jiant.AJAX_SUFFIX : "")) : url;
       const settings = {
         method: "POST",
         url: url,
-        data: elem.serialize()
+        data: serializeForm(formEl)
       };
       if (appRoot.crossDomain) {
         settings.crossDomain = true;
@@ -337,6 +381,18 @@ jiant.module("jiant-fields", [], function({app, jiant, params}) {
         return;
       });
     };
+  }
+
+  function serializeForm(form) {
+    if (!form) {
+      return "";
+    }
+    const data = new FormData(form);
+    const params = new URLSearchParams();
+    data.forEach(function(value, key) {
+      params.append(key, value);
+    });
+    return params.toString();
   }
 
   function fetchForm(settings) {
@@ -370,6 +426,7 @@ jiant.module("jiant-fields", [], function({app, jiant, params}) {
   }
 
   function setupNumLabel(appRoot, uiElem) {
+    ensureHtmlApi(uiElem);
     const prev = uiElem.html;
     uiElem.html = function(val) {
       const num = parseInt(val);

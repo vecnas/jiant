@@ -1,5 +1,5 @@
 jiant.module("jiant-ui", ["jiant-auto", "jiant-render", "jiant-types", "jiant-spec"],
-  function ({$, app, jiant, params, "jiant-auto": Auto, "jiant-render": Render, "jiant-types": JType,
+  function ({app, jiant, params, "jiant-auto": Auto, "jiant-render": Render, "jiant-types": JType,
               "jiant-spec": Spec}) {
 
     this.singleton();
@@ -7,7 +7,8 @@ jiant.module("jiant-ui", ["jiant-auto", "jiant-render", "jiant-types", "jiant-sp
     const serviceNames = ["parseTemplate", "parseTemplate2Text", "propagate", "renderer"];
 
     function scanForSpec(prefix, content, elem) {
-      const children = elem[0].getElementsByTagName("*");
+      const root = dom.first(elem);
+      const children = root && root.querySelectorAll ? root.querySelectorAll("*") : [];
       for (const child of children) {
         for (const cls of child.className.split(/\s+/)) {
           if (cls.startsWith(prefix)) {
@@ -21,8 +22,11 @@ jiant.module("jiant-ui", ["jiant-auto", "jiant-render", "jiant-types", "jiant-sp
     }
 
     function hndlOn({that, fnName, val, useCls, clsVal, useExactVal, exactVal}) {
-      const p = that._j.parent._j,
+      const p = that && that._j && that._j.parent ? (that._j.parent._j = that._j.parent._j || {}) : null,
         fn = typeof val === "function";
+      if (!p) {
+        return;
+      }
       let dir = true;
       p[fnName] = p[fnName] || [];
       if (!fn && val.startsWith("!")) {
@@ -39,28 +43,32 @@ jiant.module("jiant-ui", ["jiant-auto", "jiant-render", "jiant-types", "jiant-sp
       p[fnName].push(data);
     }
 
-    $.fn.extend({
-      showOn: function (fldOrCb, exactVal) {
-        hndlOn({that: this, fnName: "showing", val: fldOrCb, useCls: false,
-          useExactVal: arguments.length > 1, exactVal: exactVal});
-      },
-      hideOn: function (fldOrCb, exactVal) {
-        if (typeof fldOrCb === "function") {
-          this.showOn(function () {
-            return !fldOrCb.apply(this, arguments);
-          });
-        } else {
-          fldOrCb = (fldOrCb.startsWith("!")) ? fldOrCb.substr(1) : ("!" + fldOrCb);
-          arguments.length > 1 ? this.showOn(fldOrCb, exactVal) : this.showOn(fldOrCb);
-        }
-      },
-      switchClassOn: function (clsOrCb, fldOrCb, exactVal) {
-        hndlOn({that: this, fnName: "switchClass", val: fldOrCb, useCls: true,
-          clsVal: clsOrCb, useExactVal: arguments.length > 1, exactVal: exactVal});
-      }
-    });
-
     const dom = jiant.dom;
+
+    function showOn(elem, fldOrCb, exactVal) {
+      dom.forEach(elem, function(el) {
+        hndlOn({that: el, fnName: "showing", val: fldOrCb, useCls: false,
+          useExactVal: arguments.length > 2, exactVal: exactVal});
+      });
+    }
+
+    function hideOn(elem, fldOrCb, exactVal) {
+      if (typeof fldOrCb === "function") {
+        showOn(elem, function () {
+          return !fldOrCb.apply(this, arguments);
+        });
+      } else {
+        fldOrCb = (fldOrCb.startsWith("!")) ? fldOrCb.substr(1) : ("!" + fldOrCb);
+        showOn(elem, fldOrCb, exactVal);
+      }
+    }
+
+    function switchClassOn(elem, clsOrCb, fldOrCb, exactVal) {
+      dom.forEach(elem, function(el) {
+        hndlOn({that: el, fnName: "switchClass", val: fldOrCb, useCls: true,
+          clsVal: clsOrCb, useExactVal: arguments.length > 3, exactVal: exactVal});
+      });
+    }
 
     function getComponentType(spec) {
       return JType.is(spec) ? spec.tp() : (typeof spec === "object" && "tp" in spec) ? spec.tp : spec;
@@ -78,7 +86,7 @@ jiant.module("jiant-ui", ["jiant-auto", "jiant-render", "jiant-types", "jiant-sp
           on = Array.isArray(item.exactVal) ? jiant.inArray(on, item.exactVal) >= 0 : on === item.exactVal;
         }
         on = item.dir ? on : !on;
-        item.el[on ? "show" : "hide"]();
+        on ? dom.show(item.el) : dom.hide(item.el);
       });
       view._j.switchClass && view._j.switchClass.forEach(function (item) {
         let on;
@@ -91,7 +99,7 @@ jiant.module("jiant-ui", ["jiant-auto", "jiant-render", "jiant-types", "jiant-sp
           on = Array.isArray(item.exactVal) ? jiant.inArray(on, item.exactVal) >= 0 : on === item.exactVal;
         }
         on = item.dir ? on : !on;
-        item.el[on ? "addClass" : "removeClass"](item.cls);
+        on ? dom.addClass(item.el, item.cls) : dom.removeClass(item.el, item.cls);
       });
     }
 
@@ -106,7 +114,7 @@ jiant.module("jiant-ui", ["jiant-auto", "jiant-render", "jiant-types", "jiant-sp
           mappedKey = (mapping && (fieldKey in mapping)) ? mapping[fieldKey] : fieldKey;
           val = typeof mappedKey === "function" ? mappedKey.apply(data) : data[mappedKey];
           if (elemType?.alwaysUpdatable || Render.isOnRenderPresent({app, viewId, templateId, field: fieldKey})
-            || (data && val !== undefined && val !== null && !isServiceName(fieldKey) && !dom.isJq(val))) {
+            || (data && val !== undefined && val !== null && !isServiceName(fieldKey) && !dom.isNode(val))) {
 
             const actualVal = typeof val === "function" ? val.apply(data) : val;
             const actualElement = viewOrTm[componentKey],
@@ -125,7 +133,7 @@ jiant.module("jiant-ui", ["jiant-auto", "jiant-render", "jiant-types", "jiant-sp
               if (fn[fnKey]) {
                 const oldData = fn[fnKey][0];
                 oldData && oldData.off(fn[fnKey][1]);
-                fn[fnKey][2] && actualElement.off && actualElement.off("change", fn[fnKey][2]);
+                fn[fnKey][2] && dom.off(actualElement, "change", fn[fnKey][2]);
               }
               if (typeof val !== "function") { // ?
                 mappedKey = null;
@@ -144,10 +152,11 @@ jiant.module("jiant-ui", ["jiant-auto", "jiant-render", "jiant-types", "jiant-sp
               });
               fn[fnKey] = [data, handler];
             }
-            if (reverseBinding && actualElement && actualElement.change) {
+            if (reverseBinding && actualElement) {
               const backHandler = function (event) {
-                const tagName = actualElement[0].tagName.toLowerCase(),
-                  tp = actualElement.attr("type"),
+                const actualEl = dom.first(actualElement);
+                const tagName = actualEl && actualEl.tagName ? actualEl.tagName.toLowerCase() : "",
+                  tp = dom.attr(actualElement, "type"),
                   etype = spec[componentKey];
 
                 function convert(val) {
@@ -156,7 +165,7 @@ jiant.module("jiant-ui", ["jiant-auto", "jiant-render", "jiant-types", "jiant-sp
 
                 function elem2arr(elem) {
                   const arr = [];
-                  jiant.each(elem, function (i, item) {
+                  dom.forEach(elem, function (item) {
                     dom.getChecked(item) && arr.push(convert(dom.getVal(item)));
                   });
                   return arr;
@@ -179,7 +188,7 @@ jiant.module("jiant-ui", ["jiant-auto", "jiant-render", "jiant-types", "jiant-sp
                     } else if (tagName in {"input": 1, "select": 1, "textarea": 1}) {
                       val.call(data, dom.getVal(actualElement)); // don't convert due to user may input "undefined" as string
                     } else if (tagName === "img") {
-                      val.call(data, actualElement.attr("src"));
+                      val.call(data, dom.attr(actualElement, "src"));
                       // no actual event for changing html, manual 'change' trigger supported by this code
                     } else {
                       val.call(data, jiant.html(actualElement));
@@ -188,7 +197,7 @@ jiant.module("jiant-ui", ["jiant-auto", "jiant-render", "jiant-types", "jiant-sp
                 }
               };
               // jiant.logInfo(viewOrTm, compKey, compElem);
-              actualElement.change(backHandler);
+              dom.on(actualElement, "change", backHandler);
               fn[fnKey] && fn[fnKey].push(backHandler);
             }
           }
@@ -233,7 +242,7 @@ jiant.module("jiant-ui", ["jiant-auto", "jiant-render", "jiant-types", "jiant-sp
           if (fn[fnKey]) {
             const oldData = fn[fnKey][0];
             oldData && oldData.off(fn[fnKey][1]);
-            fn[fnKey][2] && elem.off && elem.off("change", fn[fnKey][2]);
+            fn[fnKey][2] && dom.off(elem, "change", fn[fnKey][2]);
           }
         }
         if (jiant.DEV_MODE) {
@@ -250,12 +259,19 @@ jiant.module("jiant-ui", ["jiant-auto", "jiant-render", "jiant-types", "jiant-sp
       return serviceNames.indexOf(key) >= 0;
     }
 
+    jiant.showOn = showOn;
+    jiant.hideOn = hideOn;
+    jiant.switchClassOn = switchClassOn;
+
     return {
       makePropagationFunction,
       isServiceName,
       isOptional,
       scanForSpec,
       getComponentType,
+      showOn,
+      hideOn,
+      switchClassOn,
     }
 
   });

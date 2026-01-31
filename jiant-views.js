@@ -13,7 +13,7 @@ jiant.module("jiant-views", ["jiant-uifactory", "jiant-ui", "jiant-types", "jian
     viewRoot._j = {};
     jiant.each(viewRoot, function (componentId, elemSpec) {
       const componentTp = Ui.getComponentType(elemSpec);
-      const predefined = componentId in {"_scan": 1, "impl": 1, "appPrefix": 1, "renderer": 1, "jInit": 1, "_j": 1};
+      const predefined = componentId in {"_scan": 1, "impl": 1, "appPrefix": 1, "renderer": 1, "jInit": 1, "_j": 1, "_el": 1};
       if (! predefined) {
         Spec.viewSpec(appRoot, viewId)[componentId] = jiant.wrapType(elemSpec);
       }
@@ -36,16 +36,17 @@ jiant.module("jiant-views", ["jiant-uifactory", "jiant-ui", "jiant-types", "jian
             Ui.isOptional(elemSpec));
         viewRoot[componentId] = uiElem;
         addOnRender(componentId);
+        viewRoot[componentId] && (viewRoot[componentId]._j = {parent: viewRoot});
       }
     });
     viewRoot.onRender = (cb) => jiant.onRender({app: appRoot, viewId, cb});
   }
 
-  function ensureSafeExtend(spec, jqObject) {
+  function ensureSafeExtend(spec, baseObject) {
     jiant.each(spec, function(key, content) {
-      if (jqObject[key]) {
-        jiant.info("unsafe extension: " + key + " already defined in base jQuery, shouldn't be used, now overriding!");
-        jqObject[key] = undefined;
+      if (baseObject && baseObject[key]) {
+        jiant.info("unsafe extension: " + key + " already defined in base view element, shouldn't be used, now overriding!");
+        baseObject[key] = undefined;
       }
     });
   }
@@ -66,6 +67,7 @@ jiant.module("jiant-views", ["jiant-uifactory", "jiant-ui", "jiant-types", "jian
     }
     const prefix = jiant.getAppPrefix(appRoot, viewContent);
     viewImpl = viewImpl || UiFactory.view(prefix, viewId, viewContent, appRoot.bindByTag);
+    viewContent._el = viewImpl;
     if ("_scan" in viewContent) {
       Ui.scanForSpec(prefix, viewContent, viewImpl);
     }

@@ -10,9 +10,6 @@
 <div id="qunit"></div>
 <div id="qunit-fixture"></div>
 <script src="https://code.jquery.com/qunit/qunit-2.22.0.js"></script>
-<script src="https://code.jquery.com/jquery-3.7.1.min.js"
-        integrity="sha256-/JqT3SQfawRcv/BIHPThkBvs0OEvtFFmqPF/lYI/Cxo="
-        crossorigin="anonymous"></script>
 <script src="../jiant.js"></script>
 <script>
   const timeout = 2000;
@@ -111,7 +108,7 @@
           tR: {
             impl: "<b id='tR'><span>Component</span></b>",
             renderer: function({view}) {
-              view.html("wow");
+              jiant.dom.html(view, "wow");
               assert.ok(true, "renderer called for component");
               done();
             }
@@ -145,7 +142,7 @@
           ttCC: {
             impl: "<b id='ttCC'><span>TT Component</span></b>",
             renderer: function({view}) {
-              view.html("comp inside comp");
+              jiant.dom.html(view, "comp inside comp");
               assert.ok(true, "renderer called for component inside component");
               done();
             }

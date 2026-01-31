@@ -61,7 +61,7 @@ jiant.module("jiant-dev", function({jiant}) {
         path + "graph.js",
       ]});
     jiant.loadModule(app, "jiant-visualize", function() {
-      jiant.onApp(app, ["jiantVisualizer"], function($, app) {
+      jiant.onApp(app, ["jiantVisualizer"], function(app) {
         app.logic.jiantVisualizer.visualize($, app);
       });
     });

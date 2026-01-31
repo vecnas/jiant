@@ -2,7 +2,6 @@
 <html>
 <head>
     <title></title>
-    <script type="text/javascript" src="https://code.jquery.com/jquery-3.7.1.min.js"
             integrity="sha256-/JqT3SQfawRcv/BIHPThkBvs0OEvtFFmqPF/lYI/Cxo="
             crossorigin="anonymous"></script>
     <script src="../jiant.js"></script>
@@ -31,13 +30,13 @@
             }
         }
     };
-    $(function() {
+    document.addEventListener("DOMContentLoaded", function() {
         jiant.AJAX_PREFIX = "/some-prefix/";
         jiant.onApp(app, function() {
-            app.views.main.ctl.click(function() {
+            jiant.dom.on(app.views.main.ctl, "click", function() {
                 app.ajax.test();
             });
-            app.views.main.ctl2.click(function() {
+            jiant.dom.on(app.views.main.ctl2, "click", function() {
                 app.ajax.testOverridenUrl(12);
             });
         });

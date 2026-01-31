@@ -1,9 +1,9 @@
-jQuery(function ($) {
+document.addEventListener("DOMContentLoaded", function() {
 
   var app = helloJiant,
       name;
 
-  jiant.onApp(app, function($, app) {
+  jiant.onApp(app, function(app) {
     var obj1 = {
           a: 2,
           b: 3,
@@ -16,23 +16,23 @@ jQuery(function ($) {
     app.ajax.traditionalTest(obj1, arr, function() {});
   });
 
-  jiant.onApp(app, function($, app) {
+  jiant.onApp(app, function(app) {
     jiant.logInfo("registered for onApp, immediate");
   });
 
-  jiant.onApp(app, ["asObj"], function($, app) {
+  jiant.onApp(app, ["asObj"], function(app) {
     jiant.logInfo("registered for onApp 2, waiting for asObj");
   });
 
-  jiant.onApp(app, [], function($, app) {
+  jiant.onApp(app, [], function(app) {
     jiant.logInfo("registered for onApp 3, immediate");
   });
 
-  jiant.onApp(app, ["asObj", "asObj2"], function($, app) {
+  jiant.onApp(app, ["asObj", "asObj2"], function(app) {
     jiant.logInfo("registered for onApp 4, waiting for asObj, asObj2");
   });
 
-  jiant.onApp(app, ["asObj2"], function($, app) {
+  jiant.onApp(app, ["asObj2"], function(app) {
     jiant.logInfo("registered for onApp 5, waiting for asObj2");
   });
 
@@ -40,11 +40,11 @@ jQuery(function ($) {
     jiant.logInfo("registered for onApp after bind");
   });
 
-  jiant.onApp(app, ["asObj", "asObj2"], function($, app) {
+  jiant.onApp(app, ["asObj", "asObj2"], function(app) {
     jiant.logInfo("registered for onApp 6, waiting for asObj, asObj2");
   });
 
-  jiant.onApp(app, ["ext0"], function($, app) {
+  jiant.onApp(app, ["ext0"], function(app) {
     app.logic.ext0.show();
   });
 
@@ -52,53 +52,55 @@ jQuery(function ($) {
     show: function() {jiant.logInfo("show0")}
   });
 
-  jiant.onApp(app, function($, app) {
+  jiant.onApp(app, function(app) {
     var askView = app.views.askView,
         showView = app.views.showView,
         templ = app.templates.templ,
-        templ2 = app.templates.templ2;
+        templ2 = app.templates.templ2,
+        dom = jiant.dom;
 
     app.ajax.getData();
 
-    askView.brokenCtl.click(function() {
+    dom.on(askView.brokenCtl, "click", function() {
       alert("never");
     });
 
-    askView.setNameCtl.click(function() {
-      name = askView.nameInput.val();
+    dom.on(askView.setNameCtl, "click", function() {
+      name = dom.getVal(askView.nameInput);
       app.states.main.go(name, undefined);
     });
 
-    askView.addTemplateCtl.click(function() {
+    dom.on(askView.addTemplateCtl, "click", function() {
       var elem = templ.parseTemplate({name: name});
-      showView.templatedContainer.append(elem);
+      dom.append(showView.templatedContainer, elem);
     });
 
-    askView.addTemplate2Ctl.click(function() {
+    dom.on(askView.addTemplate2Ctl, "click", function() {
       var elem = templ2.parseTemplate({name: name});
-      showView.templatedContainer.append(elem);
-      elem.name.click(function() {
-        elem.name.html(name ? name : "");
+      dom.append(showView.templatedContainer, elem);
+      dom.on(elem.name, "click", function() {
+        dom.html(elem.name, name ? name : "");
       });
     });
 
-    askView.colorizeLookupsCtl.click(function() {
-      showView.name().css("color", "#33f");
+    dom.on(askView.colorizeLookupsCtl, "click", function() {
+      var nameElem = typeof showView.name === "function" ? showView.name() : showView.name;
+      jiant.css(nameElem, "color", "#33f");
     });
 
-    askView.fire1Ctl.click(function() {
+    dom.on(askView.fire1Ctl, "click", function() {
       app.events.custom1.fire("Just some message", name);
     });
 
-    askView.fire2Ctl.click(function() {
+    dom.on(askView.fire2Ctl, "click", function() {
       app.events.custom2.fire("Some rnd params");
     });
 
     app.states.main.start(function(name, color) {
-      showView.nameLabel.html(name);
-      askView.nameInput.val(name);
-      askView.css("background-color", color);
-      askView.show();
+      dom.html(showView.nameLabel, name);
+      dom.setVal(askView.nameInput, name);
+      jiant.css(askView, "background-color", color);
+      jiant.show(askView);
     });
 
     app.states[""].start(function() {
@@ -106,19 +108,19 @@ jQuery(function ($) {
     });
 
     app.states.main.end(function(name, color) {
-      askView.hide();
+      jiant.hide(askView);
     });
 
-    askView.ctlNavCustom1.click(function() {
+    dom.on(askView.ctlNavCustom1, "click", function() {
       app.states.customEventsView.go("custom1");
     });
-    askView.ctlNavCustom2.click(function() {
+    dom.on(askView.ctlNavCustom2, "click", function() {
       app.states.customEventsView.go("custom2");
     });
-    askView.ctlNavMainBlue.click(function() {
+    dom.on(askView.ctlNavMainBlue, "click", function() {
       app.states.main.go(undefined, "blue");
     });
-    askView.ctlNavMainGreen.click(function() {
+    dom.on(askView.ctlNavMainGreen, "click", function() {
       app.states.main.go(undefined, "green");
     });
 
@@ -150,36 +152,40 @@ jQuery(function ($) {
         custom2: 0
       };
       app.events.custom1.on(function(message, userName) {
-        app.views.customEventsView.logContainer.append("got custom1 event with message: " + message + " with name: " + userName);
+        var line = document.createElement("div");
+        line.textContent = "got custom1 event with message: " + message + " with name: " + userName;
+        dom.append(app.views.customEventsView.logContainer, line);
         counts.custom1++;
       });
       app.events.custom2.on(function(someParamToPass) {
-        app.views.customEventsView.logContainer.append("got custom2 event with params: " + someParamToPass);
+        var line = document.createElement("div");
+        line.textContent = "got custom2 event with params: " + someParamToPass;
+        dom.append(app.views.customEventsView.logContainer, line);
         counts.custom2++;
       });
 
       app.states.customEventsView.start(function(eventType) {
-        app.views.customEventsView.show();
+        jiant.show(app.views.customEventsView);
         eventType = eventType == "custom1" ? "custom1" : "custom2";
-        app.views.customEventsView.eventsTypeLabel.html(eventType);
-        app.views.customEventsView.eventsCountLabel.html("" + counts[eventType]);
+        dom.html(app.views.customEventsView.eventsTypeLabel, eventType);
+        dom.html(app.views.customEventsView.eventsCountLabel, "" + counts[eventType]);
       });
       app.states.customEventsView.end(function(params) {
-        app.views.customEventsView.hide();
+        jiant.hide(app.views.customEventsView);
       });
 
-      app.views.customEventsView.ctlMain.click(function() {
+      dom.on(app.views.customEventsView.ctlMain, "click", function() {
         app.states.main.go("", "");
       });
-      app.views.customEventsView.ctlMainBlue.click(function() {
+      dom.on(app.views.customEventsView.ctlMainBlue, "click", function() {
         app.states.main.go(undefined, "blue");
       });
 
-      app.views.askView.fire1Ctl.click(function() {
+      dom.on(app.views.askView.fire1Ctl, "click", function() {
         app.templates.templ.parseTemplate({name: "agaaga"});
       });
 
-      app.views.customEventsView.ctlRoot.click(function() {
+      dom.on(app.views.customEventsView.ctlRoot, "click", function() {
         jiant.goRoot();
       });
 

@@ -3,14 +3,35 @@ jiant.module("jiant-templates", ["jiant-uifactory", "jiant-ui", "jiant-types", "
                "jiant-types": Types, "jiant-spec": Spec}) {
 
       this.singleton();
-      const $ = window.jQuery;
-
   const jTypeTemplate = {};
   let errString;
 
+  function htmlToFragment(html) {
+    const tpl = document.createElement("template");
+    tpl.innerHTML = html;
+    return tpl.content;
+  }
+
+  function fragmentOrElem(html) {
+    const frag = htmlToFragment(html);
+    return frag.children.length === 1 ? frag.children[0] : frag;
+  }
+
+  function collectElements(root) {
+    const out = [];
+    if (!root) { return out; }
+    if (root.nodeType === 1) {
+      out.push(root);
+    }
+    if (root.querySelectorAll) {
+      out.push(...root.querySelectorAll("*"));
+    }
+    return out;
+  }
+
   function fillClassMappings(elem, classMapping) {
-    const childs = elem.find("*"), selfs = elem.filter("*");
-    jiant.each(jiant.merge(selfs, childs), function(i, item) {
+    const elems = collectElements(elem);
+    jiant.each(elems, function(i, item) {
       if (typeof item.className.split === "function" && item.className.length > 0) {
         const clss = item.className.split(" ");
         clss.forEach(function(cls) {
@@ -22,8 +43,8 @@ jiant.module("jiant-templates", ["jiant-uifactory", "jiant-ui", "jiant-types", "
   }
 
   function fillTagMappings(elem, tagMapping) {
-    const childs = elem.find("*"), selfs = elem.filter("*");
-    jiant.each(jiant.merge(selfs, childs), function(i, item) {
+    const elems = collectElements(elem);
+    jiant.each(elems, function(i, item) {
       const tag = item.tagName.toLowerCase();
       tagMapping[tag] = tagMapping[tag] || [];
       tagMapping[tag].push(item);
@@ -71,10 +92,17 @@ jiant.module("jiant-templates", ["jiant-uifactory", "jiant-ui", "jiant-types", "
     });
     tmContent.onRender = (cb) => jiant.onRender({app: appRoot, templateId: tmId, cb});
     errArr[0] += UiFactory.ensureExists(tm, prefix + tmId);
-    tmContent.templateSource = function() {return jiant.html(tm).trim()};
+    tmContent.templateSource = function() {
+      if (tm instanceof DocumentFragment) {
+        const wrap = document.createElement("div");
+        wrap.appendChild(tm.cloneNode(true));
+        return wrap.innerHTML.trim();
+      }
+      return (tm && tm.innerHTML ? tm.innerHTML : "").trim();
+    };
     tmContent.parseTemplate = function(data, subscribeForUpdates, reverseBind, mapping) {
-      const retVal = $("<!-- -->" + jiant._parseTemplate(tm, data, tmId, mapping)); // add comment to force jQuery to read it as HTML fragment
-      retVal._j = {};
+      const retVal = fragmentOrElem(jiant._parseTemplate(tm, data, tmId, mapping));
+      retVal._j = retVal._j || {};
       const classMappings = {},
           tagMappings = {};
       if (!appRoot.bindByTag || appRoot.bindByTag === "after-class" || appRoot.bindByTag === "before-class") {
@@ -84,8 +112,8 @@ jiant.module("jiant-templates", ["jiant-uifactory", "jiant-ui", "jiant-types", "
         fillTagMappings(retVal, tagMappings);
       }
       function getUsingBindBy(componentId) {
-        const byCls = (prefix + componentId) in classMappings ?  $(classMappings[prefix + componentId]) : null,
-            byTag = componentId in tagMappings ? $(tagMappings[componentId.toLowerCase()]) : null,
+        const byCls = (prefix + componentId) in classMappings ? classMappings[prefix + componentId] : null,
+            byTag = componentId in tagMappings ? tagMappings[componentId.toLowerCase()] : null,
             bindBy = appRoot.bindByTag;
         return !bindBy ? byCls : bindBy === 'after-class' ? (byCls || byTag) : bindBy === 'before-class' ? (byTag || byCls) : byTag;
       }
@@ -110,7 +138,6 @@ jiant.module("jiant-templates", ["jiant-uifactory", "jiant-ui", "jiant-types", "
           retVal[componentId]._j = {parent: retVal};
         }
       });
-      retVal.splice(0, 1); // remove first comment
       Ui.makePropagationFunction({app: appRoot, templateId: tmId,
         content: tmContent, spec: Spec.templateSpec(appRoot, tmId), viewOrTm: retVal});
       if (tmContent.jInit && typeof tmContent.jInit === "function") {
@@ -118,12 +145,16 @@ jiant.module("jiant-templates", ["jiant-uifactory", "jiant-ui", "jiant-types", "
       }
       data && retVal.propagate(data, !!subscribeForUpdates, !!reverseBind, mapping);
       if ((!("ADD_TM_TAGS" in jiant)) || jiant.ADD_TM_TAGS) {
-        jiant.addClass(retVal, "jianttm_" + tmId);
+        if (retVal instanceof DocumentFragment) {
+          Array.from(retVal.children).forEach(function(el) { el.classList && el.classList.add("jianttm_" + tmId); });
+        } else {
+          jiant.addClass(retVal, "jianttm_" + tmId);
+        }
       }
       return retVal;
     };
     tmContent.parseTemplate2Text = function(data, mapping) {
-      return this.parseTemplate(tm, data, tmId, mapping);
+      return jiant._parseTemplate(tm, data, tmId, mapping);
     };
     return tmContent;
   }

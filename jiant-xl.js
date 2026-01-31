@@ -471,7 +471,7 @@
         var selectedElem, selectedVal, selectClass, defaultCb = cb;
         return {
           add: function(elem, val, cb, selected) {
-            var jqElem = elem && elem.jquery ? elem : (window.jQuery ? window.jQuery(elem) : elem);
+            var jqElem = elem;
             cb = cb || defaultCb;
             on(elem, "click", function() {
               var prevElem = selectedElem, prevVal = selectedVal;
