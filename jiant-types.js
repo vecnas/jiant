@@ -95,7 +95,19 @@ jiant.module("jiant-types", ["jiant-jtype", "jiant-comp", "jiant-util"],
       } else if (tagName === "img") {
         dom.attr(elem, "src", val);
       } else if (fieldPresent) {
-        jiant.html(elem, val === undefined ? "" : val);
+        const htmlVal = val === undefined ? "" : val;
+        let usedCustom = false;
+        dom.forEach(elem, function(node) {
+          if (node && typeof node.html === "function") {
+            node.html(htmlVal);
+            usedCustom = true;
+          } else if (node && "innerHTML" in node) {
+            node.innerHTML = htmlVal;
+          }
+        });
+        if (!usedCustom && elem && typeof elem.html === "function") {
+          elem.html(htmlVal);
+        }
       }
     };
 
