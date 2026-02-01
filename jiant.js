@@ -562,6 +562,40 @@
     });
   }
 
+  const displayCache = new WeakMap();
+  const defaultDisplayMap = {};
+  function getDefaultDisplay(tagName) {
+    const name = tagName ? tagName.toLowerCase() : "";
+    if (!name) {
+      return "block";
+    }
+    if (defaultDisplayMap[name]) {
+      return defaultDisplayMap[name];
+    }
+    if (!/^[a-z]/.test(name)) {
+      defaultDisplayMap[name] = "block";
+      return "block";
+    }
+    const parent = document.body || document.documentElement;
+    const elem = document.createElement(name);
+    if (parent && parent.appendChild) {
+      parent.appendChild(elem);
+    }
+    let display;
+    if (window && typeof window.getComputedStyle === "function") {
+      display = window.getComputedStyle(elem).display;
+    } else {
+      display = elem.style.display;
+    }
+    if (parent && parent.removeChild) {
+      parent.removeChild(elem);
+    }
+    if (!display || display === "none") {
+      display = "block";
+    }
+    defaultDisplayMap[name] = display;
+    return display;
+  }
   function jHtml(elem, val) {
     if (arguments.length > 1) {
       forEachElem(elem, function(el) { el.innerHTML = val; });
@@ -587,11 +621,41 @@
   }
 
   function hide(elem) {
-    forEachElem(elem, function(el) { el.style.display = "none"; });
+    forEachElem(elem, function(el) {
+      const style = el && el.style;
+      if (!style) {
+        return;
+      }
+      const computed = window && typeof window.getComputedStyle === "function" ? window.getComputedStyle(el) : null;
+      const current = computed && computed.display ? computed.display : style.display;
+      if (current && current !== "none") {
+        displayCache.set(el, current);
+      }
+      style.display = "none";
+    });
   }
 
   function show(elem) {
-    forEachElem(elem, function(el) { el.style.display = ""; });
+    forEachElem(elem, function(el) {
+      const style = el && el.style;
+      if (!style) {
+        return;
+      }
+      let display = displayCache.get(el);
+      if (!display || display === "none") {
+        const computed = window && typeof window.getComputedStyle === "function" ? window.getComputedStyle(el) : null;
+        if (computed && computed.display && computed.display !== "none") {
+          display = computed.display;
+        }
+      }
+      if (!display || display === "none") {
+        display = getDefaultDisplay(el && el.nodeName);
+      }
+      style.display = display;
+      if (display !== "none") {
+        displayCache.delete(el);
+      }
+    });
   }
 
   function css(elem) {
