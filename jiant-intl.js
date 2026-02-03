@@ -18,7 +18,31 @@ jiant.module("jiant-intl", ["jiant-logic"], function({app, jiant, params, "jiant
       jiant.error("nlabel used, but no intl declared, degrading nlabel to label");
       return;
     }
-    const prev = elem[fname];
+    let prev = elem && elem[fname];
+    if (!prev) {
+      if (fname === "html") {
+        prev = function(val) {
+          if (val === undefined || val === null) {
+            return (elem && elem.innerHTML) || "";
+          }
+          if (elem) {
+            elem.innerHTML = val;
+          }
+        };
+      } else if (fname === "text") {
+        prev = function(val) {
+          if (val === undefined || val === null) {
+            return (elem && elem.textContent) || "";
+          }
+          if (elem) {
+            elem.textContent = val;
+          }
+        };
+      }
+    }
+    if (!prev) {
+      return;
+    }
     elem[fname] = function(val) {
       if (val === undefined || val === null) {
         return prev.call(elem, val);

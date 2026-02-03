@@ -71,9 +71,12 @@ jiant.module("jiant-templates", ["jiant-uifactory", "jiant-ui", "jiant-types", "
     });
     tmContent.onRender = (cb) => jiant.onRender({app: appRoot, templateId: tmId, cb});
     errArr[0] += UiFactory.ensureExists(tm, prefix + tmId);
-    tmContent.templateSource = function() {return jiant.html(tm).trim()};
+    tmContent.templateSource = function() {
+      return (tmContent.impl ? tmContent.impl : jiant.html(tm)).trim();
+    };
     tmContent.parseTemplate = function(data, subscribeForUpdates, reverseBind, mapping) {
-      const retVal = $("<!-- -->" + jiant._parseTemplate(tm, data, tmId, mapping)); // add comment to force jQuery to read it as HTML fragment
+      const src = tmContent.impl ? tmContent.impl : tm;
+      const retVal = $(jiant._parseTemplate(src, data, tmId, mapping));
       retVal._j = {};
       const classMappings = {},
           tagMappings = {};
@@ -110,7 +113,7 @@ jiant.module("jiant-templates", ["jiant-uifactory", "jiant-ui", "jiant-types", "
           retVal[componentId]._j = {parent: retVal};
         }
       });
-      retVal.splice(0, 1); // remove first comment
+      // no comment wrapper, nothing to strip
       Ui.makePropagationFunction({app: appRoot, templateId: tmId,
         content: tmContent, spec: Spec.templateSpec(appRoot, tmId), viewOrTm: retVal});
       if (tmContent.jInit && typeof tmContent.jInit === "function") {
