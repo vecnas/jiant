@@ -10,12 +10,19 @@
 <div id="qunit"></div>
 <div id="qunit-fixture"></div>
 <script src="https://code.jquery.com/qunit/qunit-2.22.0.js"></script>
-<script src="https://code.jquery.com/jquery-3.7.1.min.js"
-        integrity="sha256-/JqT3SQfawRcv/BIHPThkBvs0OEvtFFmqPF/lYI/Cxo="
-        crossorigin="anonymous"></script>
 <script src="../jiant.js"></script>
 <script>
   const timeout = 2000;
+  const fixture = document.getElementById("qunit-fixture");
+  function setFixtureHtml(html) {
+    fixture.innerHTML = html;
+  }
+  function byId(id) {
+    return document.getElementById(id);
+  }
+  function bySel(sel, root) {
+    return (root || document).querySelectorAll(sel);
+  }
 
   QUnit.module("jiant modules", function() {
 
@@ -103,7 +110,7 @@
     QUnit.test("external module html injects into target with replace", function(assert) {
       assert.timeout(timeout);
       const done = assert.async();
-      $("#qunit-fixture").html("<div id='inject'><b>OLD</b></div>");
+      setFixtureHtml("<div id='inject'><b>OLD</b></div>");
 
       jiant.app(() => ({
         id: "ModulesAppHtml",
@@ -113,10 +120,10 @@
 
       jiant.onApp("ModulesAppHtml", function(app) {
         jiant.loadModule(app, "t5_html", function() {
-          assert.equal($("#inject").text().trim(), "FRAG", "html injected with replace");
-          assert.equal($("#inject #frag").length, 1, "injected fragment present");
+          assert.equal(fixture.textContent.trim(), "FRAG", "html injected with replace");
+          assert.equal(bySel("#frag", fixture).length, 1, "injected fragment present");
           done();
-        }, true, "#inject");
+        }, true, fixture);
       });
     });
 

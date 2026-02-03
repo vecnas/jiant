@@ -59,7 +59,19 @@ jiant.module("jiant-types", ["jiant-jtype", "jiant-comp"],
       } else if (tagName === "img") {
         elem.attr("src", val);
       } else if (fieldPresent) {
-        jiant.html(elem, val === undefined ? "" : val);
+        const htmlVal = val === undefined ? "" : val;
+        let usedCustom = false;
+        dom.forEach(elem, function(node) {
+          if (node && typeof node.html === "function") {
+            node.html(htmlVal);
+            usedCustom = true;
+          } else if (node && "innerHTML" in node) {
+            node.innerHTML = htmlVal;
+          }
+        });
+        if (!usedCustom && elem && typeof elem.html === "function") {
+          elem.html(htmlVal);
+        }
       }
     };
 
@@ -111,8 +123,11 @@ jiant.module("jiant-types", ["jiant-jtype", "jiant-comp"],
   const nlabel = initType({clz: class nlabel extends JType {},
     componentProducer: visualComponentProducer.and(({elem, app}) => {
       jiant.loadModule(app, "jiant-intl", function() {
-        jiant.intlProxy(app, elem, "html");
-        jiant.intlProxy(app, elem, "text");
+        dom.forEach(elem, function(el) {
+          ensureHtmlApi(el);
+          jiant.intlProxy(app, el, "html");
+          jiant.intlProxy(app, el, "text");
+        });
       });
     }),
     renderProducer: visualRenderProducer});

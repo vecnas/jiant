@@ -10,12 +10,25 @@
 <div id="qunit"></div>
 <div id="qunit-fixture"></div>
 <script src="https://code.jquery.com/qunit/qunit-2.22.0.js"></script>
-<script src="https://code.jquery.com/jquery-3.7.1.min.js"
-        integrity="sha256-/JqT3SQfawRcv/BIHPThkBvs0OEvtFFmqPF/lYI/Cxo="
-        crossorigin="anonymous"></script>
 <script src="../jiant.js"></script>
 <script>
   const timeout = 2000;
+  function appendToBody(node) {
+    if (!node) {
+      return;
+    }
+    if (node.nodeType) {
+      document.body.appendChild(node);
+      return;
+    }
+    if (Array.isArray(node)) {
+      node.forEach(appendToBody);
+      return;
+    }
+    if (node.length && node[0] && node[0].nodeType) {
+      Array.prototype.forEach.call(node, appendToBody);
+    }
+  }
 
   QUnit.module("UI render", function() {
 
@@ -42,7 +55,7 @@
       jiant.module("viewRendMod", ({app}) => {
         jiant.onApp(app, () => {
           app.views.testViewRV.propagate({name: "test name"});
-          $("body").append(app.views.testViewRV);
+          appendToBody(app.views.testViewRV);
         });
       });
       jiant.app(() => ({
@@ -66,7 +79,7 @@
       const done = assert.async();
       jiant.module("compJinitMod", ({app}) => {
         jiant.onApp(app, () => {
-          $("body").append(app.views.testViewJ);
+          appendToBody(app.views.testViewJ);
         });
       });
       jiant.app(() => ({
@@ -95,7 +108,7 @@
       const done = assert.async();
       jiant.module("compRendererMod", ({app}) => {
         jiant.onApp(app, () => {
-          $("body").append(app.views.testViewRC);
+          appendToBody(app.views.testViewRC);
         });
       });
       jiant.app(() => ({
@@ -125,7 +138,7 @@
       const done = assert.async();
       jiant.module("compCompMod", ({app}) => {
         jiant.onApp(app, () => {
-          $("body").append(app.views.testViewCIC);
+          appendToBody(app.views.testViewCIC);
         });
       });
       jiant.app(() => ({

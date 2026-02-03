@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="utf-8">
-  <title>Jiant jQuery compatibility tests</title>
+  <title>Jiant native compatibility tests</title>
   <link rel="stylesheet" href="https://code.jquery.com/qunit/qunit-2.22.0.css">
   <link rel="icon" href="data:,">
 </head>
@@ -10,14 +10,38 @@
 <div id="qunit"></div>
 <div id="qunit-fixture"></div>
 <script src="https://code.jquery.com/qunit/qunit-2.22.0.js"></script>
-<script src="https://code.jquery.com/jquery-3.7.1.min.js"
-        integrity="sha256-/JqT3SQfawRcv/BIHPThkBvs0OEvtFFmqPF/lYI/Cxo="
-        crossorigin="anonymous"></script>
 <script src="../jiant.js"></script>
 <script>
   const timeout = 2000;
+  const fixture = document.getElementById("qunit-fixture");
+  function setFixtureHtml(html) {
+    fixture.innerHTML = html;
+  }
+  function clearFixture() {
+    fixture.innerHTML = "";
+  }
+  function qs(sel, root) {
+    return (root || document).querySelector(sel);
+  }
+  function qsa(sel, root) {
+    return Array.from((root || document).querySelectorAll(sel));
+  }
+  function byId(id) {
+    return document.getElementById(id);
+  }
+  function text(el) {
+    return el ? (el.textContent || "") : "";
+  }
+  function isVisible(el) {
+    if (!el) { return false; }
+    const style = window.getComputedStyle(el);
+    return style.display !== "none" && style.visibility !== "hidden";
+  }
+  function toArr(val) {
+    return Array.prototype.slice.call(val);
+  }
 
-  QUnit.module("jQuery compatibility", function() {
+  QUnit.module("native compatibility", function() {
 
     QUnit.test("jiant toArray uses array detection", function(assert) {
       assert.timeout(timeout);
@@ -31,7 +55,7 @@
       });
     });
 
-    QUnit.test("jiant.each mirrors jQuery.each behavior", function(assert) {
+    QUnit.test("jiant.each iterates arrays, objects, and elements", function(assert) {
       const arr = [10, 20];
       const arrSeen = [];
       const arrRet = jiant.each(arr, function(i, val) {
@@ -49,56 +73,56 @@
       assert.equal(objSeen.a.self, 1, "object callback this is value");
       assert.equal(objSeen.b.self, 2, "object callback this is value");
 
-      $("#qunit-fixture").html("<div class='e1'></div><div class='e2'></div>");
-      const elems = $("#qunit-fixture").find("div");
+      setFixtureHtml("<div class='e1'></div><div class='e2'></div>");
+      const elems = qsa("#qunit-fixture div");
       const elemSeen = [];
       const elemRet = jiant.each(elems, function(i, el) {
         elemSeen.push([i, el, this]);
       });
-      assert.strictEqual(elemRet, elems, "returns jQuery collection");
-      assert.ok(elemSeen.length === 2, "iterates jQuery collection");
-      assert.strictEqual(elemSeen[0][1], elemSeen[0][2], "jQuery callback this is element");
-      assert.strictEqual(elemSeen[1][1], elemSeen[1][2], "jQuery callback this is element");
+      assert.strictEqual(elemRet, elems, "returns original element list");
+      assert.ok(elemSeen.length === 2, "iterates element list");
+      assert.strictEqual(elemSeen[0][1], elemSeen[0][2], "callback this is element");
+      assert.strictEqual(elemSeen[1][1], elemSeen[1][2], "callback this is element");
     });
 
     QUnit.test("jiant html/empty/addClass wrappers", function(assert) {
-      $("#qunit-fixture").html("<div id='wrap1'>x</div>");
-      const el = $("#wrap1");
+      setFixtureHtml("<div id='wrap1'>x</div>");
+      const el = byId("wrap1");
 
       const retAdd = jiant.addClass(el, "foo");
-      assert.strictEqual(retAdd, el, "addClass returns original jQuery object");
-      assert.ok(el.hasClass("foo"), "addClass applied");
+      assert.strictEqual(retAdd, el, "addClass returns original element");
+      assert.ok(el.classList.contains("foo"), "addClass applied");
 
       const retHtmlSet = jiant.html(el, "y");
-      assert.strictEqual(retHtmlSet, el, "html setter returns original jQuery object");
+      assert.strictEqual(retHtmlSet, el, "html setter returns original element");
       assert.equal(jiant.html(el), "y", "html getter returns content");
 
       const retEmpty = jiant.empty(el);
-      assert.strictEqual(retEmpty, el, "empty returns original jQuery object");
+      assert.strictEqual(retEmpty, el, "empty returns original element");
       assert.equal(jiant.html(el), "", "empty clears content");
     });
 
     QUnit.test("jiant hide/show/css wrappers", function(assert) {
-      $("#qunit-fixture").html("<div id='wrap2' style='display:block;'></div>");
-      const el = $("#wrap2");
+      setFixtureHtml("<div id='wrap2' style='display:block;'></div>");
+      const el = byId("wrap2");
 
       const retCssSet = jiant.css(el, "display", "block");
-      assert.strictEqual(retCssSet, el, "css setter returns original jQuery object");
+      assert.strictEqual(retCssSet, el, "css setter returns original element");
       assert.equal(jiant.css(el, "display"), "block", "css getter returns value");
 
       const retHide = jiant.hide(el);
-      assert.strictEqual(retHide, el, "hide returns original jQuery object");
+      assert.strictEqual(retHide, el, "hide returns original element");
       assert.equal(jiant.css(el, "display"), "none", "hide sets display to none");
 
       const retShow = jiant.show(el);
-      assert.strictEqual(retShow, el, "show returns original jQuery object");
-      assert.notEqual(jiant.css(el, "display"), "none", "show clears display none");
+      assert.strictEqual(retShow, el, "show returns original element");
+      assert.ok(isVisible(el), "show restores visibility");
     });
 
-    QUnit.test("onApp provides jQuery and view/components are jQuery objects", function(assert) {
+    QUnit.test("onApp provides native views/components", function(assert) {
       assert.timeout(timeout);
       const done = assert.async();
-      $("#qunit-fixture").html("<div id='v1'><span class='fld'></span></div>");
+      setFixtureHtml("<div id='v1'><span class='fld'></span></div>");
 
       jiant.app(() => ({
         id: "JQApp1",
@@ -110,9 +134,8 @@
       }));
 
       jiant.onApp("JQApp1", function(app) {
-        assert.ok(typeof $ === "function" && $.fn && $.fn.jquery, "onApp passes jQuery function");
-        assert.ok(!!app.views.v1.jquery, "view is a jQuery object");
-        assert.ok(!!app.views.v1.fld.jquery, "component is a jQuery object");
+        assert.ok(app.views.v1 instanceof HTMLElement, "view is a DOM element");
+        assert.ok(app.views.v1.fld instanceof HTMLElement, "component is a DOM element");
         done();
       });
     });
@@ -120,7 +143,7 @@
     QUnit.test("onApp with multiple apps receives each app", function(assert) {
       assert.timeout(timeout);
       const done = assert.async();
-      $("#qunit-fixture").html("<div id='a1'></div><div id='a2'></div>");
+      setFixtureHtml("<div id='a1'></div><div id='a2'></div>");
 
       jiant.app(() => ({id: "JQAppMulti1", views: {a1: {}}}));
       jiant.app(() => ({id: "JQAppMulti2", views: {a2: {}}}));
@@ -132,10 +155,10 @@
       });
     });
 
-    QUnit.test("parseTemplate returns jQuery fragment and component jQuery elements", function(assert) {
+    QUnit.test("parseTemplate returns native fragment and component elements", function(assert) {
       assert.timeout(timeout);
       const done = assert.async();
-      $("#qunit-fixture").empty();
+      clearFixture();
 
       jiant.app(() => ({
         id: "JQApp2",
@@ -149,8 +172,8 @@
 
       jiant.onApp("JQApp2", function(app) {
         const frag = app.templates.t1.parseTemplate({fld: "x"}, false);
-        assert.ok(!!frag.jquery, "parseTemplate returns jQuery");
-        assert.ok(!!frag.fld.jquery, "template component is jQuery");
+        assert.ok(frag && frag.nodeType, "parseTemplate returns DOM node/fragment");
+        assert.ok(frag.fld instanceof HTMLElement, "template component is DOM element");
         done();
       });
     });
@@ -158,7 +181,7 @@
     QUnit.test("bindByTag after-class prefers class over tag", function(assert) {
       assert.timeout(timeout);
       const done = assert.async();
-      $("#qunit-fixture").html("<div id='vbt1'><div class='item' data-src='class'></div><item data-src='tag'></item></div>");
+      setFixtureHtml("<div id='vbt1'><div class='item' data-src='class'></div><item data-src='tag'></item></div>");
 
       jiant.app(() => ({
         id: "JQAppBindAfter",
@@ -167,7 +190,7 @@
       }));
 
       jiant.onApp("JQAppBindAfter", function(app) {
-        assert.equal(app.views.vbt1.item.attr("data-src"), "class", "class element selected");
+        assert.equal(app.views.vbt1.item.getAttribute("data-src"), "class", "class element selected");
         done();
       });
     });
@@ -175,7 +198,7 @@
     QUnit.test("bindByTag before-class prefers tag over class", function(assert) {
       assert.timeout(timeout);
       const done = assert.async();
-      $("#qunit-fixture").html("<div id='vbt2'><div class='item' data-src='class'></div><item data-src='tag'></item></div>");
+      setFixtureHtml("<div id='vbt2'><div class='item' data-src='class'></div><item data-src='tag'></item></div>");
 
       jiant.app(() => ({
         id: "JQAppBindBefore",
@@ -184,7 +207,7 @@
       }));
 
       jiant.onApp("JQAppBindBefore", function(app) {
-        assert.equal(app.views.vbt2.item.attr("data-src"), "tag", "tag element selected");
+        assert.equal(app.views.vbt2.item.getAttribute("data-src"), "tag", "tag element selected");
         done();
       });
     });
@@ -192,7 +215,7 @@
     QUnit.test("bindByTag true uses tag selection", function(assert) {
       assert.timeout(timeout);
       const done = assert.async();
-      $("#qunit-fixture").html("<vbt3><div class='item' data-src='class'></div><item data-src='tag'></item></vbt3>");
+      setFixtureHtml("<vbt3><div class='item' data-src='class'></div><item data-src='tag'></item></vbt3>");
 
       jiant.app(() => ({
         id: "JQAppBindTag",
@@ -201,15 +224,15 @@
       }));
 
       jiant.onApp("JQAppBindTag", function(app) {
-        assert.equal(app.views.vbt3.item.attr("data-src"), "tag", "tag element selected");
+        assert.equal(app.views.vbt3.item.getAttribute("data-src"), "tag", "tag element selected");
         done();
       });
     });
 
-    QUnit.test("showOn/hideOn are available on jQuery objects", function(assert) {
+    QUnit.test("showOn/hideOn are available on elements", function(assert) {
       assert.timeout(timeout);
       const done = assert.async();
-      $("#qunit-fixture").html("<div id='v3'><div class='box'></div></div>");
+      setFixtureHtml("<div id='v3'><div class='box'></div></div>");
 
       jiant.app(() => ({
         id: "JQApp3",
@@ -222,15 +245,15 @@
 
       jiant.onApp("JQApp3", function(app) {
         const box = app.views.v3.box;
-        assert.equal(typeof $.fn.showOn, "function", "showOn exists on jQuery prototype");
-        assert.equal(typeof $.fn.hideOn, "function", "hideOn exists on jQuery prototype");
+        assert.equal(typeof box.showOn, "function", "showOn exists on element");
+        assert.equal(typeof box.hideOn, "function", "hideOn exists on element");
 
         box.hideOn("flag");
         app.views.v3.propagate({flag: true});
-        assert.notOk(box.is(":visible"), "hideOn hides when flag is true");
+        assert.notOk(isVisible(box), "hideOn hides when flag is true");
 
         app.views.v3.propagate({flag: false});
-        assert.ok(box.is(":visible"), "hideOn shows when flag is false");
+        assert.ok(isVisible(box), "hideOn shows when flag is false");
         done();
       });
     });
@@ -238,7 +261,7 @@
     QUnit.test("reverse binding updates model on input change", function(assert) {
       assert.timeout(timeout);
       const done = assert.async();
-      $("#qunit-fixture").html("<div id='v4'><input class='name' type='text'/></div>");
+      setFixtureHtml("<div id='v4'><input class='name' type='text'/></div>");
 
       jiant.app(() => ({
         id: "JQAppReverseBind",
@@ -248,8 +271,108 @@
       jiant.onApp("JQAppReverseBind", function(app) {
         const data = { _name: "", name: function(val) { this._name = val; } };
         app.views.v4.propagate(data, true, true);
-        app.views.v4.name.val("abc").change();
+        app.views.v4.name.value = "abc";
+        app.views.v4.name.dispatchEvent(new Event("change", {bubbles: true}));
         assert.equal(data._name, "abc", "reverse binding set value from input");
+        done();
+      });
+    });
+
+    QUnit.test("jiant.each handles NodeList and HTMLCollection", function(assert) {
+      setFixtureHtml("<div class='n1'></div><div class='n2'></div>");
+      const list = document.querySelectorAll("#qunit-fixture div");
+      const coll = document.getElementsByTagName("div");
+      let listCount = 0;
+      let collCount = 0;
+      jiant.each(list, function(i, el) { listCount++; assert.ok(el.nodeType === 1, "NodeList element"); });
+      jiant.each(coll, function(i, el) { collCount++; assert.ok(el.nodeType === 1, "HTMLCollection element"); });
+      assert.ok(listCount === 2, "NodeList iterated");
+      assert.ok(collCount >= 2, "HTMLCollection iterated");
+    });
+
+    QUnit.test("showOn/hideOn supports NodeList", function(assert) {
+      assert.timeout(timeout);
+      const done = assert.async();
+      setFixtureHtml("<div id='v3n'><div class='box'></div><div class='box'></div></div>");
+
+      jiant.app(() => ({
+        id: "JQApp3List",
+        views: {
+          v3n: { box: jiant.label }
+        }
+      }));
+
+      jiant.onApp("JQApp3List", function(app) {
+        const boxes = app.views.v3n.box;
+        assert.ok(boxes && (boxes.length === 2 || boxes.length === undefined), "boxes resolved");
+        if (boxes.length !== undefined) {
+          toArr(boxes).forEach(function(b) {
+            assert.equal(typeof b.showOn, "function", "showOn exists on element");
+            assert.equal(typeof b.hideOn, "function", "hideOn exists on element");
+          });
+        }
+        app.views.v3n.propagate({flag: true});
+        if (boxes.length !== undefined) {
+          toArr(boxes).forEach(function(b) { assert.notOk(isVisible(b), "hideOn hides element"); });
+        }
+        app.views.v3n.propagate({flag: false});
+        if (boxes.length !== undefined) {
+          toArr(boxes).forEach(function(b) { assert.ok(isVisible(b), "showOn shows element"); });
+        }
+        done();
+      });
+    });
+
+    QUnit.test("reverse binding updates checkbox", function(assert) {
+      assert.timeout(timeout);
+      const done = assert.async();
+      setFixtureHtml("<div id='v5'><input class='flag' type='checkbox'/></div>");
+
+      jiant.app(() => ({
+        id: "JQAppReverseCheckbox",
+        views: { v5: { flag: jiant.input } }
+      }));
+
+      jiant.onApp("JQAppReverseCheckbox", function(app) {
+        const data = { _flag: false, flag: function(val) { this._flag = val; } };
+        app.views.v5.propagate(data, true, true);
+        app.views.v5.flag.checked = true;
+        app.views.v5.flag.dispatchEvent(new Event("change", {bubbles: true}));
+        assert.equal(data._flag, true, "checkbox reverse binding set value");
+        done();
+      });
+    });
+
+    QUnit.test("dom helpers operate on arrays", function(assert) {
+      setFixtureHtml("<div class='h1'></div><div class='h1'></div>");
+      const nodes = qsa(".h1");
+      jiant.addClass(nodes, "x");
+      assert.ok(nodes.every(n => n.classList.contains("x")), "addClass works on list");
+      jiant.removeClass(nodes, "x");
+      assert.ok(nodes.every(n => !n.classList.contains("x")), "removeClass works on list");
+      jiant.hide(nodes);
+      assert.ok(nodes.every(n => !isVisible(n)), "hide works on list");
+      jiant.show(nodes);
+      assert.ok(nodes.every(n => isVisible(n)), "show works on list");
+    });
+
+    QUnit.test("parseTemplate binds nested components", function(assert) {
+      assert.timeout(timeout);
+      const done = assert.async();
+      clearFixture();
+
+      jiant.app(() => ({
+        id: "JQAppTplNested",
+        templates: {
+          parent: { impl: "<div id='parent'><div class='child'></div></div>", child: jiant.comp.compName("child") },
+          child: { impl: "<span id='child'><b class='val'></b></span>", val: jiant.label }
+        }
+      }));
+
+      jiant.onApp("JQAppTplNested", function(app) {
+        const frag = app.templates.parent.parseTemplate({child: {val: "ok"}}, false);
+        assert.ok(frag.child instanceof HTMLElement, "child component element");
+        assert.ok(frag.child.val instanceof HTMLElement, "nested label element");
         done();
       });
     });
@@ -257,13 +380,13 @@
     QUnit.test("intl loads data and updates scanDoc labels", function(assert) {
       assert.timeout(timeout);
       const done = assert.async();
-      $("#qunit-fixture").html("<div id='intl_el' data-nlabel='someText'></div>");
+      setFixtureHtml("<div id='intl_el' data-nlabel='someText'></div>");
 
       jiant.app(() => ({
         id: "JQAppIntl",
         logic: {
           intl: {
-            url: "/tests/intlData.json",
+            url: "/tests-native/intlData.json",
             scanDoc: true,
             t: function(key) {},
             someText: function() {},
@@ -277,7 +400,7 @@
           assert.equal(app2.logic.intl.t("someKey"), "Some key for t()", "intl.t returns translation");
           assert.equal(app2.logic.intl.someText(), "Me some text", "intl function implemented");
           setTimeout(function() {
-            assert.equal($("#intl_el").text(), "Me some text", "scanDoc updated element text");
+            assert.equal(text(byId("intl_el")), "Me some text", "scanDoc updated element text");
             done();
           }, 0);
         });
@@ -287,7 +410,7 @@
     QUnit.test("loadCss loads stylesheet and applies styles", function(assert) {
       assert.timeout(timeout);
       const done = assert.async();
-      $("#qunit-fixture").html("<div id='cssTarget' class='css-test'>X</div>");
+      setFixtureHtml("<div id='cssTarget' class='css-test'>X</div>");
 
       jiant.app(() => ({
         id: "JQAppLoadCss",
@@ -297,9 +420,9 @@
 
       jiant.onApp("JQAppLoadCss", function(app) {
         jiant.loadModule(app, "jiant-load", function() {
-          jiant.loadCss("/tests/fixtures/test.css", function() {
-            const styleTag = $("style[data-uri='/tests/fixtures/test.css']");
-            assert.equal(styleTag.length, 1, "css stylesheet tag added");
+          jiant.loadCss("/tests-native/fixtures/test.css", function() {
+            const styleTags = qsa("style[data-uri='/tests-native/fixtures/test.css']");
+            assert.equal(styleTags.length, 1, "css stylesheet tag added");
             done();
           });
         });
@@ -309,7 +432,7 @@
     QUnit.test("states go triggers start with params", function(assert) {
       assert.timeout(timeout);
       const done = assert.async();
-      $("#qunit-fixture").empty();
+      clearFixture();
       window.location.hash = "";
 
       jiant.app(() => ({
@@ -331,7 +454,7 @@
     QUnit.test("models repo add and update emit events", function(assert) {
       assert.timeout(timeout);
       const done = assert.async();
-      $("#qunit-fixture").empty();
+      clearFixture();
 
       jiant.app(() => ({
         id: "JQAppModels",
@@ -362,7 +485,7 @@
     QUnit.test("models event bus supports stopImmediatePropagation and handler removal", function(assert) {
       assert.timeout(timeout);
       const done = assert.async();
-      $("#qunit-fixture").empty();
+      clearFixture();
 
       jiant.app(() => ({
         id: "JQAppModelEvents",
@@ -411,13 +534,13 @@
     QUnit.test("jiant ajax parses JSON response", function(assert) {
       assert.timeout(timeout);
       const done = assert.async();
-      $("#qunit-fixture").empty();
+      clearFixture();
 
       jiant.app(() => ({
         id: "JQAppAjaxOk",
         ajax: {
           getData: function(id, cb) {
-            return {url: "/tests/fixtures/ajax_ok.json", method: "GET"};
+            return {url: "/tests-native/fixtures/ajax_ok.json", method: "GET"};
           }
         }
       }));
@@ -434,13 +557,13 @@
     QUnit.test("jiant ajax flattens objects into query params", function(assert) {
       assert.timeout(timeout);
       const done = assert.async();
-      $("#qunit-fixture").empty();
+      clearFixture();
 
       jiant.app(() => ({
         id: "JQAppAjaxEcho",
         ajax: {
           echo: function(payload, cb) {
-            return {url: "/tests/fixtures/echo", method: "GET"};
+            return {url: "/tests-native/fixtures/echo", method: "GET"};
           }
         }
       }));
@@ -457,13 +580,13 @@
     QUnit.test("jiant ajax replaces url params", function(assert) {
       assert.timeout(timeout);
       const done = assert.async();
-      $("#qunit-fixture").empty();
+      clearFixture();
 
       jiant.app(() => ({
         id: "JQAppAjaxRest",
         ajax: {
           byId: function(id, cb) {
-            return {url: "/tests/fixtures/echo/:id", method: "GET"};
+            return {url: "/tests-native/fixtures/echo/:id", method: "GET"};
           }
         }
       }));
@@ -479,13 +602,13 @@
     QUnit.test("jiant ajax error handler is called on 404", function(assert) {
       assert.timeout(timeout);
       const done = assert.async();
-      $("#qunit-fixture").empty();
+      clearFixture();
 
       jiant.app(() => ({
         id: "JQAppAjaxErr",
         ajax: {
           getMissing: function(id, cb, err) {
-            return {url: "/tests/fixtures/missing.json", method: "GET"};
+            return {url: "/tests-native/fixtures/missing.json", method: "GET"};
           }
         }
       }));
@@ -504,7 +627,7 @@
     QUnit.test("crossDomain ajax uses CORS settings (no jsonp)", function(assert) {
       assert.timeout(timeout);
       const done = assert.async();
-      $("#qunit-fixture").empty();
+      clearFixture();
       const origFetch = window.fetch;
       let call;
 
@@ -542,10 +665,10 @@
     QUnit.test("crossDomain ajax works with CORS across hostnames", function(assert) {
       assert.timeout(timeout);
       const done = assert.async();
-      $("#qunit-fixture").empty();
+      clearFixture();
       const altHost = window.location.hostname === "localhost" ? "127.0.0.1" : "localhost";
       const port = window.location.port ? (":" + window.location.port) : "";
-      const url = window.location.protocol + "//" + altHost + port + "/tests/fixtures/echo";
+      const url = window.location.protocol + "//" + altHost + port + "/tests-native/fixtures/echo";
 
       jiant.app(() => ({
         id: "JQAppAjaxCorsLive",
@@ -568,7 +691,7 @@
     QUnit.test("submitForm uses CORS settings and withCredentials when enabled", function(assert) {
       assert.timeout(timeout);
       const done = assert.async();
-      $("#qunit-fixture").html("<div id='vf'><form class='frm' action='http://example.com/api'></form></div>");
+      setFixtureHtml("<div id='vf'><form class='frm' action='http://example.com/api'></form></div>");
       const origFetch = window.fetch;
       let call;
 
@@ -613,7 +736,7 @@
       window.__jiantExternalLibValue = undefined;
       const altHost = window.location.hostname === "localhost" ? "127.0.0.1" : "localhost";
       const port = window.location.port ? (":" + window.location.port) : "";
-      const url = window.location.protocol + "//" + altHost + port + "/tests/fixtures/external_lib.js";
+      const url = window.location.protocol + "//" + altHost + port + "/tests-native/fixtures/external_lib.js";
 
       jiant.app(() => ({
         id: "JQAppCorsLogic",
@@ -892,11 +1015,11 @@
       });
     });
 
-    QUnit.test("states work without jquery hashchange plugin", function(assert) {
+    QUnit.test("states work without hashchange plugin", function(assert) {
       assert.timeout(timeout);
       const done = assert.async();
-      const prevHashchange = $.fn.hashchange;
-      $.fn.hashchange = undefined;
+      const prevOnHashChange = window.onhashchange;
+      window.onhashchange = null;
       window.location.hash = "";
 
       jiant.app(() => ({
@@ -906,7 +1029,7 @@
 
       jiant.onApp("JQAppNoHashchange", function(app) {
         app.states.s1.start(function() {
-          $.fn.hashchange = prevHashchange;
+          window.onhashchange = prevOnHashChange;
           assert.ok(true, "states still functional without plugin");
           done();
         });

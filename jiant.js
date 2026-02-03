@@ -191,7 +191,7 @@
         console.error("loadModule called before .app with callback, callback will be ignored. loadModule arguments: ");
         console.error(arguments);
       }
-      preApp(appId, function($, app) {
+      preApp(appId, function(app) {
         modules.forEach(function(m) {
           app.modules.push(m);
         });
@@ -878,13 +878,13 @@
       preApping[appId] = root;
       if (preAppCallbacks[appId]) {
         preAppCallbacks[appId].forEach(function(cb) {
-          cb($, root, jiant);
+          cb(root, jiant);
         });
         delete preAppCallbacks[appId];
       }
       if (appId !== "*" && preAppCallbacks["*"]) {
         preAppCallbacks["*"].forEach(function(cb) {
-          cb($, root, jiant);
+          cb(root, jiant);
         });
       }
       delete preApping[appId];
@@ -1022,7 +1022,7 @@
       const arr = preAppCallbacks[appId] = nvl(preAppCallbacks[appId], []);
       arr.push(cb);
       if (preApping[appId]) {
-        cb($, preApping[appId], jiant);
+        cb(preApping[appId], jiant);
       }
     }
   }
@@ -1039,7 +1039,7 @@
       }
     });
     if (allBound) {
-      let allDependsResolved = true, params = [$];
+      let allDependsResolved = true, params = [];
       appIdArr.some(function(appId) {
         if ("jiant-logic" in singletones) {
           allDependsResolved = singletones["jiant-logic"].isDependResolved(appId, {

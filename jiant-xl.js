@@ -74,22 +74,33 @@
 
   var confirmedActionBsSelectedFn;
 
-  var dom = jiant.dom;
-  var on = dom.on;
-  var trigger = dom.trigger;
-  var removeClass = dom.removeClass;
-  var addClass = dom.addClass;
-  var toggleClass = dom.toggleClass;
-  var getChecked = dom.getChecked;
-  var getData = dom.getData;
-  var setChecked = dom.setChecked;
-  var appendElem = dom.append;
-  var insertBeforeElem = dom.insertBefore;
-  var removeElem = dom.remove;
-  var setHtml = dom.html;
-  var hideElem = dom.hide;
-  var showElem = dom.show;
-  var setDisabled = dom.setDisabled;
+  var dom, on, trigger, removeClass, addClass, toggleClass, getChecked, getData,
+      setChecked, appendElem, insertBeforeElem, removeElem, setHtml, hideElem, showElem, setDisabled;
+
+  function initDom() {
+    if (dom) {
+      return;
+    }
+    dom = jiant.dom || (jiant.util && jiant.util.dom);
+    if (!dom) {
+      return;
+    }
+    on = dom.on;
+    trigger = dom.trigger;
+    removeClass = dom.removeClass;
+    addClass = dom.addClass;
+    toggleClass = dom.toggleClass;
+    getChecked = dom.getChecked;
+    getData = dom.getData;
+    setChecked = dom.setChecked;
+    appendElem = dom.append;
+    insertBeforeElem = dom.insertBefore;
+    removeElem = dom.remove;
+    setHtml = dom.html;
+    hideElem = dom.hide;
+    showElem = dom.show;
+    setDisabled = dom.setDisabled;
+  }
 
   var tmpJiantXl = {
 
@@ -514,6 +525,7 @@
   };
 
   jiant.module("jiant-xl", function() {
+    initDom();
     this.singleton();
     return tmpJiantXl;
   });
