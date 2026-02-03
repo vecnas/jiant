@@ -1,7 +1,8 @@
-jiant.module("jiant-types", ["jiant-jtype", "jiant-comp"],
-  function({jiant, "jiant-jtype": {initType, JType}, "jiant-comp": {getCompRenderer}}) {
+jiant.module("jiant-types", ["jiant-jtype", "jiant-comp", "jiant-util"],
+  function({jiant, "jiant-jtype": {initType, JType}, "jiant-comp": {getCompRenderer}, "jiant-util": util}) {
 
   this.singleton();
+  const dom = (util && util.dom) ? util.dom : jiant.dom;
 
   function fit(val, min, max) {
     val = isNaN(min) ? val : parseFloat(val) < min ? min : val;
