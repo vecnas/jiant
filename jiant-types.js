@@ -125,7 +125,6 @@ jiant.module("jiant-types", ["jiant-jtype", "jiant-comp", "jiant-util"],
     componentProducer: visualComponentProducer.and(({elem, app}) => {
       jiant.loadModule(app, "jiant-intl", function() {
         dom.forEach(elem, function(el) {
-          ensureHtmlApi(el);
           jiant.intlProxy(app, el, "html");
           jiant.intlProxy(app, el, "text");
         });
