@@ -279,7 +279,7 @@
         mname = moduleSpec.name,
         module = loadedModules[mname];
     if (typeof module === "function") {
-      const args = {$, app: appRoot, jiant, params: moduleSpec};
+      const args = {app: appRoot, jiant, params: moduleSpec};
       module.parsedDeps && module.parsedDeps.forEach(function(name) {
         args[name] = appRoot.modules[name];
         // args.push(appRoot.modules[name]);

@@ -1,8 +1,6 @@
 jiant.module("jiant-logic", ["jiant-util"], function({app, jiant, params, "jiant-util": Util}) {
 
   this.singleton();
-  const $ = window.jQuery;
-
   const createEventBus = jiant.createEventBus;
 
   const eventBus = createEventBus(),
@@ -13,7 +11,7 @@ jiant.module("jiant-logic", ["jiant-util"], function({app, jiant, params, "jiant
   function override(spec, implFn) {
     if (spec._jAppId) {
       const superImpl = jiant.extend(true, {}, spec),
-          newImpl = implFn($, jiant.getApps()[spec._jAppId], superImpl);
+          newImpl = implFn(jiant.getApps()[spec._jAppId], superImpl);
       jiant.each(newImpl, function(fname, fbody) {
         spec[fname] = fbody;
       });
@@ -30,7 +28,7 @@ jiant.module("jiant-logic", ["jiant-util"], function({app, jiant, params, "jiant
     if (obj && appId in awaitingDepends && name in awaitingDepends[appId] && app) {
       app.logic = app.logic || {};
       app.logic[name] = app.logic[name] || {};
-      jiant.each(typeof obj === "function" ? obj($, app) : obj, function(fname, fspec) {
+      jiant.each(typeof obj === "function" ? obj(app) : obj, function(fname, fspec) {
         app.logic[name][fname] = fspec;
       });
       loadedLogics[appId][name] = 1;
@@ -125,7 +123,7 @@ jiant.module("jiant-logic", ["jiant-util"], function({app, jiant, params, "jiant
           });
           spec._jOverrides && spec._jOverrides.length && jiant.each(spec._jOverrides, function(i, implFn) {
             const superImpl = jiant.extend(true, {}, spec),
-                newImpl = implFn($, jiant.getApps()[spec._jAppId], superImpl);
+                newImpl = implFn(jiant.getApps()[spec._jAppId], superImpl);
             jiant.each(newImpl, function(fname, fbody) {
               spec[fname] = fbody;
             });

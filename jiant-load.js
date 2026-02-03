@@ -13,8 +13,8 @@ jiant.module("jiant-load", function() {
       jiant.declare(pseudoName, url);
     });
     const pseudoAppName = "app" + new Date().getTime() + Math.random();
-    jiant.onApp(pseudoAppName, pseudoDeps, function($, app) {
-      cb($);
+    jiant.onApp(pseudoAppName, pseudoDeps, function(app) {
+      cb && cb(window.jQuery);
       jiant.forget(pseudoAppName);
     });
     jiant.app({id: pseudoAppName});

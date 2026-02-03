@@ -1,5 +1,5 @@
 jiant.module("jiant-ui", ["jiant-auto", "jiant-render", "jiant-types", "jiant-spec"],
-  function ({$, app, jiant, params, "jiant-auto": Auto, "jiant-render": Render, "jiant-types": JType,
+  function ({app, jiant, params, "jiant-auto": Auto, "jiant-render": Render, "jiant-types": JType,
               "jiant-spec": Spec}) {
 
     this.singleton();
@@ -39,26 +39,29 @@ jiant.module("jiant-ui", ["jiant-auto", "jiant-render", "jiant-types", "jiant-sp
       p[fnName].push(data);
     }
 
-    $.fn.extend({
-      showOn: function (fldOrCb, exactVal) {
-        hndlOn({that: this, fnName: "showing", val: fldOrCb, useCls: false,
-          useExactVal: arguments.length > 1, exactVal: exactVal});
-      },
-      hideOn: function (fldOrCb, exactVal) {
-        if (typeof fldOrCb === "function") {
-          this.showOn(function () {
-            return !fldOrCb.apply(this, arguments);
-          });
-        } else {
-          fldOrCb = (fldOrCb.startsWith("!")) ? fldOrCb.substr(1) : ("!" + fldOrCb);
-          arguments.length > 1 ? this.showOn(fldOrCb, exactVal) : this.showOn(fldOrCb);
+    const jq = (typeof window !== "undefined" && typeof window.jQuery === "function") ? window.jQuery : undefined;
+    if (jq && jq.fn) {
+      jq.fn.extend({
+        showOn: function (fldOrCb, exactVal) {
+          hndlOn({that: this, fnName: "showing", val: fldOrCb, useCls: false,
+            useExactVal: arguments.length > 1, exactVal: exactVal});
+        },
+        hideOn: function (fldOrCb, exactVal) {
+          if (typeof fldOrCb === "function") {
+            this.showOn(function () {
+              return !fldOrCb.apply(this, arguments);
+            });
+          } else {
+            fldOrCb = (fldOrCb.startsWith("!")) ? fldOrCb.substr(1) : ("!" + fldOrCb);
+            arguments.length > 1 ? this.showOn(fldOrCb, exactVal) : this.showOn(fldOrCb);
+          }
+        },
+        switchClassOn: function (clsOrCb, fldOrCb, exactVal) {
+          hndlOn({that: this, fnName: "switchClass", val: fldOrCb, useCls: true,
+            clsVal: clsOrCb, useExactVal: arguments.length > 1, exactVal: exactVal});
         }
-      },
-      switchClassOn: function (clsOrCb, fldOrCb, exactVal) {
-        hndlOn({that: this, fnName: "switchClass", val: fldOrCb, useCls: true,
-          clsVal: clsOrCb, useExactVal: arguments.length > 1, exactVal: exactVal});
-      }
-    });
+      });
+    }
 
     const dom = jiant.dom;
 
