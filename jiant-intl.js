@@ -59,7 +59,7 @@ jiant.module("jiant-intl", ["jiant-logic"], function({app, jiant, params, "jiant
   }
 
   function _bindIntl(root, intl, appId) {
-    if (intl) {
+    if (intl && Object.keys(intl).length) {
       if (root.logic.intl) {
         jiant.info("Both logic.intl and app.intl declared, skipping app.intl");
       } else {
