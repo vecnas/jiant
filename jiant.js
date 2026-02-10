@@ -461,7 +461,7 @@
       return first;
     }
     for (let i = 0; i < second.length; i++) {
-      first.push(second[i]);
+      Array.prototype.push.call(first, second[i]);
     }
     return first;
   }
@@ -525,30 +525,6 @@
 
   function fetchJson(url, options) {
     return fetchRequest(url, options).then(function(res) { return res.json(); });
-  }
-
-  function empty(elem) {
-    return elem.empty();
-  }
-
-  function jHtml(elem, val) {
-    return arguments.length > 1 ? elem.html(val) : elem.html();
-  }
-
-  function addClass(elem, cls) {
-    return elem.addClass(cls);
-  }
-
-  function hide(elem) {
-    return elem.hide();
-  }
-
-  function show(elem) {
-    return elem.show();
-  }
-
-  function css(elem) {
-    return elem.css.apply(elem, Array.prototype.slice.call(arguments, 1));
   }
 
   function addIfNeed(modules2load, depModule) {
@@ -1119,6 +1095,7 @@
     getAppPrefix: (appRoot, content) => ("appPrefix" in content) ? content.appPrefix : ("appPrefix" in appRoot) ? appRoot.appPrefix : "",
 
     version: version,
+    createEventBus: createEventBus,
     nvl: nvl,
     each: each,
     isFunction: isFunction,
@@ -1128,12 +1105,6 @@
     extend: extend,
     merge: merge,
     grep: grep,
-    empty: empty,
-    html: jHtml,
-    addClass: addClass,
-    hide: hide,
-    show: show,
-    css: css,
     globalEval: globalEval,
     fetchText: fetchText,
     fetchJson: fetchJson,

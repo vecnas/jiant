@@ -1,4 +1,4 @@
-jiant.module("jiant-util", ["jiant-log"], function({jiant}) {
+jiant.module("jiant-util", ["jiant-log", "jiant-dom"], function({jiant, "jiant-dom": dom}) {
 
   this.singleton();
 
@@ -20,62 +20,6 @@ jiant.module("jiant-util", ["jiant-log"], function({jiant}) {
     }
     const kebabName = toKebabCase(name);
     return kebabName !== name ? kebabName : (kebabName + "-" + suffix);
-  }
-
-  function createEventBus() {
-    const listeners = {};
-    return {
-      on: function(eventName, handler) {
-        listeners[eventName] = listeners[eventName] || [];
-        listeners[eventName].push(handler);
-        return handler;
-      },
-      off: function(eventName, handler) {
-        const list = listeners[eventName];
-        if (!list) {
-          return;
-        }
-        if (!handler) {
-          listeners[eventName] = [];
-          return;
-        }
-        const idx = list.indexOf(handler);
-        if (idx >= 0) {
-          list.splice(idx, 1);
-        }
-      },
-      one: function(eventName, handler) {
-        const onceHandler = function(evt) {
-          this.off(eventName, onceHandler);
-          handler.apply(null, arguments);
-        }.bind(this);
-        this.on(eventName, onceHandler);
-        return onceHandler;
-      },
-      trigger: function(eventName) {
-        const list = listeners[eventName];
-        if (!list || list.length === 0) {
-          return;
-        }
-        const extraArgs = [];
-        for (let i = 1; i < arguments.length; i++) {
-          extraArgs.push(arguments[i]);
-        }
-        const spreadArgs = (extraArgs.length === 1 && Array.isArray(extraArgs[0])) ? extraArgs[0] : extraArgs;
-        const evt = {
-          _stopped: false,
-          stopImmediatePropagation: function() { this._stopped = true; }
-        };
-        const callArgs = [evt].concat(spreadArgs);
-        const callList = list.slice();
-        for (let i = 0; i < callList.length; i++) {
-          callList[i].apply(this, callArgs);
-          if (evt._stopped) {
-            break;
-          }
-        }
-      }
-    };
   }
 
   function copy2cb(txt) {
@@ -276,7 +220,6 @@ jiant.module("jiant-util", ["jiant-log"], function({jiant}) {
     parseTemplate: function(text, data) {return $(parseTemplate(text, data));},
     parseTemplate2Text: parseTemplate2Text,
     _parseTemplate: parseTemplate,
-    getFunctionParamNames : getParamNames,
     isNumberString: isNumberString,
     getParamNames: getParamNames,
     getURLParameter: getURLParameter,
@@ -297,94 +240,7 @@ jiant.module("jiant-util", ["jiant-log"], function({jiant}) {
     isWebComponentName: isWebComponentName,
     toWebComponentName: toWebComponentName,
     toKebabCase: toKebabCase,
-    createEventBus: createEventBus,
-    dom: {
-      isJq: function(val) { return !!val && val.jquery; },
-      first: function(elem) { return elem && elem.jquery ? elem[0] : elem; },
-      forEach: function(elem, cb) {
-        if (!elem) { return; }
-        if (elem.jquery) {
-          for (let i = 0; i < elem.length; i++) { cb(elem[i]); }
-        } else { cb(elem); }
-      },
-      on: function(elem, eventName, handler) {
-        exp.dom.forEach(elem, function(el) {
-          el.addEventListener(eventName, function(evt) { handler(evt, evt.detail); });
-        });
-      },
-      trigger: function(elem, eventName, detail) {
-        exp.dom.forEach(elem, function(el) {
-          let evt;
-          if (typeof CustomEvent === "function") {
-            evt = new CustomEvent(eventName, {detail: detail});
-          } else {
-            evt = document.createEvent("CustomEvent");
-            evt.initCustomEvent(eventName, false, false, detail);
-          }
-          el.dispatchEvent(evt);
-        });
-      },
-      addClass: function(elem, cls) {
-        exp.dom.forEach(elem, function(el) { el.classList && el.classList.add(cls); });
-      },
-      removeClass: function(elem, cls) {
-        exp.dom.forEach(elem, function(el) { el.classList && el.classList.remove(cls); });
-      },
-      toggleClass: function(elem, cls) {
-        exp.dom.forEach(elem, function(el) { el.classList && el.classList.toggle(cls); });
-      },
-      setChecked: function(elem, val) {
-        exp.dom.forEach(elem, function(el) { el.checked = !!val; });
-      },
-      getChecked: function(elem) {
-        const el = exp.dom.first(elem);
-        return el ? !!el.checked : false;
-      },
-      getData: function(elem, key) {
-        const el = exp.dom.first(elem);
-        if (!el) { return undefined; }
-        if (el.dataset && key in el.dataset) { return el.dataset[key]; }
-        return el.getAttribute ? el.getAttribute("data-" + key) : undefined;
-      },
-      setDisabled: function(elem, disabled) {
-        exp.dom.forEach(elem, function(el) { el.disabled = !!disabled; });
-      },
-      append: function(parent, child) {
-        const p = exp.dom.first(parent);
-        if (!p || !child) { return; }
-        if (child.jquery) {
-          for (let i = 0; i < child.length; i++) { p.appendChild(child[i]); }
-        } else if (child.nodeType) {
-          p.appendChild(child);
-        }
-      },
-      insertBefore: function(elem, ref) {
-        const node = exp.dom.first(elem);
-        const refNode = exp.dom.first(ref);
-        if (!node || !refNode || !refNode.parentNode) { return; }
-        refNode.parentNode.insertBefore(node, refNode);
-      },
-      remove: function(elem) {
-        exp.dom.forEach(elem, function(el) {
-          if (el.remove) { el.remove(); }
-          else if (el.parentNode) { el.parentNode.removeChild(el); }
-        });
-      },
-      html: function(elem, html) {
-        exp.dom.forEach(elem, function(el) { el.innerHTML = html; });
-      },
-      hide: function(elem) {
-        exp.dom.forEach(elem, function(el) { el.style.display = "none"; });
-      },
-      show: function(elem) {
-        exp.dom.forEach(elem, function(el) { el.style.display = ""; });
-      },
-      getVal: function(elem) {
-        if (!elem) { return undefined; }
-        if (elem.jquery) { return elem.val(); }
-        return "value" in elem ? elem.value : undefined;
-      }
-    }
+    dom: dom
   };
 
   for (let key in exp) {

@@ -18,14 +18,6 @@ jiant.module("jiant-ajax", function({}) {
     });
   }
 
-  function isPlainObject(obj) {
-    if (!obj || Object.prototype.toString.call(obj) !== "[object Object]") {
-      return false;
-    }
-    const proto = Object.getPrototypeOf(obj);
-    return proto === Object.prototype || proto === null;
-  }
-
   function parseForAjaxCall(root, path, actual, traverse) {
     if (path === null) {
       return;
@@ -33,13 +25,13 @@ jiant.module("jiant-ajax", function({}) {
     if (Array.isArray(actual) || (actual && actual.jCollection)) {
       let compound = false;
       actual.forEach(function(obj) {
-        compound = compound || isPlainObject(obj) || (obj && obj.jModelName);
+        compound = compound || jiant.isPlainObject(obj) || (obj && obj.jModelName);
         return compound;
       });
       actual.forEach(function(obj, i) {
         parseForAjaxCall(root, path + (compound ? ("[" + i + "]") : ""), obj, true);
       });
-    } else if (isPlainObject(actual) || (actual && actual.jModelName)) {
+    } else if (jiant.isPlainObject(actual) || (actual && actual.jModelName)) {
       jiant.each(actual, function(key, value) {
         if (key === jiant.flags.ajaxSubmitAsMap) {
           return;
