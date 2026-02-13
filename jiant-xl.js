@@ -471,17 +471,16 @@
         var selectedElem, selectedVal, selectClass, defaultCb = cb;
         return {
           add: function(elem, val, cb, selected) {
-            var jqElem = elem && elem.jquery ? elem : (window.jQuery ? window.jQuery(elem) : elem);
             cb = cb || defaultCb;
             on(elem, "click", function() {
               var prevElem = selectedElem, prevVal = selectedVal;
               selectedVal = val;
               if (selectClass) {
                 selectedElem && removeClass(selectedElem, selectClass);
-                addClass(jqElem, selectClass);
+                addClass(elem, selectClass);
               }
-              selectedElem = jqElem;
-              cb && cb(jqElem, selectedVal, prevElem, prevVal);
+              selectedElem = elem;
+              cb && cb(elem, selectedVal, prevElem, prevVal);
             });
             selected && trigger(elem, "click");
           },

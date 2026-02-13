@@ -16,6 +16,11 @@
   const timeout = 2000;
 
   QUnit.module("jQuery compatibility", function() {
+    function loadDomAndXl(app, cb) {
+      jiant.loadModule(app, "jiant-dom", function() {
+        jiant.loadModule(app, "jiant-xl", cb);
+      });
+    }
 
     QUnit.test("jiant toArray uses array detection", function(assert) {
       assert.timeout(timeout);
@@ -91,6 +96,121 @@
       const retShow = jiant.show(el);
       assert.strictEqual(retShow, el, "show returns original jQuery object");
       assert.notEqual(jiant.css(el, "display"), "none", "show clears display none");
+    });
+
+    QUnit.test("pseudoSelect preserves DOM element in callback (no forced jQuery wrap)", function(assert) {
+      assert.timeout(timeout);
+      const done = assert.async();
+      $("#qunit-fixture").html(
+        "<div id='psDomRoot'>" +
+          "<button id='psDom1' data-for='kills'></button>" +
+          "<button id='psDom2' data-for='exp'></button>" +
+        "</div>"
+      );
+
+      jiant.app(() => ({
+        id: "JQAppPseudoDom",
+        modulesPrefix: "../",
+        modules: []
+      }));
+
+      jiant.onApp("JQAppPseudoDom", function(app) {
+        loadDomAndXl(app, function() {
+          const btn1 = document.getElementById("psDom1");
+          const btn2 = document.getElementById("psDom2");
+          const calls = [];
+          jiant.xl.pseudoSelect([btn1, btn2], [1, 2], function(selectedElem, selectedVal, prevElem) {
+            calls.push({selectedElem: selectedElem, selectedVal: selectedVal, prevElem: prevElem});
+          }, 0, "active");
+
+          assert.ok(calls.length >= 1, "initial selection callback fired");
+          assert.strictEqual(calls[0].selectedElem, btn1, "selected elem is original DOM node");
+          assert.strictEqual(calls[0].selectedElem.jquery, undefined, "selected elem is not jQuery-wrapped");
+          assert.ok(btn1.classList.contains("active"), "active class set on first element");
+
+          btn2.click();
+          assert.ok(calls.length >= 2, "second selection callback fired");
+          assert.strictEqual(calls[1].selectedElem, btn2, "selected elem switched to second DOM node");
+          assert.strictEqual(calls[1].prevElem, btn1, "previous element is first DOM node");
+          assert.ok(!btn1.classList.contains("active"), "active removed from first element");
+          assert.ok(btn2.classList.contains("active"), "active added to second element");
+          done();
+        });
+      });
+    });
+
+    QUnit.test("pseudoSelect keeps jQuery element unchanged when jQuery element passed", function(assert) {
+      assert.timeout(timeout);
+      const done = assert.async();
+      $("#qunit-fixture").html(
+        "<div id='psJqRoot'>" +
+          "<button id='psJq1' data-for='kills'></button>" +
+          "<button id='psJq2' data-for='exp'></button>" +
+        "</div>"
+      );
+
+      jiant.app(() => ({
+        id: "JQAppPseudoJq",
+        modulesPrefix: "../",
+        modules: []
+      }));
+
+      jiant.onApp("JQAppPseudoJq", function(app) {
+        loadDomAndXl(app, function() {
+          const jq1 = $("#psJq1");
+          const jq2 = $("#psJq2");
+          const calls = [];
+          jiant.xl.pseudoSelect([jq1, jq2], [1, 2], function(selectedElem, selectedVal, prevElem) {
+            calls.push({selectedElem: selectedElem, selectedVal: selectedVal, prevElem: prevElem});
+          }, 0, "active");
+
+          assert.ok(calls.length >= 1, "initial selection callback fired");
+          assert.ok(!!calls[0].selectedElem.jquery, "selected elem remains jQuery object");
+          assert.strictEqual(calls[0].selectedElem, jq1, "callback receives same jQuery object");
+          assert.strictEqual(calls[0].selectedElem[0], jq1[0], "selected jQuery points to first element");
+          assert.ok(jq1.hasClass("active"), "active class set on first jQuery element");
+
+          jq2.trigger("click");
+          assert.ok(calls.length >= 2, "second selection callback fired");
+          assert.strictEqual(calls[1].selectedElem, jq2, "callback receives same second jQuery object");
+          assert.strictEqual(calls[1].prevElem, jq1, "previous element is first jQuery object");
+          assert.ok(!jq1.hasClass("active"), "active removed from first jQuery element");
+          assert.ok(jq2.hasClass("active"), "active added to second jQuery element");
+          done();
+        });
+      });
+    });
+
+    QUnit.test("pseudoSelect callback can read data via jiant.dom.getData", function(assert) {
+      assert.timeout(timeout);
+      const done = assert.async();
+      $("#qunit-fixture").html(
+        "<div id='psDataRoot'>" +
+          "<button id='psData1' data-for='kills'></button>" +
+          "<button id='psData2' data-for='exp'></button>" +
+        "</div>"
+      );
+
+      jiant.app(() => ({
+        id: "JQAppPseudoData",
+        modulesPrefix: "../",
+        modules: []
+      }));
+
+      jiant.onApp("JQAppPseudoData", function(app) {
+        loadDomAndXl(app, function() {
+          const btn1 = document.getElementById("psData1");
+          const btn2 = document.getElementById("psData2");
+          const selectedKeys = [];
+          jiant.xl.pseudoSelect([btn1, btn2], [1, 2], function(selectedElem) {
+            selectedKeys.push(jiant.dom.getData(selectedElem, "for"));
+          }, 0, "active");
+
+          btn2.click();
+          assert.deepEqual(selectedKeys, ["kills", "exp"], "data-for read correctly on each selection");
+          done();
+        });
+      });
     });
 
     QUnit.test("onApp provides jQuery and view/components are jQuery objects", function(assert) {
