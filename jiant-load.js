@@ -14,7 +14,7 @@ jiant.module("jiant-load", function() {
     });
     const pseudoAppName = "app" + new Date().getTime() + Math.random();
     jiant.onApp(pseudoAppName, pseudoDeps, function(app) {
-      cb && cb(window.jQuery);
+      cb && cb();
       jiant.forget(pseudoAppName);
     });
     jiant.app({id: pseudoAppName});

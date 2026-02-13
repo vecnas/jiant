@@ -62,7 +62,7 @@ jiant.module("jiant-dev", function({jiant}) {
       ]});
     jiant.loadModule(app, "jiant-visualize", function() {
       jiant.onApp(app, ["jiantVisualizer"], function(app) {
-        app.logic.jiantVisualizer.visualize(window.jQuery, app);
+        app.logic.jiantVisualizer.visualize(app);
       });
     });
   }
