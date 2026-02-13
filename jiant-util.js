@@ -114,14 +114,18 @@ jiant.module("jiant-util", ["jiant-log", "jiant-dom"], function({jiant, "jiant-d
   }
 
   function msieDom2Html(elem) {
-    jiant.each(elem.find("*"), function(idx, child) {
+    const root = dom.first(elem);
+    if (!root) {
+      return "";
+    }
+    jiant.each(root.querySelectorAll("*"), function(idx, child) {
       jiant.each(child.attributes, function(i, attr) {
         if (attr.value.indexOf(" ") < 0 && attr.value.indexOf("!!") >= 0) {
           child.setAttribute(attr.name, attr.value.replace(/!!/g, "e2013e03e11eee "));
         }
       });
     });
-    return jiant.html($(elem)).trim().replace(/!!/g, "!! ").replace(/e2013e03e11eee /g, "!! ");
+    return jiant.html(root).trim().replace(/!!/g, "!! ").replace(/e2013e03e11eee /g, "!! ");
   }
 
   function parseTemplate(that, data, tmId, mapping) {
@@ -136,13 +140,13 @@ jiant.module("jiant-util", ["jiant-log", "jiant-dom"], function({jiant, "jiant-d
     try {
       let func = tmId ? _tmplCache[tmId] : null;
       if (!func) {
-        const tmp = $("<i></i>");
+        const tmp = document.createElement("i");
         typeof that === "string" && jiant.html(tmp, that);
-        let str = jiant.html(typeof that === "string" ? tmp : $(that)).trim();
+        let str = jiant.html(typeof that === "string" ? tmp : that).trim();
         if (!jiant.isMSIE) {
           str = str.replace(/!!/g, "!! ");
         } else {
-          str = msieDom2Html($(that));
+          str = msieDom2Html(that);
         }
         const strFunc =
             "var p=[],print=function(){p.push.apply(p,arguments);};" +

@@ -10,6 +10,12 @@ jiant.module("jiant-types", ["jiant-jtype", "jiant-comp", "jiant-util"],
     return "" + val;
   }
 
+  function elemFromHtml(html) {
+    const tmp = document.createElement("div");
+    tmp.innerHTML = html;
+    return tmp.firstElementChild;
+  }
+
   function updateInputSet({data, elem, val, isUpdate, view}) {
     const firstElem = dom.first(elem);
     if (!elem || !firstElem) {
@@ -50,8 +56,7 @@ jiant.module("jiant-types", ["jiant-jtype", "jiant-comp", "jiant-util"],
       }
       const tagName = elem[0].tagName.toLowerCase();
       if (tagName in {"input": 1, "textarea": 1, "select": 1}) {
-        const el = $(elem[0]),
-          tp = el.attr("type");
+        const tp = elem[0].getAttribute("type");
         if (tp === "checkbox") {
           elem.prop("checked", !!val);
         } else if (tp === "radio") {
@@ -157,7 +162,7 @@ jiant.module("jiant-types", ["jiant-jtype", "jiant-comp", "jiant-util"],
         roots = [];
       let lastPage = 0, lastTotalCls;
       jiant.each(uiElem, function(i, elem) {
-        const root = $("<ul></ul>");
+        const root = document.createElement("ul");
         jiant.addClass(root, "pagination");
         jiant.dom.append(elem, root);
         roots.push(root);
@@ -185,7 +190,7 @@ jiant.module("jiant-types", ["jiant-jtype", "jiant-comp", "jiant-util"],
       uiElem.updatePager = function(page) {
         jiant.each(roots, function(idx, root) {
           jiant.empty(root);
-          lastTotalCls && root.removeClass(lastTotalCls);
+          lastTotalCls && jiant.dom.removeClass(root, lastTotalCls);
           lastTotalCls = "totalPages_" + page.totalPages;
           jiant.addClass(root, lastTotalCls);
           const from = Math.max(0, page.number - Math.round(jiant.PAGER_RADIUS / 2)),
@@ -212,10 +217,10 @@ jiant.module("jiant-types", ["jiant-jtype", "jiant-comp", "jiant-util"],
         });
       };
       function addPageCtl(root, value, ctlClass) {
-        const ctl = $(jiant.parseTemplate($("<b><li class='!!ctlClass!!' style='cursor: pointer;'><a>!!label!!</a></li></b>"),
+        const ctl = elemFromHtml(jiant._parseTemplate("<li class='!!ctlClass!!' style='cursor: pointer;'><a>!!label!!</a></li>",
           {label: value !== -1 ? value : "...", ctlClass: ctlClass}));
-        root.append(ctl);
-        value !== -1 && ctl.click(function() {
+        jiant.dom.append(root, ctl);
+        value !== -1 && ctl.addEventListener("click", function() {
           lastPage = value;
           uiElem.refreshPage();
         });
