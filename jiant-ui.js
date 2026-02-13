@@ -149,8 +149,9 @@ jiant.module("jiant-ui", ["jiant-auto", "jiant-render", "jiant-types", "jiant-sp
             }
             if (reverseBinding && actualElement && actualElement.change) {
               const backHandler = function (event) {
-                const tagName = actualElement[0].tagName.toLowerCase(),
-                  tp = actualElement.attr("type"),
+                const rawElement = dom.first(actualElement),
+                  tagName = rawElement.tagName.toLowerCase(),
+                  tp = rawElement.getAttribute("type"),
                   etype = spec[componentKey];
 
                 function convert(val) {
@@ -182,7 +183,7 @@ jiant.module("jiant-ui", ["jiant-auto", "jiant-render", "jiant-types", "jiant-sp
                     } else if (tagName in {"input": 1, "select": 1, "textarea": 1}) {
                       val.call(data, dom.getVal(actualElement)); // don't convert due to user may input "undefined" as string
                     } else if (tagName === "img") {
-                      val.call(data, actualElement.attr("src"));
+                      val.call(data, rawElement.getAttribute("src"));
                       // no actual event for changing html, manual 'change' trigger supported by this code
                     } else {
                       val.call(data, jiant.html(actualElement));

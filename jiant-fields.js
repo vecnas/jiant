@@ -1,10 +1,39 @@
 jiant.module("jiant-fields", [], function({app, jiant, params}) {
 
   this.singleton();
+  const dom = jiant.dom;
   function elemFromHtml(html) {
     const tmp = document.createElement("div");
     tmp.innerHTML = html;
     return tmp.firstElementChild;
+  }
+
+  function firstElem(elem) {
+    return dom && typeof dom.first === "function" ? dom.first(elem) : (elem && elem.jquery ? elem[0] : elem);
+  }
+
+  function getAttr(elem, name) {
+    const raw = firstElem(elem);
+    return raw && raw.getAttribute ? raw.getAttribute(name) : undefined;
+  }
+
+  function setAttr(elem, name, val) {
+    const raw = firstElem(elem);
+    if (raw && raw.setAttribute) {
+      raw.setAttribute(name, val);
+    }
+    return elem;
+  }
+
+  function serializeForm(elem) {
+    if (elem && typeof elem.serialize === "function") {
+      return elem.serialize();
+    }
+    const raw = firstElem(elem);
+    if (!raw || raw.tagName !== "FORM") {
+      return "";
+    }
+    return new URLSearchParams(new FormData(raw)).toString();
   }
 
   const customElementTypes = {};
@@ -66,9 +95,9 @@ jiant.module("jiant-fields", [], function({app, jiant, params}) {
     dataName = dataName || componentId;
     viewRoot[componentId] = function(val) {
       if (arguments.length === 0) {
-        return viewRoot.attr("data-" + dataName);
+        return dom.getData(viewRoot, dataName);
       } else {
-        return viewRoot.attr("data-" + dataName, val);
+        return setAttr(viewRoot, "data-" + dataName, val);
       }
     };
   }
@@ -181,10 +210,10 @@ jiant.module("jiant-fields", [], function({app, jiant, params}) {
 
     function sync() {
       offset = Math.max(offset, 0);
-      offset = Math.min(offset, container.children().length - 1);
+      offset = Math.min(offset, container.children.length - 1);
       jiant.css(prev, "visibility", offset > 0 ? "visible" : "hidden");
-      jiant.css(next, "visibility", offset < container.children().length - pageSize ? "visible" : "hidden");
-      jiant.each(container.children(), function(idx, domElem) {
+      jiant.css(next, "visibility", offset < container.children.length - pageSize ? "visible" : "hidden");
+      jiant.each(container.children, function(idx, domElem) {
 //        logInfo("comparing " + idx + " vs " + offset + " - " + (offset+pageSize));
         if (idx >= offset && idx < offset + pageSize) {
 //          logInfo("showing");
@@ -255,12 +284,12 @@ jiant.module("jiant-fields", [], function({app, jiant, params}) {
     };
     input.setMax = function(val) {
       input.j_valMax = val;
-      input.attr("max", val);
+      setAttr(input, "max", val);
       input.val(fit(input.valInt(), input.j_valMin, input.j_valMax));
     };
     input.setMin = function(val) {
       input.j_valMin = val;
-      input.attr("min", val);
+      setAttr(input, "min", val);
       input.val(fit(input.valInt(), input.j_valMin, input.j_valMax));
     }
   }
@@ -293,12 +322,12 @@ jiant.module("jiant-fields", [], function({app, jiant, params}) {
     };
     input.setMax = function(val) {
       input.j_valMax = val;
-      input.attr("max", val);
+      setAttr(input, "max", val);
       input.val(fit(input.valFloat(), input.j_valMin, input.j_valMax));
     };
     input.setMin = function(val) {
       input.j_valMin = val;
-      input.attr("min", val);
+      setAttr(input, "min", val);
       input.val(fit(input.valFloat(), input.j_valMin, input.j_valMax));
     }
   }
@@ -313,13 +342,13 @@ jiant.module("jiant-fields", [], function({app, jiant, params}) {
       jiant.DEV_MODE && alert(key + "." + name + " form element assigned to non-form: " + tagName);
     }
     elem.submitForm = function(url, cb) {
-      url = url ? url : elem.attr("action");
+      url = url ? url : getAttr(elem, "action");
       url = isCouldBePrefixed(url) ? ((appRoot.ajaxPrefix ? appRoot.ajaxPrefix : jiant.AJAX_PREFIX ? jiant.AJAX_PREFIX : "") + url) : url;
       url = isCouldBePrefixed(url) ? (url + (appRoot.ajaxSuffix ? appRoot.ajaxSuffix : jiant.AJAX_SUFFIX ? jiant.AJAX_SUFFIX : "")) : url;
       const settings = {
         method: "POST",
         url: url,
-        data: elem.serialize()
+        data: serializeForm(elem)
       };
       if (appRoot.crossDomain) {
         settings.crossDomain = true;

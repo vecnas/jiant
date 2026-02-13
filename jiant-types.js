@@ -58,7 +58,7 @@ jiant.module("jiant-types", ["jiant-jtype", "jiant-comp", "jiant-util"],
       if (tagName in {"input": 1, "textarea": 1, "select": 1}) {
         const tp = elem[0].getAttribute("type");
         if (tp === "checkbox") {
-          elem.prop("checked", !!val);
+          dom.setChecked(elem, !!val);
         } else if (tp === "radio") {
           dom.forEach(elem, function(subelem) {
             dom.setChecked(subelem, subelem.value === (val + ""));
@@ -302,9 +302,9 @@ jiant.module("jiant-types", ["jiant-jtype", "jiant-comp", "jiant-util"],
 
   const containerPaged = initType({clz: class containerPaged extends JType {},
     componentProducer: visualComponentProducer.and(({elem: uiElem}) => {
-      let prev = $("<div>&laquo;</div>"),
-        next = $("<div>&raquo;</div>"),
-        container = $("<div></div>"),
+      let prev = elemFromHtml("<div>&laquo;</div>"),
+        next = elemFromHtml("<div>&raquo;</div>"),
+        container = document.createElement("div"),
         pageSize = 8,
         offset = 0;
       jiant.addClass(prev, "paged-prev");
@@ -314,16 +314,16 @@ jiant.module("jiant-types", ["jiant-jtype", "jiant-comp", "jiant-util"],
       uiElem.append(prev);
       uiElem.append(container);
       uiElem.append(next);
-      prev.click(function() {
+      prev.addEventListener("click", function() {
         offset -= pageSize;
         sync();
       });
-      next.click(function() {
+      next.addEventListener("click", function() {
         offset += pageSize;
         sync();
       });
       uiElem.append = function(elem) {
-        container.append(elem);
+        jiant.dom.append(container, elem);
         sync();
       };
       uiElem.empty = function() {
@@ -344,17 +344,16 @@ jiant.module("jiant-types", ["jiant-jtype", "jiant-comp", "jiant-util"],
 
       function sync() {
         offset = Math.max(offset, 0);
-        offset = Math.min(offset, container.children().length - 1);
+        offset = Math.min(offset, container.children.length - 1);
         jiant.css(prev, "visibility", offset > 0 ? "visible" : "hidden");
-        jiant.css(next, "visibility", offset < container.children().length - pageSize ? "visible" : "hidden");
-        jiant.each(container.children(), function(idx, domElem) {
-          let elem = $(domElem);
+        jiant.css(next, "visibility", offset < container.children.length - pageSize ? "visible" : "hidden");
+        jiant.each(container.children, function(idx, domElem) {
 //        logInfo("comparing " + idx + " vs " + offset + " - " + (offset+pageSize));
           if (idx >= offset && idx < offset + pageSize) {
 //          logInfo("showing");
-            jiant.show(elem);
+            jiant.show(domElem);
           } else {
-            jiant.hide(elem);
+            jiant.hide(domElem);
           }
         });
       }
@@ -491,9 +490,11 @@ jiant.module("jiant-types", ["jiant-jtype", "jiant-comp", "jiant-util"],
     componentProducer: ({app, view, viewImpl, componentId, tpInstance}) => function(val) {
       const attrName = "data-" + (tpInstance.dataName() || componentId);
       if (arguments.length === 0) {
-        return viewImpl.attr(attrName);
+        return dom.getData(viewImpl, tpInstance.dataName() || componentId);
       } else {
-        return viewImpl.attr(attrName, val);
+        const raw = dom.first(viewImpl);
+        raw && raw.setAttribute && raw.setAttribute(attrName, val);
+        return viewImpl;
       }
     },
     renderProducer: ({componentId}) => function ({val, view}) {view[componentId](val)}

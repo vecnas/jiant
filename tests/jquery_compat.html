@@ -280,6 +280,91 @@
       });
     });
 
+    QUnit.test("containerPaged append/empty/setPageSize controls visibility", function(assert) {
+      assert.timeout(timeout);
+      const done = assert.async();
+      $("#qunit-fixture").html("<div id='vPagedCompat'><div class='items'></div></div>");
+
+      jiant.app(() => ({
+        id: "JQAppContainerPagedCompat",
+        views: {
+          vPagedCompat: {
+            items: jiant.containerPaged
+          }
+        }
+      }));
+
+      jiant.onApp("JQAppContainerPagedCompat", function(app) {
+        const cont = app.views.vPagedCompat.items;
+        cont.setPageSize(2);
+        cont.append($("<div class='i'>1</div>"));
+        cont.append($("<div class='i'>2</div>"));
+        cont.append($("<div class='i'>3</div>"));
+
+        const items = $("#vPagedCompat .paged-container .i");
+        assert.equal(items.length, 3, "all items appended");
+        assert.ok(items.eq(0).is(":visible"), "first visible");
+        assert.ok(items.eq(1).is(":visible"), "second visible");
+        assert.notOk(items.eq(2).is(":visible"), "third hidden by page size");
+
+        cont.empty();
+        assert.equal($("#vPagedCompat .paged-container .i").length, 0, "empty clears container");
+        done();
+      });
+    });
+
+    QUnit.test("data field getter/setter uses data-* attribute", function(assert) {
+      assert.timeout(timeout);
+      const done = assert.async();
+      $("#qunit-fixture").html("<div id='vDataCompat'></div>");
+
+      jiant.app(() => ({
+        id: "JQAppDataCompat",
+        views: {
+          vDataCompat: {
+            score: jiant.data
+          }
+        }
+      }));
+
+      jiant.onApp("JQAppDataCompat", function(app) {
+        const view = app.views.vDataCompat;
+        view.score("41");
+        assert.equal(view.score(), "41", "setter/getter works");
+        assert.equal(view.attr("data-score"), "41", "data-score attribute set");
+        view.propagate({score: "42"});
+        assert.equal(view.score(), "42", "propagate updates data field");
+        done();
+      });
+    });
+
+    QUnit.test("inputInt setMax/setMin updates attrs and clamps value", function(assert) {
+      assert.timeout(timeout);
+      const done = assert.async();
+      $("#qunit-fixture").html("<div id='vInputIntCompat'><input class='num' type='text' value='10'/></div>");
+
+      jiant.app(() => ({
+        id: "JQAppInputIntCompat",
+        views: {
+          vInputIntCompat: {
+            num: jiant.inputInt
+          }
+        }
+      }));
+
+      jiant.onApp("JQAppInputIntCompat", function(app) {
+        const input = app.views.vInputIntCompat.num;
+        input.setMax(5);
+        assert.equal(input.attr("max"), "5", "max attribute updated");
+        assert.equal(input.val(), "5", "value clamped to max");
+        input.val("0");
+        input.setMin(2);
+        assert.equal(input.attr("min"), "2", "min attribute updated");
+        assert.equal(input.val(), "2", "value clamped to min");
+        done();
+      });
+    });
+
     QUnit.test("parseTemplate works in msie branch for attribute placeholders", function(assert) {
       const prevMsie = jiant.isMSIE;
       jiant.isMSIE = true;
@@ -447,6 +532,46 @@
         app.views.v4.propagate(data, true, true);
         app.views.v4.name.val("abc").change();
         assert.equal(data._name, "abc", "reverse binding set value from input");
+        done();
+      });
+    });
+
+    QUnit.test("reverse binding checkbox uses checked value", function(assert) {
+      assert.timeout(timeout);
+      const done = assert.async();
+      $("#qunit-fixture").html("<div id='v4cb'><input class='flag' type='checkbox'/></div>");
+
+      jiant.app(() => ({
+        id: "JQAppReverseBindCheckbox",
+        views: { v4cb: { flag: jiant.input } }
+      }));
+
+      jiant.onApp("JQAppReverseBindCheckbox", function(app) {
+        const data = { _flag: false, flag: function(val) { this._flag = val; } };
+        app.views.v4cb.propagate(data, true, true);
+        app.views.v4cb.flag.prop("checked", true).change();
+        assert.equal(data._flag, true, "reverse binding set boolean from checkbox");
+        app.views.v4cb.flag.prop("checked", false).change();
+        assert.equal(data._flag, false, "reverse binding clears boolean from checkbox");
+        done();
+      });
+    });
+
+    QUnit.test("reverse binding image uses src attribute", function(assert) {
+      assert.timeout(timeout);
+      const done = assert.async();
+      $("#qunit-fixture").html("<div id='v4img'><img class='avatar' src='a.png'/></div>");
+
+      jiant.app(() => ({
+        id: "JQAppReverseBindImage",
+        views: { v4img: { avatar: jiant.image } }
+      }));
+
+      jiant.onApp("JQAppReverseBindImage", function(app) {
+        const data = { _avatar: "", avatar: function(val) { this._avatar = val; } };
+        app.views.v4img.propagate(data, true, true);
+        app.views.v4img.avatar.attr("src", "b.png").change();
+        assert.equal(data._avatar, "b.png", "reverse binding reads src from image");
         done();
       });
     });
@@ -797,6 +922,49 @@
           assert.equal(call.opts.mode, "cors", "cors mode set");
           assert.equal(call.opts.credentials, "include", "credentials included with withCredentials");
           assert.ok(call.opts.headers && call.opts.headers["Content-Type"], "contentType set for form submit");
+          window.fetch = origFetch;
+          done();
+        }, 0);
+      });
+    });
+
+    QUnit.test("submitForm serializes payload from form fields", function(assert) {
+      assert.timeout(timeout);
+      const done = assert.async();
+      $("#qunit-fixture").html(
+        "<div id='vfPayload'><form class='frm' action='/tests/fixtures/echo'>" +
+          "<input type='text' name='foo' value='bar'/>" +
+          "<input type='text' name='x' value='7'/>" +
+        "</form></div>"
+      );
+      const origFetch = window.fetch;
+      let call;
+
+      window.fetch = function(url, opts) {
+        call = {url: url, opts: opts || {}};
+        return Promise.resolve({
+          ok: true,
+          status: 200,
+          statusText: "OK",
+          text: function() { return Promise.resolve("{}"); }
+        });
+      };
+
+      jiant.app(() => ({
+        id: "JQAppFormPayloadCompat",
+        views: {
+          vfPayload: {
+            frm: jiant.form
+          }
+        }
+      }));
+
+      jiant.onApp("JQAppFormPayloadCompat", function(app) {
+        app.views.vfPayload.frm.submitForm();
+        setTimeout(function() {
+          assert.ok(call, "fetch called");
+          assert.ok((call.opts.body || "").includes("foo=bar"), "foo serialized");
+          assert.ok((call.opts.body || "").includes("x=7"), "x serialized");
           window.fetch = origFetch;
           done();
         }, 0);
