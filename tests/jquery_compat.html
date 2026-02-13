@@ -213,6 +213,85 @@
       });
     });
 
+    QUnit.test("inputSet updates checkbox and radio checked state", function(assert) {
+      assert.timeout(timeout);
+      const done = assert.async();
+      $("#qunit-fixture").html(
+        "<div id='vInputSet'>" +
+          "<input class='opts' type='checkbox' value='1'/>" +
+          "<input class='opts' type='checkbox' value='2'/>" +
+          "<input class='opts' type='checkbox' value='3'/>" +
+          "<input class='rad' type='radio' name='r1' value='10'/>" +
+          "<input class='rad' type='radio' name='r1' value='20'/>" +
+        "</div>"
+      );
+
+      jiant.app(() => ({
+        id: "JQAppInputSetCompat",
+        views: {
+          vInputSet: {
+            opts: jiant.inputSet,
+            rad: jiant.inputSet
+          }
+        }
+      }));
+
+      jiant.onApp("JQAppInputSetCompat", function(app) {
+        app.views.vInputSet.propagate({opts: [1, 3], rad: 20});
+        const opts = $("#vInputSet .opts");
+        const rad = $("#vInputSet .rad");
+        assert.strictEqual(opts.eq(0).prop("checked"), true, "checkbox 1 checked");
+        assert.strictEqual(opts.eq(1).prop("checked"), false, "checkbox 2 unchecked");
+        assert.strictEqual(opts.eq(2).prop("checked"), true, "checkbox 3 checked");
+        assert.strictEqual(rad.eq(0).prop("checked"), false, "radio 10 unchecked");
+        assert.strictEqual(rad.eq(1).prop("checked"), true, "radio 20 checked");
+        done();
+      });
+    });
+
+    QUnit.test("pager onValueChange works with value set and click", function(assert) {
+      assert.timeout(timeout);
+      const done = assert.async();
+      $("#qunit-fixture").html("<div id='vPagerCompat'><div class='pg'></div></div>");
+
+      jiant.app(() => ({
+        id: "JQAppPagerCompat",
+        views: {
+          vPagerCompat: {
+            pg: jiant.pager
+          }
+        }
+      }));
+
+      jiant.onApp("JQAppPagerCompat", function(app) {
+        const got = [];
+        app.views.vPagerCompat.pg.onValueChange(function(evt, page) {
+          got.push(page);
+        });
+        app.views.vPagerCompat.pg.val(3);
+        app.views.vPagerCompat.pg.updatePager({totalPages: 5, number: 0});
+        app.views.vPagerCompat.pg.find("li").filter(function() {
+          return $(this).text().trim() === "2";
+        }).first().click();
+
+        assert.ok(got.includes(3), "value set triggers onValueChange");
+        assert.ok(got.includes(2), "page click triggers onValueChange");
+        done();
+      });
+    });
+
+    QUnit.test("parseTemplate works in msie branch for attribute placeholders", function(assert) {
+      const prevMsie = jiant.isMSIE;
+      jiant.isMSIE = true;
+      try {
+        const tm = $("<div><span data-test='!!foo!!'></span></div>");
+        const parsed = jiant._parseTemplate(tm, {foo: "bar"}, "JQAppMsieParse");
+        assert.ok(parsed.indexOf("bar") >= 0, "placeholder replaced in msie branch");
+      } finally {
+        jiant.isMSIE = prevMsie;
+      }
+    });
+
     QUnit.test("onApp provides jQuery and view/components are jQuery objects", function(assert) {
       assert.timeout(timeout);
       const done = assert.async();

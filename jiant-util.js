@@ -117,7 +117,7 @@ jiant.module("jiant-util", ["jiant-log", "jiant-dom"], function({jiant, "jiant-d
     jiant.each(elem.find("*"), function(idx, child) {
       jiant.each(child.attributes, function(i, attr) {
         if (attr.value.indexOf(" ") < 0 && attr.value.indexOf("!!") >= 0) {
-          $(child).attr(attr.name, attr.value.replace(/!!/g, "e2013e03e11eee "));
+          child.setAttribute(attr.name, attr.value.replace(/!!/g, "e2013e03e11eee "));
         }
       });
     });

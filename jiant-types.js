@@ -11,21 +11,25 @@ jiant.module("jiant-types", ["jiant-jtype", "jiant-comp", "jiant-util"],
   }
 
   function updateInputSet({data, elem, val, isUpdate, view}) {
-    if (!elem || !elem[0]) {
+    const firstElem = dom.first(elem);
+    if (!elem || !firstElem) {
       return;
     }
     jiant.each(elem, function(i, item) {
-      item = $(item);
-      let check = item.val() === val + "";
+      const itemElem = dom.first(item);
+      if (!itemElem) {
+        return;
+      }
+      let check = itemElem.value === val + "";
       if (!check && Array.isArray(val)) {
         val.forEach(function(subval) {
-          if (subval + "" === item.val() + "") {
+          if (subval + "" === itemElem.value + "") {
             check = true;
             return false;
           }
         });
       }
-      item.prop("checked", check);
+      dom.setChecked(itemElem, check);
     });
   }
 
@@ -51,8 +55,8 @@ jiant.module("jiant-types", ["jiant-jtype", "jiant-comp", "jiant-util"],
         if (tp === "checkbox") {
           elem.prop("checked", !!val);
         } else if (tp === "radio") {
-          elem.forEach(function(subelem) {
-            $(subelem).prop("checked", subelem.value === (val + ""));
+          dom.forEach(elem, function(subelem) {
+            dom.setChecked(subelem, subelem.value === (val + ""));
           });
         } else {
           (val === undefined || val === null) ? elem.val(val) : elem.val(val + "");
@@ -149,13 +153,13 @@ jiant.module("jiant-types", ["jiant-jtype", "jiant-comp", "jiant-util"],
 
   const pager = initType({clz: class pager extends JType {},
     componentProducer: visualComponentProducer.and(({elem: uiElem}) => {
-      const pagerBus = $({}),
+      const pagerBus = jiant.createEventBus(),
         roots = [];
       let lastPage = 0, lastTotalCls;
       jiant.each(uiElem, function(i, elem) {
         const root = $("<ul></ul>");
         jiant.addClass(root, "pagination");
-        $(elem).append(root);
+        jiant.dom.append(elem, root);
         roots.push(root);
       });
       uiElem.onValueChange = function(callback) {
